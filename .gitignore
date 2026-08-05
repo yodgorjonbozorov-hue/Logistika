@@ -1,0 +1,36 @@
+# Bog'liqliklar
+node_modules/
+.pnpm-store/
+
+# Build natijalari
+dist/
+build/
+coverage/
+
+# Muhit
+.env
+.env.local
+.env.*.local
+
+# Loglar
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Prisma
+apps/backend/prisma/*.db
+
+# Docker volume'lar (lokal)
+.docker-data/
+
+# Flutter
+mobile/**/build/
+mobile/**/.dart_tool/
+mobile/**/.flutter-plugins*
+mobile/**/ios/Pods/
+mobile/**/*.iml
