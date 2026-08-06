@@ -20,6 +20,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'Maintenance',
   'Document',
   'Notification',
+  'StoredFile',
 ]);
 
 type AnyArgs = Record<string, unknown>;

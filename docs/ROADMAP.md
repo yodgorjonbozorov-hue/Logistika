@@ -33,17 +33,21 @@
 - [x] Testlar: auth oqimi, tenant-izolyatsiya (unit — extension + sxema-qamrov),
       javob formati; real bazali e2e izolyatsiya testlari 3-bosqichdan modul-boshiga yoziladi
 
-## 3-bosqich — Asosiy CRUD
+## 3-bosqich — Asosiy CRUD ✅
 
-- [ ] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
-- [ ] `users` CRUD; haydovchi auth (telefon + SMS-kod / login-parol)
-- [ ] `drivers`: profil, ish haqi turi (fixed/percent/per_km), hujjatlar
-- [ ] `clients`: mijozlar, to'lov shartlari, balans
-- [ ] `vehicles`: kartochka, norma l/100km, probeg, hujjat muddatlari
-- [ ] `trips`: hayot sikli (draft→assigned→in_progress→completed/cancelled), avans, spidometr
-- [ ] `expenses`/`incomes`: kategoriyalar, tasdiqlash, to'lov holatlari
-- [ ] `files`: MinIO yuklash, foto siqish (max 1500px), imzolangan URL, tenant-prefiks
-- [ ] Har modulga test (izolyatsiya stsenariysi bilan)
+- [x] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
+- [x] `users` CRUD; haydovchi auth (telefon + SMS-kod, 5 daq TTL, 5 urinish, enumeratsiyasiz)
+- [x] `drivers`: profil, ish haqi turi (fixed/percent/per_km), soft-delete
+- [x] `clients`: mijozlar, to'lov shartlari, balans
+- [x] `vehicles`: kartochka, norma l/100km, probeg, hujjat muddatlari
+- [x] `trips`: hayot sikli (draft→assigned→in_progress→completed/cancelled), avans, spidometr,
+      kompaniya-boshiga raqamlash, tenant-ichida referens tekshiruvi
+- [x] `expenses`/`incomes`: kategoriyalar, tasdiqlash (approve'dan keyin o'zgartirib bo'lmaydi),
+      to'lov holatlari
+- [x] `files`: MinIO yuklash, foto siqish (max 1500px, EXIF-rotatsiya), imzolangan URL,
+      tenant-prefiks kalitlar
+- [x] Har modulga unit-test izolyatsiya stsenariysi bilan (60 test); real bazali e2e — 9-bosqich
+      xavfsizlik auditida
 
 ## 4-bosqich — Web asos + logist paneli
 

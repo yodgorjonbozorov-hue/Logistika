@@ -3,12 +3,31 @@ import type { CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
+import { DriverAuthService } from './driver-auth.service';
+import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly driverAuthService: DriverAuthService,
+  ) {}
+
+  @Public()
+  @Post('driver/request-code')
+  @HttpCode(HttpStatus.OK)
+  requestCode(@Body() dto: RequestCodeDto) {
+    return this.driverAuthService.requestCode(dto.phone);
+  }
+
+  @Public()
+  @Post('driver/verify')
+  @HttpCode(HttpStatus.OK)
+  verifyCode(@Body() dto: VerifyCodeDto) {
+    return this.driverAuthService.verify(dto.phone, dto.code);
+  }
 
   @Public()
   @Post('login')

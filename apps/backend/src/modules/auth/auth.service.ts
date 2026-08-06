@@ -96,7 +96,7 @@ export class AuthService {
     return safeUser;
   }
 
-  private async issueTokens(user: User): Promise<AuthTokens> {
+  async issueTokens(user: User): Promise<AuthTokens> {
     const accessTtl = this.config.getOrThrow<string>('JWT_ACCESS_TTL');
     const refreshTtl = this.config.getOrThrow<string>('JWT_REFRESH_TTL');
     const jti = randomUUID();

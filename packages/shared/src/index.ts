@@ -142,5 +142,10 @@ export const ERROR_CODES = [
   'NOT_FOUND',
   'TENANT_MISSING',
   'INTERNAL_ERROR',
+  'ALREADY_EXISTS',
+  'RESOURCE_IN_USE',
+  'TRIP_INVALID_STATUS',
+  'SMS_CODE_INVALID',
+  'FILE_TYPE_NOT_ALLOWED',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -10,7 +10,14 @@ import { HealthController } from './health.controller';
 import { I18nModule } from './i18n/i18n.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { CompaniesModule } from './modules/companies/companies.module';
+import { DriversModule } from './modules/drivers/drivers.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { FilesModule } from './modules/files/files.module';
+import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
+import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -21,6 +28,13 @@ import { PrismaModule } from './prisma/prisma.module';
     AuditModule,
     UsersModule,
     AuthModule,
+    CompaniesModule,
+    DriversModule,
+    ClientsModule,
+    VehiclesModule,
+    TripsModule,
+    ExpensesModule,
+    FilesModule,
   ],
   controllers: [HealthController],
   providers: [

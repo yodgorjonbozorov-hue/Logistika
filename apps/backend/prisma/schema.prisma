@@ -142,6 +142,7 @@ model Company {
   documents     Document[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  storedFiles   StoredFile[]
 
   @@map("companies")
 }
@@ -505,6 +506,38 @@ model Notification {
 
   @@index([companyId, userId, isRead])
   @@map("notifications")
+}
+
+// ---------- Files (MinIO object metadata) ----------
+
+model StoredFile {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  key          String   @unique
+  mimeType     String   @map("mime_type")
+  size         Int
+  originalName String?  @map("original_name")
+  createdById  String?  @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("stored_files")
+}
+
+// ---------- Driver login codes (pre-auth, not tenant-scoped) ----------
+
+model SmsCode {
+  id        String   @id @default(uuid())
+  phone     String
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([phone])
+  @@map("sms_codes")
 }
 
 // ---------- Audit (TZ §9) ----------
