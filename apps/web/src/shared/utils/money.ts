@@ -1,0 +1,32 @@
+/**
+ * Money is tiyin (BigInt-as-string) on the wire; users see and type so'm.
+ * All arithmetic stays in BigInt — floats are forbidden (CLAUDE.md).
+ */
+
+/** "419780000" tiyin → "4 197 800" (so'm, grouped). */
+export function formatTiyin(tiyin: string | bigint | null | undefined): string {
+  if (tiyin === null || tiyin === undefined || tiyin === '') return '—';
+  const value = typeof tiyin === 'bigint' ? tiyin : BigInt(tiyin);
+  const som = value / 100n;
+  const sign = som < 0n ? '-' : '';
+  const digits = (som < 0n ? -som : som).toString();
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${sign}${grouped}`;
+}
+
+/** User input in so'm ("1250000" yoki "1 250 000") → tiyin string ("125000000"). */
+export function somToTiyin(input: string): string | null {
+  const cleaned = input.replace(/[\s\u00A0]/g, '');
+  if (!/^\d+$/.test(cleaned)) return null;
+  return (BigInt(cleaned) * 100n).toString();
+}
+
+/** Tiyin string → so'm string for form defaults. */
+export function tiyinToSom(tiyin: string | null | undefined): string {
+  if (!tiyin) return '';
+  return (BigInt(tiyin) / 100n).toString();
+}
+
+export function sumTiyin(values: Array<string | null | undefined>): bigint {
+  return values.reduce<bigint>((acc, v) => acc + (v ? BigInt(v) : 0n), 0n);
+}

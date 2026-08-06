@@ -49,14 +49,19 @@
 - [x] Har modulga unit-test izolyatsiya stsenariysi bilan (60 test); real bazali e2e — 9-bosqich
       xavfsizlik auditida
 
-## 4-bosqich — Web asos + logist paneli
+## 4-bosqich — Web asos + logist paneli ✅
 
-- [ ] Vite + Tailwind + TanStack Query skelet, i18n (uz-latn default), qorong'i rejim
-- [ ] Auth sahifalari, himoyalangan router, API-klient (`packages/shared` tiplari bilan)
-- [ ] W-3 Reyslar: ro'yxat + filtr, yangi reys formasi (mijoz, yuk, marshrut, avans)
-- [ ] W-4 Reys kartochkasi: xronologiya / moliya / hujjatlar tablari
-- [ ] W-5 Avtopark, W-6 Haydovchilar sahifalari
-- [ ] Mijozlar sahifasi, xarajat/kirim formalari (buxgalter oqimi)
+- [x] Vite + Tailwind + TanStack Query skelet, i18n (uz-latn/uz-cyrl/ru, default uz-latn),
+      qorong'i rejim (default), brend palitra (TZ §11)
+- [x] Auth sahifasi, himoyalangan router, API-klient (`shared` tiplari, envelope-unwrap,
+      avtomatik refresh-rotatsiya)
+- [x] W-3 Reyslar: ro'yxat + status filtr + pagination, yangi reys formasi (mijoz, yuk,
+      marshrut, narx/avans so'mda → tiyin BigInt)
+- [x] W-4 Reys kartochkasi: xronologiya / moliya / hujjatlar tablari + hayot sikli amallari
+      (biriktirish, boshlash, yakunlash, bekor qilish); haydovchi hodisalari va hujjatlar
+      tablari 5/7-bosqichda to'ldiriladi
+- [x] W-5 Avtopark, W-6 Haydovchilar sahifalari (CRUD + deaktivatsiya)
+- [x] Mijozlar sahifasi, xarajat/kirim formalari, tasdiqlash tugmasi (buxgalter oqimi)
 
 ## 5-bosqich — Haydovchi mobil ilovasi (MVP)
 
