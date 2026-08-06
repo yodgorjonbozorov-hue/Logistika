@@ -13,8 +13,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { DriversModule } from './modules/drivers/drivers.module';
+import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
+import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
@@ -33,6 +35,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ClientsModule,
     VehiclesModule,
     TripsModule,
+    EventsModule,
+    TrackingModule,
     ExpensesModule,
     FilesModule,
   ],

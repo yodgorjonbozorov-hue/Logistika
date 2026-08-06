@@ -68,6 +68,20 @@ export class TripsService {
     return { data, total };
   }
 
+  /** Driver app: the logged-in driver's active trips (resolved via their profile). */
+  async listMine(actor: CurrentUserPayload): Promise<Trip[]> {
+    const db = this.prisma.forCompany(actor.companyId);
+    const driver = await db.driver.findFirst({
+      where: { userId: actor.userId, isActive: true },
+    });
+    if (!driver) return [];
+    return db.trip.findMany({
+      where: { driverId: driver.id, status: { in: ['ASSIGNED', 'IN_PROGRESS'] } },
+      orderBy: { createdAt: 'desc' },
+      include: { client: true, vehicle: true, trailer: true },
+    });
+  }
+
   async create(actor: CurrentUserPayload, dto: CreateTripDto): Promise<Trip> {
     await this.assertRefsExist(actor, dto);
     const status: TripStatus = dto.vehicleId && dto.driverId ? 'ASSIGNED' : 'DRAFT';

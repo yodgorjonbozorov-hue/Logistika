@@ -41,6 +41,12 @@ export class TripsController {
     return this.tripsService.create(user, dto);
   }
 
+  @Get('my')
+  @Roles(UserRole.DRIVER)
+  listMine(@CurrentUser() user: CurrentUserPayload) {
+    return this.tripsService.listMine(user);
+  }
+
   @Get(':id')
   getById(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.tripsService.getById(user, id);

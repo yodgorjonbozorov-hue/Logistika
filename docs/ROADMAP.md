@@ -63,14 +63,21 @@
 - [x] W-5 Avtopark, W-6 Haydovchilar sahifalari (CRUD + deaktivatsiya)
 - [x] Mijozlar sahifasi, xarajat/kirim formalari, tasdiqlash tugmasi (buxgalter oqimi)
 
-## 5-bosqich — Haydovchi mobil ilovasi (MVP)
+## 5-bosqich — Haydovchi mobil ilovasi (MVP) ✅
 
-- [ ] Flutter skelet, i18n (3 til), qorong'i rejim, katta tugmalar (TZ §3.1)
-- [ ] E-1 Kirish: telefon+SMS yoki login/parol
-- [ ] E-2/E-3: 10 ta status tugmasi — har bosishda vaqt (UTC) + GPS + kerakli foto
-- [ ] Offline navbat (drift/sqlite) + idempotent `POST /events/batch` sinxron
-- [ ] E-4 Reys tafsiloti (avans, yetkazish vaqti), E-5 Xarajatlarim, E-6 Hujjatlarim, E-7 Profil
-- [ ] Fon rejimida GPS: 2–5 daqiqa, paketli, ilova yopiq bo'lsa ham (TZ §3.3)
+- [x] Flutter skelet, i18n (3 til, kalit-qamrov testi bilan), qorong'i rejim,
+      katta tugmalar (TZ §3.1)
+- [x] E-1 Kirish: telefon+SMS kod
+- [x] E-2/E-3: 10 ta status tugmasi — har bosishda vaqt (UTC) + GPS + kerakli foto
+      (spidometr, litr/summa maydonlari turiga qarab)
+- [x] Offline navbat (sqflite) + idempotent `POST /events/batch` sinxron (klient UUID,
+      connectivity'da avto-retry, foto avval /files/upload) — testlar bilan
+- [x] Backend: `events` (idempotent batch, testlar), `tracking` qabul, `GET /trips/my`
+- [x] E-2 reys kartasi, E-5 Xarajatlarim (sinxron holati bilan), E-6 placeholder
+      (documents moduli 7-bosqichda), E-7 Profil (til, sinxron hisoblagich, chiqish)
+- [x] Fon rejimida GPS: 3 daqiqalik batch, geolocator foreground-service
+      (Android'da ilova yig'ilganda ham); to'liq «ilova o'ldirilgan» rejim sinovi —
+      9-bosqich qurilma-testlarida
 
 ## 6-bosqich — Xarita va kuzatuv
 
