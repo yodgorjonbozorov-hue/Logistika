@@ -1,0 +1,12 @@
+{
+  "AUTH_INVALID_CREDENTIALS": "Login yoki parol noto'g'ri",
+  "AUTH_USER_INACTIVE": "Hisobingiz faol emas. Administratorga murojaat qiling",
+  "AUTH_TOKEN_INVALID": "Kirish tokeni yaroqsiz",
+  "AUTH_TOKEN_EXPIRED": "Sessiya muddati tugadi, qaytadan kiring",
+  "AUTH_REFRESH_INVALID": "Sessiyani yangilab bo'lmadi, qaytadan kiring",
+  "AUTH_FORBIDDEN": "Bu amal uchun sizda huquq yo'q",
+  "VALIDATION_FAILED": "Kiritilgan ma'lumotlar noto'g'ri",
+  "NOT_FOUND": "Ma'lumot topilmadi",
+  "TENANT_MISSING": "Kompaniya aniqlanmadi",
+  "INTERNAL_ERROR": "Ichki xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring"
+}

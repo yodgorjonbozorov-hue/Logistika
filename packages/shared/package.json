@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "TruckControl AI — backend va web uchun umumiy TS tiplari (API kontrakt, enum'lar)",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --noEmit",
-    "test": "echo 'shared: faqat tiplar, test yo`q' && exit 0"
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

@@ -4,8 +4,9 @@
 > Bosqich tugadi = barcha punktlari belgilangan + testlari yashil.
 >
 > TZ §10 dagi 4 ishlab chiqish bosqichiga moslik: bizning 2–8-bosqichlar ≈ TZ «Bosqich 1 (MVP)»
-> + «Bosqich 2»; 9-bosqich ≈ TZ «Bosqich 3»; TZ «Bosqich 4» (AI-5/6/7, treker/OBD, 1C, birja) —
-> pilotdan keyin, bu faylga kirmagan.
+>
+> - «Bosqich 2»; 9-bosqich ≈ TZ «Bosqich 3»; TZ «Bosqich 4» (AI-5/6/7, treker/OBD, 1C, birja) —
+>   pilotdan keyin, bu faylga kirmagan.
 
 ## 1-bosqich — Poydevor ✅
 
@@ -17,18 +18,20 @@
 - [x] `docker-compose.yml` (postgres, redis, minio) + `.env.example`
 - [x] `README.md`
 
-## 2-bosqich — Backend asosi
+## 2-bosqich — Backend asosi ✅
 
-- [ ] NestJS ilova skeleti (`apps/backend`), config moduli (env validatsiyasi)
-- [ ] Prisma sxemasi — TZ §5 jadvallari: companies, users, drivers, vehicles, clients,
+- [x] NestJS ilova skeleti (`apps/backend`), config moduli (env validatsiyasi)
+- [x] Prisma sxemasi — TZ §5 jadvallari: companies, users, drivers, vehicles, clients,
       trips, trip_events, expenses, fuel_logs, incomes, gps_tracks, maintenance,
       documents, notifications (pul BigInt tiyin, vaqt UTC, snake_case)
-- [ ] Prisma Client Extension: majburiy `company_id` filtri
-- [ ] Global API-javob interceptor `{ success, data, error, meta }` + exception filter (`AppException`)
-- [ ] `auth`: email/parol login, JWT access+refresh, RBAC guard'lari (OWNER/LOGIST/ACCOUNTANT/DRIVER)
-- [ ] `audit` moduli: o'zgarishlar logi (kim, qachon, nimani)
-- [ ] Backend i18n asosi (xato kodlari, uz-latn/uz-cyrl/ru)
-- [ ] Testlar: auth oqimi, tenant-izolyatsiya, javob formati
+- [x] Prisma Client Extension: majburiy `company_id` filtri (`forCompany()`)
+- [x] Global API-javob interceptor `{ success, data, error, meta }` + exception filter (`AppException`)
+- [x] `auth`: email/parol login, JWT access+refresh (rotatsiya), RBAC guard'lari
+      (OWNER/LOGIST/ACCOUNTANT/DRIVER)
+- [x] `audit` moduli: o'zgarishlar logi (kim, qachon, nimani)
+- [x] Backend i18n asosi (xato kodlari, uz-latn/uz-cyrl/ru)
+- [x] Testlar: auth oqimi, tenant-izolyatsiya (unit — extension + sxema-qamrov),
+      javob formati; real bazali e2e izolyatsiya testlari 3-bosqichdan modul-boshiga yoziladi
 
 ## 3-bosqich — Asosiy CRUD
 

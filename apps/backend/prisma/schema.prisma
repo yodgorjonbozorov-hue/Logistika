@@ -1,0 +1,527 @@
+// TruckControl AI — database schema (docs/TZ.md §5).
+// Conventions: tables/columns snake_case via @@map/@map; money is BigInt in tiyin
+// (1 so'm = 100 tiyin); all timestamps are UTC; every tenant table carries company_id.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  SUPERADMIN
+  OWNER
+  LOGIST
+  ACCOUNTANT
+  DRIVER
+
+  @@map("user_role")
+}
+
+enum VehicleType {
+  TRUCK
+  TRAILER
+  SPECIAL
+
+  @@map("vehicle_type")
+}
+
+enum SalaryType {
+  FIXED
+  PERCENT
+  PER_KM
+
+  @@map("salary_type")
+}
+
+enum TripStatus {
+  DRAFT
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("trip_status")
+}
+
+enum TripEventType {
+  START
+  LOADED
+  REST
+  RESUME
+  REFUEL
+  BREAKDOWN
+  CUSTOMS
+  EXPENSE
+  DELIVERED
+  FINISH
+
+  @@map("trip_event_type")
+}
+
+enum ExpenseCategory {
+  FUEL
+  TOLL
+  CUSTOMS
+  REPAIR
+  PARTS
+  FINE
+  PARKING
+  SALARY
+  INSURANCE
+  TAX
+  OTHER
+
+  @@map("expense_category")
+}
+
+enum Currency {
+  UZS
+  USD
+  RUB
+  KZT
+
+  @@map("currency")
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+
+  @@map("payment_status")
+}
+
+enum DocumentOwnerType {
+  VEHICLE
+  DRIVER
+  COMPANY
+  TRIP
+
+  @@map("document_owner_type")
+}
+
+enum MaintenanceType {
+  PLANNED_TO
+  REPAIR
+
+  @@map("maintenance_type")
+}
+
+// ---------- Tenant root ----------
+
+model Company {
+  id                String    @id @default(uuid())
+  name              String
+  inn               String?
+  address           String?
+  phone             String?
+  logo              String?
+  tariffPlan        String?   @map("tariff_plan")
+  subscriptionUntil DateTime? @map("subscription_until")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  users         User[]
+  drivers       Driver[]
+  vehicles      Vehicle[]
+  clients       Client[]
+  trips         Trip[]
+  tripEvents    TripEvent[]
+  expenses      Expense[]
+  fuelLogs      FuelLog[]
+  incomes       Income[]
+  gpsTracks     GpsTrack[]
+  maintenances  Maintenance[]
+  documents     Document[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("companies")
+}
+
+// ---------- Users & auth ----------
+
+model User {
+  id           String    @id @default(uuid())
+  // Null only for SUPERADMIN (platform staff); enforced in application code.
+  companyId    String?   @map("company_id")
+  fullName     String    @map("full_name")
+  phone        String?   @unique
+  email        String?   @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  company       Company?       @relation(fields: [companyId], references: [id])
+  driverProfile Driver?
+  refreshTokens RefreshToken[]
+  createdTrips  Trip[]         @relation("TripCreatedBy")
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ---------- Fleet & people ----------
+
+model Driver {
+  id            String      @id @default(uuid())
+  companyId     String      @map("company_id")
+  userId        String?     @unique @map("user_id")
+  fullName      String      @map("full_name")
+  phone         String?
+  birthDate     DateTime?   @map("birth_date")
+  passport      String?
+  licenseNumber String?     @map("license_number")
+  licenseExpiry DateTime?   @map("license_expiry")
+  hireDate      DateTime?   @map("hire_date")
+  salaryType    SalaryType? @map("salary_type")
+  // FIXED → tiyin/month; PER_KM → tiyin/km; PERCENT → basis points (1% = 100).
+  salaryValue   BigInt?     @map("salary_value")
+  rating        Decimal?    @db.Decimal(3, 2)
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+  trips        Trip[]
+  tripEvents   TripEvent[]
+  expenses     Expense[]
+  fuelLogs     FuelLog[]
+
+  @@index([companyId])
+  @@map("drivers")
+}
+
+model Vehicle {
+  id                   String      @id @default(uuid())
+  companyId            String      @map("company_id")
+  plateNumber          String      @map("plate_number")
+  type                 VehicleType @default(TRUCK)
+  brand                String?
+  model                String?
+  year                 Int?
+  vin                  String?
+  fuelType             String?     @map("fuel_type")
+  fuelNormPer100km     Decimal?    @map("fuel_norm_per_100km") @db.Decimal(6, 2)
+  tankCapacity         Decimal?    @map("tank_capacity") @db.Decimal(7, 2)
+  currentOdometer      Int?        @map("current_odometer")
+  insuranceExpiry      DateTime?   @map("insurance_expiry")
+  techInspectionExpiry DateTime?   @map("tech_inspection_expiry")
+  nextServiceOdometer  Int?        @map("next_service_odometer")
+  isActive             Boolean     @default(true) @map("is_active")
+  createdAt            DateTime    @default(now()) @map("created_at")
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  trips        Trip[]        @relation("TripVehicle")
+  trailerTrips Trip[]        @relation("TripTrailer")
+  fuelLogs     FuelLog[]
+  gpsTracks    GpsTrack[]
+  maintenances Maintenance[]
+  expenses     Expense[]
+
+  @@unique([companyId, plateNumber])
+  @@index([companyId])
+  @@map("vehicles")
+}
+
+model Client {
+  id               String  @id @default(uuid())
+  companyId        String  @map("company_id")
+  name             String
+  inn              String?
+  contactPerson    String? @map("contact_person")
+  phone            String?
+  email            String?
+  address          String?
+  paymentTermsDays Int?    @map("payment_terms_days")
+  balance          BigInt  @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  company Company  @relation(fields: [companyId], references: [id])
+  trips   Trip[]
+  incomes Income[]
+
+  @@index([companyId])
+  @@map("clients")
+}
+
+// ---------- Trips ----------
+
+model Trip {
+  id                String     @id @default(uuid())
+  companyId         String     @map("company_id")
+  tripNumber        String     @map("trip_number")
+  clientId          String?    @map("client_id")
+  vehicleId         String?    @map("vehicle_id")
+  trailerId         String?    @map("trailer_id")
+  driverId          String?    @map("driver_id")
+  cargoName         String?    @map("cargo_name")
+  cargoWeight       Decimal?   @map("cargo_weight") @db.Decimal(10, 2)
+  cargoVolume       Decimal?   @map("cargo_volume") @db.Decimal(10, 2)
+  loadingAddress    String?    @map("loading_address")
+  loadingLat        Float?     @map("loading_lat")
+  loadingLng        Float?     @map("loading_lng")
+  loadingDate       DateTime?  @map("loading_date")
+  unloadingAddress  String?    @map("unloading_address")
+  unloadingLat      Float?     @map("unloading_lat")
+  unloadingLng      Float?     @map("unloading_lng")
+  unloadingDate     DateTime?  @map("unloading_date")
+  plannedDistanceKm Decimal?   @map("planned_distance_km") @db.Decimal(9, 1)
+  actualDistanceKm  Decimal?   @map("actual_distance_km") @db.Decimal(9, 1)
+  agreedPrice       BigInt     @default(0) @map("agreed_price")
+  currency          Currency   @default(UZS)
+  driverAdvance     BigInt     @default(0) @map("driver_advance")
+  status            TripStatus @default(DRAFT)
+  startOdometer     Int?       @map("start_odometer")
+  endOdometer       Int?       @map("end_odometer")
+  startedAt         DateTime?  @map("started_at")
+  finishedAt        DateTime?  @map("finished_at")
+  createdById       String?    @map("created_by")
+  createdAt         DateTime   @default(now()) @map("created_at")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  client    Client?    @relation(fields: [clientId], references: [id])
+  vehicle   Vehicle?   @relation("TripVehicle", fields: [vehicleId], references: [id])
+  trailer   Vehicle?   @relation("TripTrailer", fields: [trailerId], references: [id])
+  driver    Driver?    @relation(fields: [driverId], references: [id])
+  createdBy User?      @relation("TripCreatedBy", fields: [createdById], references: [id])
+  events    TripEvent[]
+  expenses  Expense[]
+  fuelLogs  FuelLog[]
+  incomes   Income[]
+  gpsTracks GpsTrack[]
+
+  @@unique([companyId, tripNumber])
+  @@index([companyId, status])
+  @@map("trips")
+}
+
+model TripEvent {
+  id            String        @id @default(uuid())
+  companyId     String        @map("company_id")
+  tripId        String        @map("trip_id")
+  driverId      String?       @map("driver_id")
+  eventType     TripEventType @map("event_type")
+  eventTime     DateTime      @map("event_time")
+  lat           Float?
+  lng           Float?
+  address       String?
+  odometer      Int?
+  comment       String?
+  photoUrls     Json?         @map("photo_urls")
+  // Client-generated UUID for idempotent offline batch sync (TZ §3.1).
+  clientEventId String?       @unique @map("client_event_id")
+  isSynced      Boolean       @default(true) @map("is_synced")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  trip    Trip    @relation(fields: [tripId], references: [id])
+  driver  Driver? @relation(fields: [driverId], references: [id])
+
+  @@index([companyId, tripId, eventTime])
+  @@map("trip_events")
+}
+
+// ---------- Money ----------
+
+model Expense {
+  id            String          @id @default(uuid())
+  companyId     String          @map("company_id")
+  tripId        String?         @map("trip_id")
+  vehicleId     String?         @map("vehicle_id")
+  driverId      String?         @map("driver_id")
+  category      ExpenseCategory
+  amount        BigInt
+  currency      Currency        @default(UZS)
+  quantity      Decimal?        @db.Decimal(10, 2)
+  unitPrice     BigInt?         @map("unit_price")
+  description   String?
+  receiptPhoto  String?         @map("receipt_photo")
+  paymentMethod String?         @map("payment_method")
+  expenseDate   DateTime        @map("expense_date")
+  createdById   String?         @map("created_by")
+  isApproved    Boolean         @default(false) @map("is_approved")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  company Company  @relation(fields: [companyId], references: [id])
+  trip    Trip?    @relation(fields: [tripId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  driver  Driver?  @relation(fields: [driverId], references: [id])
+
+  @@index([companyId, expenseDate])
+  @@map("expenses")
+}
+
+model FuelLog {
+  id            String   @id @default(uuid())
+  companyId     String   @map("company_id")
+  tripId        String?  @map("trip_id")
+  vehicleId     String   @map("vehicle_id")
+  driverId      String?  @map("driver_id")
+  liters        Decimal  @db.Decimal(8, 2)
+  pricePerLiter BigInt?  @map("price_per_liter")
+  totalAmount   BigInt?  @map("total_amount")
+  stationName   String?  @map("station_name")
+  odometer      Int?
+  lat           Float?
+  lng           Float?
+  receiptPhoto  String?  @map("receipt_photo")
+  refuelTime    DateTime @map("refuel_time")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  trip    Trip?   @relation(fields: [tripId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  driver  Driver? @relation(fields: [driverId], references: [id])
+
+  @@index([companyId, vehicleId, refuelTime])
+  @@map("fuel_logs")
+}
+
+model Income {
+  id            String        @id @default(uuid())
+  companyId     String        @map("company_id")
+  tripId        String?       @map("trip_id")
+  clientId      String?       @map("client_id")
+  amount        BigInt
+  currency      Currency      @default(UZS)
+  paymentDate   DateTime?     @map("payment_date")
+  paymentMethod String?       @map("payment_method")
+  invoiceNumber String?       @map("invoice_number")
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  trip    Trip?   @relation(fields: [tripId], references: [id])
+  client  Client? @relation(fields: [clientId], references: [id])
+
+  @@index([companyId, status])
+  @@map("incomes")
+}
+
+// ---------- Telemetry ----------
+
+// Grows fast: rows older than 90 days are moved to an archive by a cron job
+// (partitioning/TimescaleDB is a later optimization) — TZ §5 note.
+model GpsTrack {
+  id         BigInt   @id @default(autoincrement())
+  companyId  String   @map("company_id")
+  vehicleId  String   @map("vehicle_id")
+  tripId     String?  @map("trip_id")
+  lat        Float
+  lng        Float
+  speed      Float?
+  heading    Float?
+  recordedAt DateTime @map("recorded_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  trip    Trip?   @relation(fields: [tripId], references: [id])
+
+  @@index([companyId, vehicleId, recordedAt])
+  @@map("gps_tracks")
+}
+
+// ---------- Maintenance, documents, notifications ----------
+
+model Maintenance {
+  id                  String          @id @default(uuid())
+  companyId           String          @map("company_id")
+  vehicleId           String          @map("vehicle_id")
+  type                MaintenanceType
+  description         String?
+  odometer            Int?
+  cost                BigInt?
+  partsList           Json?           @map("parts_list")
+  serviceName         String?         @map("service_name")
+  serviceDate         DateTime?       @map("service_date")
+  nextServiceOdometer Int?            @map("next_service_odometer")
+  createdAt           DateTime        @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, vehicleId])
+  @@map("maintenance")
+}
+
+model Document {
+  id           String            @id @default(uuid())
+  companyId    String            @map("company_id")
+  ownerType    DocumentOwnerType @map("owner_type")
+  ownerId      String            @map("owner_id")
+  docType      String            @map("doc_type")
+  docNumber    String?           @map("doc_number")
+  issueDate    DateTime?         @map("issue_date")
+  expiryDate   DateTime?         @map("expiry_date")
+  fileUrl      String?           @map("file_url")
+  reminderSent Boolean           @default(false) @map("reminder_sent")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, ownerType, ownerId])
+  @@index([companyId, expiryDate])
+  @@map("documents")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  companyId   String   @map("company_id")
+  userId      String?  @map("user_id")
+  type        String
+  title       String
+  message     String
+  relatedType String?  @map("related_type")
+  relatedId   String?  @map("related_id")
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, userId, isRead])
+  @@map("notifications")
+}
+
+// ---------- Audit (TZ §9) ----------
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  companyId  String?  @map("company_id")
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, entityType, createdAt])
+  @@map("audit_logs")
+}

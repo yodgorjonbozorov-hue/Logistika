@@ -7,6 +7,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json",
     "prisma": "prisma"
@@ -41,5 +42,18 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "setupFiles": [
+      "<rootDir>/common/serialization.ts"
+    ],
+    "moduleNameMapper": {
+      "^shared$": "<rootDir>/../../../packages/shared/src/index.ts",
+      "^@/(.*)$": "<rootDir>/$1"
+    }
   }
 }

@@ -40,6 +40,7 @@ To'liq tuzilish va modullar bog'liqligi — `docs/ARCHITECTURE.md`.
 ## Kod yozish qoidalari
 
 ### Naming
+
 - Fayllar: kebab-case (`fuel-entry.service.ts`); NestJS suffikslari: `.module.ts`,
   `.controller.ts`, `.service.ts`, `.dto.ts`, `.spec.ts`.
 - Klasslar `PascalCase`, o'zgaruvchi/funksiya `camelCase`, konstantalar `UPPER_SNAKE`.
@@ -49,6 +50,7 @@ To'liq tuzilish va modullar bog'liqligi — `docs/ARCHITECTURE.md`.
 - React komponentlar `PascalCase.tsx`, hook'lar `useXxx.ts`. Flutter/Dart: `snake_case` fayllar.
 
 ### Error handling
+
 - Backend: xatolar `AppException(code, httpStatus, params)` orqali; global exception filter
   ularni `{ success:false, error:{ code, message, details } }` ga aylantiradi. `error.code` —
   mashina o'qiydigan kalit (`AUTH_INVALID_CREDENTIALS`), klient uni i18n orqali matnga aylantiradi.
@@ -57,6 +59,7 @@ To'liq tuzilish va modullar bog'liqligi — `docs/ARCHITECTURE.md`.
 - Web: TanStack Query'ning `error` holati orqali; mobil: offline navbat xatoni saqlab qayta uradi.
 
 ### Validatsiya
+
 - Har controller kirishi DTO + `class-validator` (`ValidationPipe` global, `whitelist: true`).
 - `companyId` va `userId` HECH QACHON body/query'dan olinmaydi — faqat JWT'dan (guard →
   `@CurrentUser()`). Body'da kelgan `companyId` e'tiborsiz qoldiriladi.

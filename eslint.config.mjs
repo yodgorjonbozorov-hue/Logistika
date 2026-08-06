@@ -13,7 +13,10 @@ export default tseslint.config(
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],
       '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
-    }
-  }
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
+    },
+  },
 );

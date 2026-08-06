@@ -3,7 +3,7 @@
 Sun'iy intellektga asoslangan logistika boshqaruv tizimi — O'zbekiston yuk tashish
 firmalari (5–40 texnika) uchun SaaS.
 
-> *Furangiz qayerda emas — qancha foyda keltiryapti.*
+> _Furangiz qayerda emas — qancha foyda keltiryapti._
 
 ## Nima qiladi
 
@@ -16,12 +16,12 @@ firmalari (5–40 texnika) uchun SaaS.
 
 ## Hujjatlar
 
-| Fayl | Mazmuni |
-|---|---|
-| [`docs/TZ.md`](docs/TZ.md) | Texnik topshiriq — barcha talablar manbasi |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | 9 bosqichli reja, joriy holat |
-| [`CLAUDE.md`](CLAUDE.md) | Ishlab chiqish qoidalari |
+| Fayl                                           | Mazmuni                                    |
+| ---------------------------------------------- | ------------------------------------------ |
+| [`docs/TZ.md`](docs/TZ.md)                     | Texnik topshiriq — barcha talablar manbasi |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
+| [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek
 
