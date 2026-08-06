@@ -123,6 +123,14 @@ export enum MaintenanceType {
   REPAIR = 'REPAIR',
 }
 
+/** Live map colors — TZ §4.1 W-2: 🟢 moving, 🟡 rest, 🔴 breakdown, ⚪️ idle. */
+export enum LiveStatus {
+  MOVING = 'MOVING',
+  RESTING = 'RESTING',
+  BREAKDOWN = 'BREAKDOWN',
+  IDLE = 'IDLE',
+}
+
 // ---------- i18n ----------
 
 export const LOCALES = ['uz-latn', 'uz-cyrl', 'ru'] as const;

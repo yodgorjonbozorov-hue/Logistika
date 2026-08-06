@@ -67,7 +67,7 @@ describe('applyTenantScope', () => {
 
 describe('TENANT_MODELS completeness', () => {
   it('covers every schema model that has a companyId column (except intentional exclusions)', () => {
-    const intentionallyUnscoped = new Set(['Company', 'RefreshToken', 'AuditLog']);
+    const intentionallyUnscoped = new Set(['Company', 'RefreshToken', 'AuditLog', 'TrackingLink']);
     const modelsWithCompanyId = Prisma.dmmf.datamodel.models
       .filter((model) => model.fields.some((field) => field.name === 'companyId'))
       .map((model) => model.name)

@@ -1,11 +1,14 @@
 {
-  "app": { "title": "TruckControl AI" },
+  "app": {
+    "title": "TruckControl AI"
+  },
   "nav": {
     "trips": "Reyslar",
     "vehicles": "Avtopark",
     "drivers": "Haydovchilar",
     "clients": "Mijozlar",
-    "finance": "Moliya"
+    "finance": "Moliya",
+    "map": "Xarita"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -83,7 +86,10 @@
     "documentsNote": "Hujjatlar moduli 7-bosqichda ulanadi",
     "financeIncome": "Kirim",
     "financeExpenses": "Xarajatlar",
-    "financeBalance": "Farq"
+    "financeBalance": "Farq",
+    "shareLink": "Mijoz havolasi",
+    "linkCopied": "Havola nusxalandi",
+    "copy": "Nusxalash"
   },
   "vehicles": {
     "title": "Avtopark",
@@ -98,7 +104,11 @@
     "odometer": "Probeg (km)",
     "insuranceExpiry": "Sug'urta muddati",
     "techExpiry": "Texko'rik muddati",
-    "types": { "TRUCK": "Fura", "TRAILER": "Tirkama", "SPECIAL": "Maxsus" }
+    "types": {
+      "TRUCK": "Fura",
+      "TRAILER": "Tirkama",
+      "SPECIAL": "Maxsus"
+    }
   },
   "drivers": {
     "title": "Haydovchilar",
@@ -111,7 +121,11 @@
     "salaryType": "Ish haqi turi",
     "salaryValue": "Ish haqi qiymati",
     "salaryHint": "FIXED — so'm/oy · PER_KM — so'm/km · PERCENT — foiz (100 = 1%)",
-    "salaryTypes": { "FIXED": "Oylik", "PERCENT": "Foiz", "PER_KM": "Km ga" }
+    "salaryTypes": {
+      "FIXED": "Oylik",
+      "PERCENT": "Foiz",
+      "PER_KM": "Km ga"
+    }
   },
   "clients": {
     "title": "Mijozlar",
@@ -163,5 +177,41 @@
       "TAX": "Soliq",
       "OTHER": "Boshqa"
     }
+  },
+  "map": {
+    "title": "Jonli xarita",
+    "live": "Jonli",
+    "history": "Marshrut tarixi",
+    "MOVING": "Yurmoqda",
+    "RESTING": "Dam / obed",
+    "BREAKDOWN": "Nosozlik",
+    "IDLE": "Bo'sh",
+    "lastSignal": "Oxirgi signal",
+    "speed": "Tezlik",
+    "deviation": "Chetlash",
+    "selectVehicle": "Mashinani tanlang",
+    "selectDate": "Sana",
+    "noTrack": "Bu kunda trek yo'q",
+    "noPosition": "Hali GPS signal yo'q"
+  },
+  "track": {
+    "title": "Yuk kuzatuvi",
+    "stage": "Bosqich",
+    "updated": "Yangilangan",
+    "notFound": "Havola topilmadi yoki muddati tugagan",
+    "route": "Marshrut",
+    "cargo": "Yuk"
+  },
+  "event": {
+    "START": "Yo'lga chiqdi",
+    "LOADED": "Yuk ortildi",
+    "REST": "Dam / obed",
+    "RESUME": "Yo'lda davom etmoqda",
+    "REFUEL": "Yoqilg'i quyildi",
+    "BREAKDOWN": "Nosozlik",
+    "CUSTOMS": "Chegara / bojxona",
+    "EXPENSE": "Yo'l xarajati",
+    "DELIVERED": "Yuk topshirildi",
+    "FINISH": "Reys tugadi"
   }
 }

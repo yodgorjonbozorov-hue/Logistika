@@ -79,14 +79,17 @@
       (Android'da ilova yig'ilganda ham); to'liq «ilova o'ldirilgan» rejim sinovi —
       9-bosqich qurilma-testlarida
 
-## 6-bosqich — Xarita va kuzatuv
+## 6-bosqich — Xarita va kuzatuv ✅
 
-- [ ] Backend `tracking`: paket qabul, jonli holat, trek tarixi, marshrutdan chetlash
-- [ ] W-2 jonli xarita (Leaflet): holat ranglari (🟢🟡🔴⚪️), mashina kartochkasi
-- [ ] Marshrut tarixi (sana tanlab chizish)
-- [ ] Mashina holatlari hodisalardan avtomatik
-- [ ] `gps_tracks` arxivlash strategiyasi (90 kun)
-- [ ] Mijoz tracking-havolasi (`public-link`): yaratish + autentifikatsiyasiz sahifa (TZ §4.2)
+- [x] Backend `tracking`: jonli holat (oxirgi hodisa + oxirgi GPS nuqta), trek tarixi,
+      marshrutdan chetlash (yuklash→tushirish koridoridan km, geo-testlar bilan)
+- [x] W-2 jonli xarita (Leaflet): holat ranglari (🟢🟡🔴⚪️) + hisoblagichli legenda,
+      mashina kartochkasi (haydovchi, reys, tezlik, chetlash, oxirgi signal), 30s polling
+- [x] Marshrut tarixi (mashina + sana tanlab polyline chizish)
+- [x] Mashina holatlari hodisalardan avtomatik (BREAKDOWN/REST/RESUME/DELIVERED… — testlar bilan)
+- [x] `gps_tracks` arxivlash: tungi cron 90 kundan eski nuqtalarni `gps_tracks_archive`ga ko'chiradi
+- [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
+      autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
 ## 7-bosqich — Moliya yadrosi
 

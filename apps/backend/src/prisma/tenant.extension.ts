@@ -3,8 +3,9 @@ import { Prisma } from '@prisma/client';
 /**
  * Models that carry `company_id`. Every query against them is forcibly scoped
  * to one tenant (CLAUDE.md rule: no query without a company_id filter).
- * `Company`, `RefreshToken` and `AuditLog` are intentionally outside the scope:
- * Company IS the tenant, RefreshToken is keyed by user, AuditLog may be platform-wide.
+ * `Company`, `RefreshToken`, `AuditLog` and `TrackingLink` are intentionally
+ * outside the scope: Company IS the tenant, RefreshToken is keyed by user,
+ * AuditLog may be platform-wide, TrackingLink is looked up by bare public token.
  */
 export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'User',
@@ -21,6 +22,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'Document',
   'Notification',
   'StoredFile',
+  'GpsTrackArchive',
 ]);
 
 type AnyArgs = Record<string, unknown>;

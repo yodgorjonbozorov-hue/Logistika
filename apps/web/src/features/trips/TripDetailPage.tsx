@@ -1,6 +1,8 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
+import { api } from '../../shared/api/client';
 import {
   Badge,
   Button,
@@ -46,6 +48,7 @@ export function TripDetailPage() {
         title={`${t('trips.title')} №${trip.tripNumber}`}
         actions={
           <>
+            <ShareLinkButton tripId={id} />
             {canAssign && (
               <Button variant="secondary" onClick={() => setDialog('assign')}>
                 {t('trips.assign')}
@@ -144,25 +147,85 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+function ShareLinkButton({ tripId }: { tripId: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const share = useMutation({
+    mutationFn: async () =>
+      (await api<{ url: string }>(`/trips/${tripId}/share-link`, { method: 'POST', body: {} }))
+        .data,
+    onSuccess: async ({ url }) => {
+      await navigator.clipboard.writeText(url).catch(() => undefined);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    },
+  });
+  return (
+    <Button variant="secondary" onClick={() => share.mutate()} disabled={share.isPending}>
+      {copied ? t('trips.linkCopied') : t('trips.shareLink')}
+    </Button>
+  );
+}
+
+interface TripEventRow {
+  id: string;
+  eventType: string;
+  eventTime: string;
+  address: string | null;
+  odometer: number | null;
+  comment: string | null;
+}
+
+/** W-4 tab 1: the driver's real button presses, time + place + notes. */
 function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip }) {
   const { t } = useTranslation();
-  const points = [
+  const { data: events, isLoading } = useQuery({
+    queryKey: ['events', trip.id],
+    queryFn: async () =>
+      (await api<TripEventRow[]>('/events', { query: { tripId: trip.id } })).data,
+  });
+
+  if (isLoading) return <Spinner />;
+
+  const fallbackPoints = [
     { label: t('trips.createdAt'), at: trip.createdAt },
     { label: t('trips.startedAt'), at: trip.startedAt },
     { label: t('trips.finishedAt'), at: trip.finishedAt },
   ].filter((p) => p.at);
+
   return (
     <Card>
-      <ul className="space-y-2 text-sm">
-        {points.map((point, index) => (
-          <li key={index} className="flex items-center gap-3">
-            <span className="h-2 w-2 rounded-full bg-accent" />
-            <span className="w-32 text-muted">{point.label}</span>
-            <span>{formatDateTime(point.at)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 text-xs text-muted">{t('trips.timelineNote')}</p>
+      {(events ?? []).length > 0 ? (
+        <ul className="space-y-3 text-sm">
+          {events!.map((event) => (
+            <li key={event.id} className="flex items-start gap-3">
+              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+              <div>
+                <div className="font-semibold">{t(`event.${event.eventType}`)}</div>
+                <div className="text-xs text-muted">
+                  {formatDateTime(event.eventTime)}
+                  {event.odometer != null && <> · {event.odometer} km</>}
+                  {event.address && <> · {event.address}</>}
+                </div>
+                {event.comment && <div className="mt-0.5 text-xs">{event.comment}</div>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <>
+          <ul className="space-y-2 text-sm">
+            {fallbackPoints.map((point, index) => (
+              <li key={index} className="flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-accent" />
+                <span className="w-32 text-muted">{point.label}</span>
+                <span>{formatDateTime(point.at)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs text-muted">{t('trips.timelineNote')}</p>
+        </>
+      )}
     </Card>
   );
 }

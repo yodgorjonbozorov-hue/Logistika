@@ -1,11 +1,14 @@
 {
-  "app": { "title": "TruckControl AI" },
+  "app": {
+    "title": "TruckControl AI"
+  },
   "nav": {
     "trips": "Рейслар",
     "vehicles": "Автопарк",
     "drivers": "Ҳайдовчилар",
     "clients": "Мижозлар",
-    "finance": "Молия"
+    "finance": "Молия",
+    "map": "Харита"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -83,7 +86,10 @@
     "documentsNote": "Ҳужжатлар модули 7-босқичда уланади",
     "financeIncome": "Кирим",
     "financeExpenses": "Харажатлар",
-    "financeBalance": "Фарқ"
+    "financeBalance": "Фарқ",
+    "shareLink": "Мижоз ҳаволаси",
+    "linkCopied": "Ҳавола нусхаланди",
+    "copy": "Нусхалаш"
   },
   "vehicles": {
     "title": "Автопарк",
@@ -98,7 +104,11 @@
     "odometer": "Пробег (км)",
     "insuranceExpiry": "Суғурта муддати",
     "techExpiry": "Техкўрик муддати",
-    "types": { "TRUCK": "Фура", "TRAILER": "Тиркама", "SPECIAL": "Махсус" }
+    "types": {
+      "TRUCK": "Фура",
+      "TRAILER": "Тиркама",
+      "SPECIAL": "Махсус"
+    }
   },
   "drivers": {
     "title": "Ҳайдовчилар",
@@ -111,7 +121,11 @@
     "salaryType": "Иш ҳақи тури",
     "salaryValue": "Иш ҳақи қиймати",
     "salaryHint": "FIXED — сўм/ой · PER_KM — сўм/км · PERCENT — фоиз (100 = 1%)",
-    "salaryTypes": { "FIXED": "Ойлик", "PERCENT": "Фоиз", "PER_KM": "Км га" }
+    "salaryTypes": {
+      "FIXED": "Ойлик",
+      "PERCENT": "Фоиз",
+      "PER_KM": "Км га"
+    }
   },
   "clients": {
     "title": "Мижозлар",
@@ -163,5 +177,41 @@
       "TAX": "Солиқ",
       "OTHER": "Бошқа"
     }
+  },
+  "map": {
+    "title": "Жонли харита",
+    "live": "Жонли",
+    "history": "Маршрут тарихи",
+    "MOVING": "Юрмоқда",
+    "RESTING": "Дам / обед",
+    "BREAKDOWN": "Носозлик",
+    "IDLE": "Бўш",
+    "lastSignal": "Охирги сигнал",
+    "speed": "Тезлик",
+    "deviation": "Четлаш",
+    "selectVehicle": "Машинани танланг",
+    "selectDate": "Сана",
+    "noTrack": "Бу кунда трек йўқ",
+    "noPosition": "Ҳали GPS сигнал йўқ"
+  },
+  "track": {
+    "title": "Юк кузатуви",
+    "stage": "Босқич",
+    "updated": "Янгиланган",
+    "notFound": "Ҳавола топилмади ёки муддати тугаган",
+    "route": "Маршрут",
+    "cargo": "Юк"
+  },
+  "event": {
+    "START": "Йўлга чиқди",
+    "LOADED": "Юк ортилди",
+    "REST": "Дам / обед",
+    "RESUME": "Йўлда давом этмоқда",
+    "REFUEL": "Ёқилғи қуйилди",
+    "BREAKDOWN": "Носозлик",
+    "CUSTOMS": "Чегара / божхона",
+    "EXPENSE": "Йўл харажати",
+    "DELIVERED": "Юк топширилди",
+    "FINISH": "Рейс тугади"
   }
 }

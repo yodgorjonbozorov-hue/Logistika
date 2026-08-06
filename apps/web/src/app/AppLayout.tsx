@@ -10,6 +10,7 @@ import { cn } from '../shared/utils/cn';
 const THEME_KEY = 'tc.theme';
 
 const NAV_ITEMS = [
+  { to: '/map', key: 'nav.map' },
   { to: '/trips', key: 'nav.trips' },
   { to: '/vehicles', key: 'nav.vehicles' },
   { to: '/drivers', key: 'nav.drivers' },

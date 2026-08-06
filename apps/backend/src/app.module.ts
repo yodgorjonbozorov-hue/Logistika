@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -16,6 +17,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
+import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
@@ -25,6 +27,7 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     I18nModule,
     AuditModule,
@@ -39,6 +42,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TrackingModule,
     ExpensesModule,
     FilesModule,
+    PublicLinkModule,
   ],
   controllers: [HealthController],
   providers: [

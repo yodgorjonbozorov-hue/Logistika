@@ -1,11 +1,14 @@
 {
-  "app": { "title": "TruckControl AI" },
+  "app": {
+    "title": "TruckControl AI"
+  },
   "nav": {
     "trips": "Рейсы",
     "vehicles": "Автопарк",
     "drivers": "Водители",
     "clients": "Клиенты",
-    "finance": "Финансы"
+    "finance": "Финансы",
+    "map": "Карта"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -83,7 +86,10 @@
     "documentsNote": "Модуль документов подключается на этапе 7",
     "financeIncome": "Доход",
     "financeExpenses": "Расходы",
-    "financeBalance": "Разница"
+    "financeBalance": "Разница",
+    "shareLink": "Ссылка клиенту",
+    "linkCopied": "Ссылка скопирована",
+    "copy": "Копировать"
   },
   "vehicles": {
     "title": "Автопарк",
@@ -98,7 +104,11 @@
     "odometer": "Пробег (км)",
     "insuranceExpiry": "Страховка до",
     "techExpiry": "Техосмотр до",
-    "types": { "TRUCK": "Фура", "TRAILER": "Прицеп", "SPECIAL": "Спецтехника" }
+    "types": {
+      "TRUCK": "Фура",
+      "TRAILER": "Прицеп",
+      "SPECIAL": "Спецтехника"
+    }
   },
   "drivers": {
     "title": "Водители",
@@ -111,7 +121,11 @@
     "salaryType": "Тип оплаты",
     "salaryValue": "Значение оплаты",
     "salaryHint": "FIXED — сум/мес · PER_KM — сум/км · PERCENT — процент (100 = 1%)",
-    "salaryTypes": { "FIXED": "Оклад", "PERCENT": "Процент", "PER_KM": "За км" }
+    "salaryTypes": {
+      "FIXED": "Оклад",
+      "PERCENT": "Процент",
+      "PER_KM": "За км"
+    }
   },
   "clients": {
     "title": "Клиенты",
@@ -163,5 +177,41 @@
       "TAX": "Налог",
       "OTHER": "Прочее"
     }
+  },
+  "map": {
+    "title": "Живая карта",
+    "live": "Онлайн",
+    "history": "История маршрута",
+    "MOVING": "В движении",
+    "RESTING": "Отдых / обед",
+    "BREAKDOWN": "Поломка",
+    "IDLE": "Свободна",
+    "lastSignal": "Последний сигнал",
+    "speed": "Скорость",
+    "deviation": "Отклонение",
+    "selectVehicle": "Выберите машину",
+    "selectDate": "Дата",
+    "noTrack": "Трека за этот день нет",
+    "noPosition": "GPS-сигнала ещё нет"
+  },
+  "track": {
+    "title": "Отслеживание груза",
+    "stage": "Этап",
+    "updated": "Обновлено",
+    "notFound": "Ссылка не найдена или истекла",
+    "route": "Маршрут",
+    "cargo": "Груз"
+  },
+  "event": {
+    "START": "Выехал",
+    "LOADED": "Груз загружен",
+    "REST": "Отдых / обед",
+    "RESUME": "Продолжает путь",
+    "REFUEL": "Заправка",
+    "BREAKDOWN": "Поломка",
+    "CUSTOMS": "Граница / таможня",
+    "EXPENSE": "Дорожный расход",
+    "DELIVERED": "Груз сдан",
+    "FINISH": "Рейс завершён"
   }
 }
