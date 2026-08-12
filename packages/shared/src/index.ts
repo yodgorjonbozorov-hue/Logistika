@@ -172,5 +172,9 @@ export const ERROR_CODES = [
   'TRIP_INVALID_STATUS',
   'SMS_CODE_INVALID',
   'FILE_TYPE_NOT_ALLOWED',
+  'AI_UNAVAILABLE',
+  'AI_DISABLED',
+  'AI_LIMIT_EXCEEDED',
+  'AI_PARSE_FAILED',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -45,5 +45,9 @@
   "EXPENSE_CATEGORY_SALARY": "Зарплата",
   "EXPENSE_CATEGORY_INSURANCE": "Страховка",
   "EXPENSE_CATEGORY_TAX": "Налог",
-  "EXPENSE_CATEGORY_OTHER": "Прочее"
+  "EXPENSE_CATEGORY_OTHER": "Прочее",
+  "AI_UNAVAILABLE": "AI-сервис временно недоступен. Введите данные вручную",
+  "AI_DISABLED": "AI-функция отключена в настройках компании",
+  "AI_LIMIT_EXCEEDED": "Месячный лимит AI исчерпан. Возобновится в следующем месяце",
+  "AI_PARSE_FAILED": "AI не смог прочитать документ. Введите данные вручную"
 }

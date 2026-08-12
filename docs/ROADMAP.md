@@ -110,10 +110,12 @@
 
 ## 8-bosqich — AI funksiyalari (TZ §8)
 
-- [ ] `ai` moduli asosi: Claude klienti (Haiku/Sonnet tanlash, timeout, retry),
+- [x] `ai` moduli asosi: Claude klienti (Haiku/Sonnet tanlash env orqali, timeout, retry),
       `ai_requests`/`ai_insights`/`ai_settings` jadvallari, xarajat-log va oylik limit
-- [ ] **AI-2 chek/hujjat OCR** (TZ MVP funksiyasi): foto → JSON taklif → avto-tekshiruvlar
-      (summa=litr×narx, sana, GPS-joy, takroriy chek hash) → tasdiqlash/tuzatish oqimi
+      (`GET /ai/usage`); API kaliti bo'lmasa tizim to'liq qo'lda rejimda ishlayveradi
+- [x] **AI-2 chek/hujjat OCR** (TZ MVP funksiyasi): foto → JSON taklif → avto-tekshiruvlar
+      (summa=litr×narx ±1%, sana reys oynasida, takroriy chek SHA-256 hash) →
+      tasdiqlash/tuzatish oqimi (`corrected_data` bilan); GPS-joy tekshiruvi — keyinroq
 - [ ] **AI-1 ovozli kiritish**: Whisper → strukturalash, confidence < 0.7 → qayta so'rash,
       ovoz fayli 30 kun saqlanadi
 - [ ] **AI-4 anomaliya detektori**: statistika kodda, izoh/tavsiya AI'da; `ai_insights`

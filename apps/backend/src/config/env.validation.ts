@@ -51,6 +51,19 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DEFAULT_TIMEZONE = 'Asia/Tashkent';
+
+  /** AI is optional (TZ §8.12.5): without a key the system runs fully manual. */
+  @IsOptional()
+  @IsString()
+  ANTHROPIC_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  AI_MODEL_OCR = 'claude-haiku-4-5';
+
+  @IsOptional()
+  @IsString()
+  AI_MODEL_CHAT = 'claude-sonnet-5';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

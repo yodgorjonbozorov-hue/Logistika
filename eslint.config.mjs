@@ -9,6 +9,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Node build scripts (scripts/*.mjs) run under Node globals.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+  },
+  {
     rules: {
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],

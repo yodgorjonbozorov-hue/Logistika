@@ -100,6 +100,16 @@ export class FilesService {
     return { url, expiresIn: SIGNED_URL_TTL_SECONDS };
   }
 
+  /** Raw object bytes (tenant checked by the caller's scoped lookup) — OCR input. */
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const stream = await this.client.getObject(this.bucket, key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
   private async ensureBucket(): Promise<void> {
     if (this.bucketReady) return;
     try {

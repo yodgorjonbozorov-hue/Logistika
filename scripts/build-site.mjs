@@ -11,4 +11,4 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(join(out, 'app'), { recursive: true });
 cpSync(join(root, 'apps/landing/index.html'), join(out, 'index.html'));
 cpSync(join(root, 'apps/web/dist/index.html'), join(out, 'app/index.html'));
-console.log('dist-site/ ready: / (landing), /app/ (demo)');
+process.stdout.write('dist-site/ ready: / (landing), /app/ (demo)\n');

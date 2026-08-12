@@ -45,5 +45,9 @@
   "EXPENSE_CATEGORY_SALARY": "Иш ҳақи",
   "EXPENSE_CATEGORY_INSURANCE": "Суғурта",
   "EXPENSE_CATEGORY_TAX": "Солиқ",
-  "EXPENSE_CATEGORY_OTHER": "Бошқа"
+  "EXPENSE_CATEGORY_OTHER": "Бошқа",
+  "AI_UNAVAILABLE": "AI хизмати ҳозирча ишламаяпти. Маълумотни қўлда киритинг",
+  "AI_DISABLED": "AI функцияси компания созламаларида ўчирилган",
+  "AI_LIMIT_EXCEEDED": "Ойлик AI лимити тугади. Кейинги ойда қайта фаоллашади",
+  "AI_PARSE_FAILED": "AI ҳужжатни ўқий олмади. Маълумотни қўлда киритинг"
 }

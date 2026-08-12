@@ -145,6 +145,8 @@ model Company {
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
   aiSettings    AiSettings?
+  aiRequests    AiRequest[]
+  aiInsights    AiInsight[]
 
   @@map("companies")
 }
@@ -566,20 +568,78 @@ model StoredFile {
   @@map("stored_files")
 }
 
-// ---------- AI settings (TZ §8.10) ----------
+// ---------- AI (TZ §8.10) ----------
 
-// Created ahead of the AI module: the fuel control threshold (W-8) lives here.
-// Stage 8 adds the remaining AI columns to this table.
 model AiSettings {
   id                     String   @id @default(uuid())
   companyId              String   @unique @map("company_id")
+  voiceEnabled           Boolean  @default(true) @map("voice_enabled")
+  ocrEnabled             Boolean  @default(true) @map("ocr_enabled")
+  chatEnabled            Boolean  @default(true) @map("chat_enabled")
+  anomalyEnabled         Boolean  @default(true) @map("anomaly_enabled")
   // Percent, e.g. 7.00 — fuel deviation above this raises an alert (default 7%).
   fuelDeviationThreshold Decimal  @default(7) @map("fuel_deviation_threshold") @db.Decimal(5, 2)
+  idleAlertHours         Decimal  @default(2) @map("idle_alert_hours") @db.Decimal(4, 1)
+  routeDeviationKm       Decimal  @default(20) @map("route_deviation_km") @db.Decimal(6, 1)
+  monthlyAiLimitUsd      Decimal  @default(50) @map("monthly_ai_limit_usd") @db.Decimal(8, 2)
   createdAt              DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("ai_settings")
+}
+
+// Every AI call is logged: cost control + accuracy measurement via corrected_data.
+model AiRequest {
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
+  userId           String?  @map("user_id")
+  // voice | ocr | chat | anomaly | pricing | eta | diagnosis | digest
+  feature          String
+  inputType        String?  @map("input_type")
+  inputRef         String?  @map("input_ref")
+  modelUsed        String   @map("model_used")
+  promptTokens     Int      @default(0) @map("prompt_tokens")
+  completionTokens Int      @default(0) @map("completion_tokens")
+  costUsd          Decimal  @default(0) @map("cost_usd") @db.Decimal(10, 6)
+  responseJson     Json?    @map("response_json")
+  confidence       Decimal? @db.Decimal(4, 3)
+  isConfirmed      Boolean  @default(false) @map("is_confirmed")
+  confirmedById    String?  @map("confirmed_by")
+  correctedData    Json?    @map("corrected_data")
+  // SHA-256 of the receipt image — the duplicate-receipt fraud check (TZ §8.3).
+  receiptHash      String?  @map("receipt_hash")
+  latencyMs        Int?     @map("latency_ms")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, feature, createdAt])
+  @@index([companyId, receiptHash])
+  @@map("ai_requests")
+}
+
+model AiInsight {
+  id             String   @id @default(uuid())
+  companyId      String   @map("company_id")
+  type           String
+  // low | medium | high | critical
+  severity       String
+  title          String
+  description    String?
+  recommendation String?
+  relatedType    String?  @map("related_type")
+  relatedId      String?  @map("related_id")
+  estimatedLoss  BigInt?  @map("estimated_loss")
+  // new | reviewed | confirmed | false_positive | resolved
+  status         String   @default("new")
+  reviewedById   String?  @map("reviewed_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, status, createdAt])
+  @@map("ai_insights")
 }
 
 // ---------- Driver login codes (pre-auth, not tenant-scoped) ----------

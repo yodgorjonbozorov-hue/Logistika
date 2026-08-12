@@ -9,6 +9,7 @@ import { ApiResponseInterceptor } from './common/interceptors/api-response.inter
 import { validateEnv } from './config/env.validation';
 import { HealthController } from './health.controller';
 import { I18nModule } from './i18n/i18n.module';
+import { AiModule } from './modules/ai/ai.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -54,6 +55,7 @@ import { PrismaModule } from './prisma/prisma.module';
     DocumentsModule,
     AlertsModule,
     ReportsModule,
+    AiModule,
     PublicLinkModule,
   ],
   controllers: [HealthController],
