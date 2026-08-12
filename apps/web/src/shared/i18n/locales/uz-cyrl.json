@@ -20,7 +20,8 @@
     "password": "Парол",
     "submit": "Кириш",
     "loggingIn": "Кирилмоқда…",
-    "logout": "Чиқиш"
+    "logout": "Чиқиш",
+    "demoHint": "Демо режим — исталган логин/парол билан киринг"
   },
   "common": {
     "actions": "Амаллар",
@@ -43,7 +44,8 @@
     "select": "Танланг…",
     "notSet": "—",
     "theme": "Тунги режим",
-    "language": "Тил"
+    "language": "Тил",
+    "menu": "Меню"
   },
   "status": {
     "DRAFT": "Қоралама",

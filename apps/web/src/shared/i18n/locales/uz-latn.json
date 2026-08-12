@@ -20,7 +20,8 @@
     "password": "Parol",
     "submit": "Kirish",
     "loggingIn": "Kirilmoqda…",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "demoHint": "Demo rejim — istalgan login/parol bilan kiring"
   },
   "common": {
     "actions": "Amallar",
@@ -43,7 +44,8 @@
     "select": "Tanlang…",
     "notSet": "—",
     "theme": "Tungi rejim",
-    "language": "Til"
+    "language": "Til",
+    "menu": "Menyu"
   },
   "status": {
     "DRAFT": "Qoralama",

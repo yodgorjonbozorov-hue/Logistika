@@ -1,7 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
 import type { AuthTokens } from 'shared';
-import { api, tokenStore } from '../api/client';
+import { api, IS_DEMO, tokenStore } from '../api/client';
+
+/** Hard redirect to login; the demo build navigates via the hash instead. */
+function gotoLogin() {
+  window.location.assign(IS_DEMO ? '#/login' : '/login');
+  if (IS_DEMO) window.location.reload();
+}
 import type { User } from '../api/entities';
 
 interface AuthContextValue {
@@ -43,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     tokenStore.clear();
     queryClient.clear();
-    window.location.assign('/login');
+    gotoLogin();
   }, [queryClient]);
 
   // The API client fires this when the refresh token dies mid-session.
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handler = () => {
       tokenStore.clear();
       queryClient.clear();
-      window.location.assign('/login');
+      gotoLogin();
     };
     window.addEventListener('tc:logout', handler);
     return () => window.removeEventListener('tc:logout', handler);

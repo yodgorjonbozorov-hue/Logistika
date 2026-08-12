@@ -1,0 +1,804 @@
+<title>TruckControl AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* TruckControl AI landing — brand palette is fixed by docs/TZ.md §11.
+     Deliberately single-theme: a dark navy "night road" world (dark mode is
+     mandatory in the product itself), every color painted explicitly. */
+  :root {
+    --ground: #111c33;
+    --surface: #1b2a4a;
+    --surface-2: #22345a;
+    --line: rgba(242, 245, 250, 0.09);
+    --ink: #f2f5fa;
+    --muted: #8a94a6;
+    --accent: #f5a623;
+    --success: #2fae6a;
+    --danger: #e14b4b;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family:
+      'Segoe UI',
+      system-ui,
+      -apple-system,
+      Roboto,
+      sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  a {
+    color: inherit;
+  }
+
+  /* ---- header ---- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(17, 28, 51, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+  }
+  .logo {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .logo .tc {
+    color: var(--accent);
+  }
+  .logo .ai {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(245, 166, 35, 0.16);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    vertical-align: 2px;
+  }
+  .btn {
+    display: inline-block;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 12px 22px;
+    transition:
+      transform 0.15s ease,
+      filter 0.15s ease;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+  .btn-accent {
+    background: var(--accent);
+    color: #16233f;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .nav .btn {
+    padding: 9px 16px;
+    font-size: 0.85rem;
+  }
+
+  /* ---- hero ---- */
+  .hero {
+    position: relative;
+    padding: 72px 0 56px;
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (min-width: 880px) {
+    .hero-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+    }
+  }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    margin-top: 14px;
+    font-size: clamp(1.9rem, 5.4vw, 3.1rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+    text-wrap: balance;
+  }
+  h1 .hl {
+    color: var(--accent);
+  }
+  .sub {
+    margin-top: 18px;
+    max-width: 34rem;
+    color: var(--muted);
+    font-size: 1.05rem;
+  }
+  .hero-cta {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hero-note {
+    margin-top: 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .hero-note b {
+    color: var(--success);
+  }
+
+  /* road line motif — the TZ logo concept, threading the page */
+  .road {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: repeating-linear-gradient(to bottom, var(--accent) 0 14px, transparent 14px 30px);
+    opacity: 0.13;
+    pointer-events: none;
+  }
+
+  /* live P&L card */
+  .pnl {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  }
+  .pnl-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .pnl-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .pnl-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--success);
+    background: rgba(47, 174, 106, 0.14);
+    padding: 2px 9px;
+    border-radius: 99px;
+  }
+  .pnl-route {
+    margin-top: 10px;
+    font-weight: 700;
+    font-size: 1.02rem;
+  }
+  .pnl-rows {
+    margin-top: 14px;
+    display: grid;
+    gap: 8px;
+    font-size: 0.92rem;
+  }
+  .pnl-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .pnl-row span:first-child {
+    color: var(--muted);
+  }
+  .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .pnl-total {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .pnl-total .val {
+    color: var(--success);
+    font-weight: 800;
+    font-size: 1.35rem;
+  }
+
+  /* ---- sections ---- */
+  section {
+    padding: 64px 0;
+    border-top: 1px solid var(--line);
+  }
+  .sec-eyebrow {
+    composes: eyebrow;
+  }
+  h2 {
+    margin-top: 12px;
+    font-size: clamp(1.4rem, 3.6vw, 2rem);
+    letter-spacing: -0.015em;
+    font-weight: 800;
+    text-wrap: balance;
+  }
+  .lead {
+    margin-top: 12px;
+    max-width: 40rem;
+    color: var(--muted);
+  }
+
+  .cards {
+    margin-top: 32px;
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 720px) {
+    .cards-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .card h3 {
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+  .card p {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .stat {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--danger);
+  }
+  .stat.ok {
+    color: var(--success);
+  }
+  .card .who {
+    display: inline-block;
+    margin-bottom: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* W-8 table */
+  .tbl-wrap {
+    margin-top: 28px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 0.9rem;
+  }
+  th,
+  td {
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  thead th {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    font-weight: 700;
+  }
+  tbody tr + tr td {
+    border-top: 1px solid var(--line);
+  }
+  td.num,
+  th.num {
+    text-align: right;
+  }
+  .bad {
+    color: var(--danger);
+    font-weight: 700;
+  }
+  .good {
+    color: var(--success);
+    font-weight: 700;
+  }
+  .tbl-note {
+    margin-top: 12px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  /* comparison */
+  .vs {
+    margin-top: 28px;
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 720px) {
+    .vs {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .vs .col {
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid var(--line);
+  }
+  .vs .them {
+    background: var(--surface);
+    color: var(--muted);
+  }
+  .vs .us {
+    background: linear-gradient(160deg, #253a66, var(--surface));
+    border-color: rgba(245, 166, 35, 0.35);
+  }
+  .vs h3 {
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .vs .us h3 {
+    color: var(--accent);
+  }
+  .vs ul {
+    margin-top: 12px;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+    font-size: 0.92rem;
+  }
+  .vs li {
+    padding-left: 22px;
+    position: relative;
+  }
+  .vs li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 10px;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+  .vs .us li::before {
+    background: var(--accent);
+    opacity: 1;
+  }
+
+  /* tariffs */
+  .plans {
+    margin-top: 32px;
+    display: grid;
+    gap: 14px;
+  }
+  @media (min-width: 880px) {
+    .plans {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  @media (min-width: 560px) and (max-width: 879px) {
+    .plans {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .plan {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  .plan.hot {
+    border-color: var(--accent);
+    background: linear-gradient(170deg, #2a3d68, var(--surface));
+  }
+  .plan .name {
+    font-weight: 800;
+  }
+  .plan .fleet {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .plan .price {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+  .plan .price small {
+    display: block;
+    font-family: inherit;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .plan .tag {
+    align-self: flex-start;
+    margin-bottom: 10px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #16233f;
+    background: var(--accent);
+    border-radius: 99px;
+    padding: 2px 9px;
+  }
+
+  /* CTA */
+  .cta-box {
+    margin: 0;
+    padding: 40px 24px;
+    text-align: center;
+    background: linear-gradient(160deg, #2a3d68, var(--surface));
+    border: 1px solid rgba(245, 166, 35, 0.35);
+    border-radius: 18px;
+  }
+  .cta-box h2 {
+    margin-top: 0;
+  }
+  .cta-box p {
+    margin: 12px auto 0;
+    max-width: 34rem;
+    color: var(--muted);
+  }
+  .cta-box .btn {
+    margin-top: 22px;
+  }
+
+  footer {
+    padding: 36px 0 48px;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+</style>
+
+<header>
+  <div class="wrap nav">
+    <span class="logo">Truck<span class="tc">Control</span><span class="ai">AI</span></span>
+    <a class="btn btn-accent" href="#pilot">Demo so'rash</a>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="road" aria-hidden="true"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">O'zbekiston logistika firmalari uchun</span>
+      <h1>Furangiz qayerda emas — <span class="hl">qancha foyda</span> keltiryapti</h1>
+      <p class="sub">
+        GPS-kuzatuv, yoqilg'i nazorati va har reys bo'yicha avtomatik foyda hisobi — bitta tizimda.
+        AI chek fotosini o'zi o'qiydi, boshliq savoliga hisobotdan javob beradi.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-accent" href="#pilot">2 oy bepul pilot</a>
+        <a class="btn btn-ghost" href="#fuel">Yoqilg'i nazoratini ko'rish</a>
+      </div>
+      <p class="hero-note">
+        O'rnatish 1 kun · 3 til (o'zbek lotin/kirill, rus) · Telegram hisobotlar
+      </p>
+    </div>
+
+    <div class="pnl" aria-label="Reys foydasi namunasi">
+      <div class="pnl-head">
+        <span class="pnl-title">Reys T-2026-0142 · Yakunlandi</span>
+        <span class="pnl-badge">Foyda</span>
+      </div>
+      <div class="pnl-route">Toshkent → Moskva · 3 412 km</div>
+      <div class="pnl-rows">
+        <div class="pnl-row">
+          <span>Kelishilgan narx</span><span class="num">48 000 000 so'm</span>
+        </div>
+        <div class="pnl-row"><span>Yoqilg'i</span><span class="num">−14 200 000</span></div>
+        <div class="pnl-row">
+          <span>Yo'l boji + bojxona</span><span class="num">−6 850 000</span>
+        </div>
+        <div class="pnl-row"><span>Haydovchi ulushi</span><span class="num">−4 800 000</span></div>
+        <div class="pnl-row"><span>Amortizatsiya</span><span class="num">−2 730 000</span></div>
+      </div>
+      <div class="pnl-total">
+        <span>Sof foyda</span>
+        <span class="num val">+19 420 000 so'm</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Muammo</span>
+    <h2>Pul qayerga ketayotganini hech kim aniq bilmaydi</h2>
+    <div class="cards cards-3">
+      <div class="card">
+        <div class="stat">10–15%</div>
+        <p>
+          Yoqilg'i xarajatining bir qismi nazoratsiz yo'qoladi — chek bor, litr yo'q. O'rtacha firma
+          oyiga millionlab so'm yutqazadi.
+        </p>
+      </div>
+      <div class="card">
+        <div class="stat">3 tadan 1</div>
+        <p>
+          Reyslarning bir qismi zarar bilan ishlaydi — lekin buni hech kim hisoblamagani uchun
+          boshliq bilmaydi.
+        </p>
+      </div>
+      <div class="card">
+        <div class="stat">Daftar + qo'ng'iroq</div>
+        <p>
+          Hisob qog'ozda, ma'lumot haydovchining og'zida. Oyning oxirida «foyda qancha?» degan
+          savolga aniq javob yo'q.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Yechim</span>
+    <h2>Uch interfeys — bitta yaxlit tizim</h2>
+    <div class="cards cards-3">
+      <div class="card">
+        <span class="who">Haydovchi · mobil</span>
+        <h3>10 ta katta tugma</h3>
+        <p>
+          Yo'lga chiqdim, yuk ortildi, yoqilg'i quydim… Har bosishda vaqt + GPS + foto. Internet
+          yo'q joyda ham ishlaydi — ulanish qaytganda o'zi yuboradi.
+        </p>
+      </div>
+      <div class="card">
+        <span class="who">Logist · web</span>
+        <h3>Jonli xarita va reyslar</h3>
+        <p>
+          Barcha mashinalar holati bir ekranda: yuribdi, dam olyapti, nosozlik. Mijozga login talab
+          qilmaydigan kuzatuv havolasi yuboriladi.
+        </p>
+      </div>
+      <div class="card">
+        <span class="who">Boshliq · web + Telegram</span>
+        <h3>Raqamlar va javoblar</h3>
+        <p>
+          Har kuni 20:00 da Telegramga kunlik xulosa. Savolni oddiy tilda berasiz — «Qaysi mashina
+          eng foydali?» — AI hisobotdan javob beradi.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fuel">
+  <div class="wrap">
+    <span class="eyebrow">Killer-funksiya</span>
+    <h2>Yoqilg'i nazorati: norma va real farqi avtomatik</h2>
+    <p class="lead">
+      Probeg GPS'dan, norma mashina kartochkasidan, quyilgan litr chekdan. Farq chegaradan oshsa —
+      boshliqqa darhol signal.
+    </p>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mashina</th>
+            <th class="num">Probeg</th>
+            <th class="num">Norma</th>
+            <th class="num">Real quyilgan</th>
+            <th class="num">Farq</th>
+            <th class="num">Zarar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>01 A 123 AA</td>
+            <td class="num">1 240 km</td>
+            <td class="num">397 l</td>
+            <td class="num">452 l</td>
+            <td class="num bad">+55 l</td>
+            <td class="num bad">550 000 so'm</td>
+          </tr>
+          <tr>
+            <td>01 B 456 BB</td>
+            <td class="num">2 980 km</td>
+            <td class="num">954 l</td>
+            <td class="num">961 l</td>
+            <td class="num good">+7 l</td>
+            <td class="num good">70 000 so'm</td>
+          </tr>
+          <tr>
+            <td>01 C 789 CC</td>
+            <td class="num">1 730 km</td>
+            <td class="num">554 l</td>
+            <td class="num">602 l</td>
+            <td class="num bad">+48 l</td>
+            <td class="num bad">480 000 so'm</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-note">
+      AZS bo'yicha tahlil ham bor: qaysi zapravkada farq ko'p chiqishini tizim o'zi ko'rsatadi.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">AI yordamchi</span>
+    <h2>Chekni suratga oling — 5 soniyada tizimda</h2>
+    <div class="cards cards-3">
+      <div class="card">
+        <h3>Chek va hujjat o'qish</h3>
+        <p>
+          Haydovchi chekni suratga oladi, AI summa, litr, sana va AZS nomini o'zi ajratadi. Logist
+          faqat tasdiqlaydi — qo'lda kiritish yo'q.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Anomaliya detektori</h3>
+        <p>
+          Yoqilg'i normadan oshdi, marshrutdan chetlashdi, takroriy chek — tizim o'zi topadi va
+          sababini tushuntiradi.
+        </p>
+      </div>
+      <div class="card">
+        <h3>AI-boshliq</h3>
+        <p>
+          «O'tgan oy Moskva yo'nalishi foyda qildimi?» — javob raqamlar bilan. Hisob-kitobni AI
+          emas, tizim formulalari bajaradi: raqamlar aniq.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Farqimiz</span>
+    <h2>GPS hamma joyda bor. Pulni ko'rsatadigani — yo'q edi</h2>
+    <div class="vs">
+      <div class="col them">
+        <h3>Oddiy GPS dasturlar</h3>
+        <ul>
+          <li>Mashina qayerda ekanini ko'rsatadi</li>
+          <li>Ma'lumotni qo'lda kiritish kerak</li>
+          <li>Hisobotni izlab topish kerak</li>
+          <li>Muammoni odam sezishi kerak</li>
+        </ul>
+      </div>
+      <div class="col us">
+        <h3>TruckControl AI</h3>
+        <ul>
+          <li>Har reysdan qancha foyda qolganini ko'rsatadi</li>
+          <li>AI chek fotosidan o'zi kiritadi</li>
+          <li>Boshliq savol beradi — tizim javob beradi</li>
+          <li>Anomaliyani o'zi topib, sababini aytadi</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Tariflar</span>
+    <h2>Park hajmiga qarab — ortiqcha to'lov yo'q</h2>
+    <div class="plans">
+      <div class="plan">
+        <span class="name">Start</span>
+        <span class="fleet">1–5 texnika</span>
+        <span class="price">800 000 so'm<small>oyiga</small></span>
+      </div>
+      <div class="plan hot">
+        <span class="tag">Ko'p tanlanadi</span>
+        <span class="name">Standart</span>
+        <span class="fleet">6–15 texnika</span>
+        <span class="price">1 800 000 so'm<small>oyiga</small></span>
+      </div>
+      <div class="plan">
+        <span class="name">Biznes</span>
+        <span class="fleet">16–40 texnika</span>
+        <span class="price">3 500 000 so'm<small>oyiga</small></span>
+      </div>
+      <div class="plan">
+        <span class="name">Korporativ</span>
+        <span class="fleet">40+ texnika</span>
+        <span class="price">Kelishuv asosida<small>individual</small></span>
+      </div>
+    </div>
+    <p class="tbl-note">
+      Solishtiring: faqat yoqilg'i nazoratining o'zi o'rtacha firmada oyiga 8–10 mln so'm tejaydi.
+    </p>
+  </div>
+</section>
+
+<section id="pilot">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2>Birinchi 2 firma uchun — 2 oy mutlaqo bepul</h2>
+      <p>
+        Shartimiz bitta: natijani raqamda ko'rsatishga ruxsat berasiz. O'z mashinalaringiz misolida
+        20 daqiqalik jonli demo qilamiz — 1 ta reysni kiritamiz va foydasini birga ko'ramiz.
+      </p>
+      <a class="btn btn-accent" href="https://t.me/truckcontrol_ai">Telegram orqali bog'lanish</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <span class="logo">Truck<span class="tc">Control</span><span class="ai">AI</span></span>
+    <span>Aqlli logistika nazorati · truckcontrol.uz</span>
+  </div>
+</footer>

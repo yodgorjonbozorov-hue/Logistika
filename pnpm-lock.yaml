@@ -192,6 +192,9 @@ importers:
       vite:
         specifier: ^6.0.5
         version: 6.4.3(@types/node@22.20.1)(jiti@1.21.7)(terser@5.49.2)
+      vite-plugin-singlefile:
+        specifier: ^2.3.3
+        version: 2.3.3(rollup@4.62.4)(vite@6.4.3(@types/node@22.20.1)(jiti@1.21.7)(terser@5.49.2))
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(terser@5.49.2)
@@ -7777,6 +7780,19 @@ packages:
     engines: { node: ^18.0.0 || >=20.0.0 }
     hasBin: true
 
+  vite-plugin-singlefile@2.3.3:
+    resolution:
+      {
+        integrity: sha512-XVnGH0QzbOa8fxRSsHdCarVN1BSBXNi7uLMQYlrGRN5apdHkk62XQWRJhVever0lnfuyBkwn+kvVChdm/OoOUg==,
+      }
+    engines: { node: '>18.0.0' }
+    peerDependencies:
+      rollup: ^4.59.0
+      vite: ^5.4.21 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
   vite@5.4.21:
     resolution:
       {
@@ -12929,6 +12945,13 @@ snapshots:
       - sugarss
       - supports-color
       - terser
+
+  vite-plugin-singlefile@2.3.3(rollup@4.62.4)(vite@6.4.3(@types/node@22.20.1)(jiti@1.21.7)(terser@5.49.2)):
+    dependencies:
+      micromatch: 4.0.8
+      vite: 6.4.3(@types/node@22.20.1)(jiti@1.21.7)(terser@5.49.2)
+    optionalDependencies:
+      rollup: 4.62.4
 
   vite@5.4.21(@types/node@22.20.1)(terser@5.49.2):
     dependencies:

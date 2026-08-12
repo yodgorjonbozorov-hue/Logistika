@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { IS_DEMO } from '../../shared/api/client';
 import { useAuth } from '../../shared/auth/AuthContext';
 import { Button, ErrorMessage, Field, Input } from '../../shared/ui';
 
@@ -8,8 +9,8 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState(IS_DEMO ? 'demo@truckcontrol.uz' : '');
+  const [password, setPassword] = useState(IS_DEMO ? 'demo' : '');
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,6 +40,11 @@ export function LoginPage() {
           </span>
           <p className="mt-1 text-sm text-muted">{t('auth.loginTitle')}</p>
         </div>
+        {IS_DEMO && (
+          <p className="rounded-lg bg-accent/15 px-3 py-2 text-center text-xs text-accent">
+            {t('auth.demoHint')}
+          </p>
+        )}
         <Field label={t('auth.identifier')}>
           <Input
             value={identifier}

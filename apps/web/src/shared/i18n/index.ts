@@ -20,6 +20,9 @@ void i18n.use(initReactI18next).init({
   },
   lng: initialLocale,
   fallbackLng: DEFAULT_LOCALE,
+  // Our locale ids are lowercase ('uz-latn'); stop i18next canonicalizing
+  // them to BCP-47 ('uz-Latn'), which broke the resource lookup.
+  lowerCaseLng: true,
   interpolation: { escapeValue: false },
 });
 

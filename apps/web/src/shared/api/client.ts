@@ -3,6 +3,9 @@ import i18n from '../i18n';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
+/** Static demo build (VITE_DEMO=1): every request is served from ./demo.ts. */
+export const IS_DEMO = import.meta.env.VITE_DEMO === '1';
+
 const ACCESS_KEY = 'tc.access';
 const REFRESH_KEY = 'tc.refresh';
 
@@ -42,6 +45,10 @@ export interface RequestOptions {
 }
 
 async function rawRequest<T>(path: string, options: RequestOptions): Promise<ApiResponse<T>> {
+  if (IS_DEMO) {
+    const { demoRequest } = await import('./demo');
+    return demoRequest<T>(path, options);
+  }
   const url = new URL(API_URL + path, window.location.origin);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== '') url.searchParams.set(key, String(value));

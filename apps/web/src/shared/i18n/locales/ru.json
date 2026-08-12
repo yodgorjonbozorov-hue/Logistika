@@ -20,7 +20,8 @@
     "password": "Пароль",
     "submit": "Войти",
     "loggingIn": "Вход…",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "demoHint": "Демо-режим — войдите с любым логином и паролем"
   },
   "common": {
     "actions": "Действия",
@@ -43,7 +44,8 @@
     "select": "Выберите…",
     "notSet": "—",
     "theme": "Тёмная тема",
-    "language": "Язык"
+    "language": "Язык",
+    "menu": "Меню"
   },
   "status": {
     "DRAFT": "Черновик",
