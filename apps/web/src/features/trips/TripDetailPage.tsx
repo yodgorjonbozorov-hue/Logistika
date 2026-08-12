@@ -20,9 +20,9 @@ import {
   Table,
 } from '../../shared/ui';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
-import { formatTiyin, sumTiyin } from '../../shared/utils/money';
+import { formatTiyin } from '../../shared/utils/money';
 import { StatusBadge } from './StatusBadge';
-import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
+import { useRefLists, useTrip, useTripFinance, useTripMutations, useTripPnl } from './api';
 
 type Tab = 'timeline' | 'finance' | 'documents';
 
@@ -230,16 +230,14 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
   );
 }
 
-function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: string }) {
+function FinanceTab({ tripId }: { tripId: string; agreedPrice: string }) {
   const { t } = useTranslation();
-  const { expenses, incomes } = useTripFinance(tripId);
-  if (expenses.isLoading || incomes.isLoading) return <Spinner />;
+  const { expenses } = useTripFinance(tripId);
+  const pnl = useTripPnl(tripId);
+  if (expenses.isLoading || pnl.isLoading) return <Spinner />;
+  if (!pnl.data) return <EmptyState />;
 
-  const expenseTotal = sumTiyin((expenses.data ?? []).map((e) => e.amount));
-  const incomeTotal = sumTiyin((incomes.data ?? []).map((i) => i.amount));
-  const planned = BigInt(agreedPrice);
-  const income = incomeTotal > 0n ? incomeTotal : planned;
-  const balance = income - expenseTotal;
+  const profit = BigInt(pnl.data.profit);
 
   return (
     <div className="space-y-4">
@@ -247,25 +245,35 @@ function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: stri
         <Card>
           <div className="text-xs uppercase text-muted">{t('trips.financeIncome')}</div>
           <div className="mt-1 text-lg font-bold tabular-nums text-success">
-            {formatTiyin(income)}
+            {formatTiyin(pnl.data.agreedPrice)}
+          </div>
+          <div className="mt-1 text-xs text-muted">
+            {t('trips.pnlReceived')}: {formatTiyin(pnl.data.receivedAmount)}
           </div>
         </Card>
         <Card>
           <div className="text-xs uppercase text-muted">{t('trips.financeExpenses')}</div>
           <div className="mt-1 text-lg font-bold tabular-nums text-danger">
-            {formatTiyin(expenseTotal)}
+            {formatTiyin(pnl.data.totalCost)}
+          </div>
+          <div className="mt-1 text-xs text-muted">
+            {t('trips.pnlDriverShare')}: {formatTiyin(pnl.data.driverShare)} ·{' '}
+            {t('trips.pnlAmortization')}: {formatTiyin(pnl.data.amortization)}
           </div>
         </Card>
         <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeBalance')}</div>
+          <div className="text-xs uppercase text-muted">{t('trips.pnlProfit')}</div>
           <div
             className={
-              balance >= 0n
+              profit >= 0n
                 ? 'mt-1 text-lg font-bold tabular-nums text-success'
                 : 'mt-1 text-lg font-bold tabular-nums text-danger'
             }
           >
-            {formatTiyin(balance)}
+            {formatTiyin(profit)}
+          </div>
+          <div className="mt-1 text-xs text-muted">
+            {t('trips.pnlCostPerKm')}: {formatTiyin(pnl.data.costPerKm)} · {pnl.data.distanceKm} km
           </div>
         </Card>
       </div>

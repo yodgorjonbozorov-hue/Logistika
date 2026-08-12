@@ -9,6 +9,7 @@ export function createTenantDbMock(models: string[]) {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
     };

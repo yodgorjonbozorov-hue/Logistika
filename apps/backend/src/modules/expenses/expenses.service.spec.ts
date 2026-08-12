@@ -8,7 +8,10 @@ describe('ExpensesService', () => {
 
   function setup() {
     const { prisma, db } = createTenantDbMock(['expense', 'income']);
-    const service = new ExpensesService(prisma, audit);
+    const alerts = {
+      raise: jest.fn(),
+    } as unknown as import('../alerts/alerts.service').AlertsService;
+    const service = new ExpensesService(prisma, audit, alerts);
     return { service, db };
   }
 

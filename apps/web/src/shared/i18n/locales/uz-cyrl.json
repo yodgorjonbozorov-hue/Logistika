@@ -8,7 +8,11 @@
     "drivers": "Ҳайдовчилар",
     "clients": "Мижозлар",
     "finance": "Молия",
-    "map": "Харита"
+    "map": "Харита",
+    "dashboard": "Бош саҳифа",
+    "fuel": "Ёқилғи",
+    "reports": "Ҳисоботлар",
+    "alerts": "Огоҳлантиришлар"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -89,7 +93,12 @@
     "financeBalance": "Фарқ",
     "shareLink": "Мижоз ҳаволаси",
     "linkCopied": "Ҳавола нусхаланди",
-    "copy": "Нусхалаш"
+    "copy": "Нусхалаш",
+    "pnlProfit": "Соф фойда",
+    "pnlReceived": "Қабул қилинган",
+    "pnlDriverShare": "Ҳайдовчи улуши",
+    "pnlAmortization": "Амортизация",
+    "pnlCostPerKm": "1 км таннархи"
   },
   "vehicles": {
     "title": "Автопарк",
@@ -108,7 +117,10 @@
       "TRUCK": "Фура",
       "TRAILER": "Тиркама",
       "SPECIAL": "Махсус"
-    }
+    },
+    "purchasePrice": "Сотиб олинган нархи (сўм)",
+    "purchasePriceHint": "Амортизация ҳисоби учун",
+    "plannedTotalKm": "Режадаги умумий пробег (км)"
   },
   "drivers": {
     "title": "Ҳайдовчилар",
@@ -176,7 +188,12 @@
       "INSURANCE": "Суғурта",
       "TAX": "Солиқ",
       "OTHER": "Бошқа"
-    }
+    },
+    "receivables": "Қарздорлар",
+    "client": "Мижоз",
+    "invoices": "Ҳисоб-фактуралар",
+    "outstanding": "Қарз (сўм)",
+    "overdueAmount": "Муддати ўтган (сўм)"
   },
   "map": {
     "title": "Жонли харита",
@@ -213,5 +230,84 @@
     "EXPENSE": "Йўл харажати",
     "DELIVERED": "Юк топширилди",
     "FINISH": "Рейс тугади"
+  },
+  "dashboard": {
+    "title": "Бош саҳифа",
+    "onRoute": "Йўлдаги машиналар",
+    "todayTrips": "Бугунги рейслар",
+    "monthIncome": "Ойлик кирим",
+    "monthExpense": "Ойлик чиқим",
+    "monthProfit": "Соф фойда",
+    "alerts": "Огоҳлантиришлар",
+    "recentEvents": "Охирги ҳодисалар",
+    "profitChart": "Фойда графиги (12 ой)",
+    "income": "Кирим",
+    "expense": "Чиқим",
+    "profit": "Фойда"
+  },
+  "fuel": {
+    "title": "Ёқилғи назорати",
+    "tabs": {
+      "control": "Назорат жадвали",
+      "stations": "АЁҚШ таҳлили",
+      "journal": "Журнал"
+    },
+    "newLog": "Янги қуйиш",
+    "vehicle": "Машина",
+    "distance": "Пробег (км)",
+    "norm": "Норма (л)",
+    "actual": "Реал (л)",
+    "diff": "Фарқ (л)",
+    "loss": "Зарар (сўм)",
+    "deviation": "Четланиш",
+    "station": "АЁҚШ",
+    "liters": "Литр",
+    "pricePerLiter": "1 л нархи (сўм)",
+    "totalAmount": "Сумма (сўм)",
+    "refuelCount": "Қуйишлар",
+    "refuelTime": "Вақт",
+    "odometer": "Спидометр"
+  },
+  "reports": {
+    "title": "Ҳисоботлар",
+    "groups": {
+      "trip": "Рейс бўйича фойда",
+      "vehicle": "Машина бўйича рентабеллик",
+      "route": "Йўналиш бўйича рентабеллик",
+      "driver": "Ҳайдовчи бўйича самарадорлик",
+      "client": "Мижоз бўйича айланма",
+      "expense-structure": "Харажат структураси"
+    },
+    "label": "Номи",
+    "tripCount": "Рейслар",
+    "distance": "Пробег (км)",
+    "income": "Кирим (сўм)",
+    "totalCost": "Жами харажат (сўм)",
+    "profit": "Фойда (сўм)",
+    "costPerKm": "1 км таннархи (сўм)",
+    "roi": "ROI",
+    "share": "Улуш"
+  },
+  "alerts": {
+    "title": "Огоҳлантиришлар",
+    "unreadOnly": "Фақат ўқилмаган",
+    "ack": "Ўқилди",
+    "ackAll": "Ҳаммасини ўқилди қилиш",
+    "typeNames": {
+      "DOC_EXPIRY": "Ҳужжат муддати",
+      "MAINTENANCE_DUE": "ТО вақти",
+      "VEHICLE_STOPPED": "Тўхтаб қолди",
+      "ROUTE_DEVIATION": "Маршрутдан четлаш",
+      "FUEL_DEVIATION": "Ёқилғи нормадан ошди",
+      "PAYMENT_OVERDUE": "Тўлов кечикди"
+    },
+    "types": {
+      "DOC_EXPIRY": "{{label}} ({{docType}}) муддати тугашига {{daysLeft}} кун қолди",
+      "MAINTENANCE_DUE": "{{plateNumber}} учун ТО вақти келди",
+      "VEHICLE_STOPPED": "{{plateNumber}} 2 соатдан бери қимирламаяпти",
+      "ROUTE_DEVIATION": "{{plateNumber}} маршрутдан четлашди",
+      "FUEL_DEVIATION": "{{plateNumber}}: ёқилғи нормадан {{deviationPercent}}% ошди ({{diffLiters}} л)",
+      "PAYMENT_OVERDUE": "{{clientName}} тўлови кечикди — {{amount}} сўм ({{invoiceNumber}})"
+    }
   }
 }

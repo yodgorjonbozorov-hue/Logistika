@@ -10,12 +10,16 @@ import { cn } from '../shared/utils/cn';
 const THEME_KEY = 'tc.theme';
 
 const NAV_ITEMS = [
+  { to: '/', key: 'nav.dashboard' },
   { to: '/map', key: 'nav.map' },
   { to: '/trips', key: 'nav.trips' },
   { to: '/vehicles', key: 'nav.vehicles' },
   { to: '/drivers', key: 'nav.drivers' },
   { to: '/clients', key: 'nav.clients' },
   { to: '/finance', key: 'nav.finance' },
+  { to: '/fuel', key: 'nav.fuel' },
+  { to: '/reports', key: 'nav.reports' },
+  { to: '/alerts', key: 'nav.alerts' },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -48,6 +52,7 @@ export function AppLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.to === '/'}
               className={({ isActive }) =>
                 cn(
                   'block rounded-lg px-3 py-2 text-sm font-medium transition',

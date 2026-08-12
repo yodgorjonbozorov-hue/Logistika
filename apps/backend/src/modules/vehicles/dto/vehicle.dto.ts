@@ -13,6 +13,7 @@ import {
   Min,
 } from 'class-validator';
 import { VehicleType } from 'shared';
+import { IsTiyin } from '../../../common/dto/money';
 
 export class CreateVehicleDto {
   @IsString()
@@ -66,6 +67,16 @@ export class CreateVehicleDto {
   @IsInt()
   @Min(0)
   currentOdometer?: number;
+
+  /** Amortization inputs (TZ §6): purchase price in tiyin + planned lifetime km. */
+  @IsOptional()
+  @IsTiyin()
+  purchasePrice?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  plannedTotalKm?: number;
 
   @IsOptional()
   @IsDateString()

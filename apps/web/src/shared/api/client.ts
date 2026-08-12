@@ -78,6 +78,32 @@ async function tryRefresh(): Promise<boolean> {
   return false;
 }
 
+/** Authenticated file download (report exports) — saves via a temporary link. */
+export async function apiDownload(
+  path: string,
+  query: Record<string, string | number | undefined>,
+): Promise<void> {
+  const url = new URL(API_URL + path, window.location.origin);
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
+  }
+  const headers: Record<string, string> = { 'accept-language': i18n.language };
+  if (tokenStore.access) headers.authorization = `Bearer ${tokenStore.access}`;
+  const response = await fetch(url.toString(), { headers });
+  if (!response.ok) {
+    throw new ApiError('INTERNAL_ERROR', i18n.t('common.errorGeneric'), undefined, response.status);
+  }
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'report';
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
 /** Unwraps the { success, data, error, meta } envelope; auto-refreshes once on expiry. */
 export async function api<T>(
   path: string,

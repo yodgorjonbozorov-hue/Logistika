@@ -91,19 +91,22 @@
 - [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
       autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
-## 7-bosqich — Moliya yadrosi
+## 7-bosqich — Moliya yadrosi ✅
 
-- [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
-      (faqat deterministik kod, BigInt)
-- [ ] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
+- [x] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
+      (faqat deterministik kod, BigInt); `GET /trips/:id/pnl`, `GET /vehicles/:id/stats`
+- [x] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
       chegara oshsa signal (default 7%, `ai_settings.fuel_deviation_threshold`)
-- [ ] `maintenance`: TO tarixi, keyingi TO rejasi
-- [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
-- [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
-- [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
-      xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
-- [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
+- [x] `maintenance`: TO tarixi, keyingi TO rejasi (`/maintenance/upcoming`)
+- [x] `documents`: muddat eslatmalari 15/7/1 kun (kunlik cron; hujjatlar + sug'urta/texko'rik +
+      guvohnoma); BullMQ o'rniga hozircha `@nestjs/schedule` (6-bosqich cron naqshiga mos)
+- [x] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati; i18n tip+param sifatida saqlanadi,
+      qimirlamaslik/chetlash jonli signallari — 9-bosqichda)
+- [x] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
+      xarajat strukturasi), Excel/PDF eksport (PDF — lotin yozuvida)
+- [x] Web: W-1 dashboard, W-7 moliya (+ qarzdorlar), W-8 yoqilg'i, W-9 hisobotlar,
+      W-10 ogohlantirishlar; W-4 moliya tabi endi server P&L'dan
+- [x] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (138 backend testi yashil)
 
 ## 8-bosqich — AI funksiyalari (TZ §8)
 

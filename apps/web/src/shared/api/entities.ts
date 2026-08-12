@@ -113,6 +113,104 @@ export interface Expense {
   isApproved: boolean;
 }
 
+export interface FuelLog {
+  id: string;
+  tripId: string | null;
+  vehicleId: string;
+  driverId: string | null;
+  liters: string;
+  pricePerLiter: string | null;
+  totalAmount: string | null;
+  stationName: string | null;
+  odometer: number | null;
+  receiptPhoto: string | null;
+  refuelTime: string;
+}
+
+export interface FuelControlRow {
+  vehicleId: string;
+  plateNumber: string;
+  fuelNormPer100km: number | null;
+  distanceKm: number;
+  normLiters: number;
+  actualLiters: number;
+  diffLiters: number;
+  avgPricePerLiter: string | null;
+  lossAmount: string | null;
+  deviationPercent: number | null;
+  overThreshold: boolean;
+}
+
+export interface StationRow {
+  stationName: string;
+  refuelCount: number;
+  liters: number;
+  totalAmount: string;
+  avgPricePerLiter: string | null;
+}
+
+export interface Alert {
+  id: string;
+  type: string;
+  title: string;
+  /** JSON i18n params written by the backend (alerts.types.<type> template). */
+  message: string;
+  relatedType: string | null;
+  relatedId: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface ProfitRow {
+  key: string;
+  label: string;
+  tripCount: number;
+  distanceKm: number;
+  income: string;
+  expenses: string;
+  driverShare: string;
+  amortization: string;
+  totalCost: string;
+  profit: string;
+  costPerKm: string | null;
+  roiPercent: number | null;
+}
+
+export interface ExpenseStructureRow {
+  category: ExpenseCategory;
+  amount: string;
+  sharePercent: number;
+}
+
+export interface DashboardData {
+  vehiclesOnRoute: number;
+  vehiclesTotal: number;
+  todayTrips: number;
+  monthIncome: string;
+  monthExpense: string;
+  monthProfit: string;
+  unreadAlerts: number;
+  recentEvents: Array<{
+    id: string;
+    eventType: string;
+    eventTime: string;
+    address: string | null;
+    driverName: string | null;
+    tripNumber: string | null;
+  }>;
+  profitSeries: Array<{ month: string; income: string; expense: string; profit: string }>;
+}
+
+export interface Receivable {
+  clientId: string;
+  name: string;
+  phone: string | null;
+  paymentTermsDays: number | null;
+  outstanding: string;
+  overdue: string;
+  invoiceCount: number;
+}
+
 export interface Income {
   id: string;
   tripId: string | null;

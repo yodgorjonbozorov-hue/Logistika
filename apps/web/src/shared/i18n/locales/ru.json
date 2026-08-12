@@ -8,7 +8,11 @@
     "drivers": "Водители",
     "clients": "Клиенты",
     "finance": "Финансы",
-    "map": "Карта"
+    "map": "Карта",
+    "dashboard": "Главная",
+    "fuel": "Топливо",
+    "reports": "Отчёты",
+    "alerts": "Уведомления"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -89,7 +93,12 @@
     "financeBalance": "Разница",
     "shareLink": "Ссылка клиенту",
     "linkCopied": "Ссылка скопирована",
-    "copy": "Копировать"
+    "copy": "Копировать",
+    "pnlProfit": "Чистая прибыль",
+    "pnlReceived": "Получено",
+    "pnlDriverShare": "Доля водителя",
+    "pnlAmortization": "Амортизация",
+    "pnlCostPerKm": "Себестоимость 1 км"
   },
   "vehicles": {
     "title": "Автопарк",
@@ -108,7 +117,10 @@
       "TRUCK": "Фура",
       "TRAILER": "Прицеп",
       "SPECIAL": "Спецтехника"
-    }
+    },
+    "purchasePrice": "Цена покупки (сум)",
+    "purchasePriceHint": "Для расчёта амортизации",
+    "plannedTotalKm": "Плановый общий пробег (км)"
   },
   "drivers": {
     "title": "Водители",
@@ -176,7 +188,12 @@
       "INSURANCE": "Страховка",
       "TAX": "Налог",
       "OTHER": "Прочее"
-    }
+    },
+    "receivables": "Должники",
+    "client": "Клиент",
+    "invoices": "Счета",
+    "outstanding": "Долг (сум)",
+    "overdueAmount": "Просрочено (сум)"
   },
   "map": {
     "title": "Живая карта",
@@ -213,5 +230,84 @@
     "EXPENSE": "Дорожный расход",
     "DELIVERED": "Груз сдан",
     "FINISH": "Рейс завершён"
+  },
+  "dashboard": {
+    "title": "Главная",
+    "onRoute": "Машины в пути",
+    "todayTrips": "Рейсы сегодня",
+    "monthIncome": "Доход за месяц",
+    "monthExpense": "Расход за месяц",
+    "monthProfit": "Чистая прибыль",
+    "alerts": "Уведомления",
+    "recentEvents": "Последние события",
+    "profitChart": "График прибыли (12 мес.)",
+    "income": "Доход",
+    "expense": "Расход",
+    "profit": "Прибыль"
+  },
+  "fuel": {
+    "title": "Контроль топлива",
+    "tabs": {
+      "control": "Контрольная таблица",
+      "stations": "Анализ АЗС",
+      "journal": "Журнал"
+    },
+    "newLog": "Новая заправка",
+    "vehicle": "Машина",
+    "distance": "Пробег (км)",
+    "norm": "Норма (л)",
+    "actual": "Факт (л)",
+    "diff": "Разница (л)",
+    "loss": "Потери (сум)",
+    "deviation": "Отклонение",
+    "station": "АЗС",
+    "liters": "Литры",
+    "pricePerLiter": "Цена за 1 л (сум)",
+    "totalAmount": "Сумма (сум)",
+    "refuelCount": "Заправки",
+    "refuelTime": "Время",
+    "odometer": "Одометр"
+  },
+  "reports": {
+    "title": "Отчёты",
+    "groups": {
+      "trip": "Прибыль по рейсам",
+      "vehicle": "Рентабельность по машинам",
+      "route": "Рентабельность по направлениям",
+      "driver": "Эффективность по водителям",
+      "client": "Оборот по клиентам",
+      "expense-structure": "Структура расходов"
+    },
+    "label": "Название",
+    "tripCount": "Рейсы",
+    "distance": "Пробег (км)",
+    "income": "Доход (сум)",
+    "totalCost": "Итого расход (сум)",
+    "profit": "Прибыль (сум)",
+    "costPerKm": "Себестоимость 1 км (сум)",
+    "roi": "ROI",
+    "share": "Доля"
+  },
+  "alerts": {
+    "title": "Уведомления",
+    "unreadOnly": "Только непрочитанные",
+    "ack": "Прочитано",
+    "ackAll": "Отметить все прочитанными",
+    "typeNames": {
+      "DOC_EXPIRY": "Срок документа",
+      "MAINTENANCE_DUE": "Время ТО",
+      "VEHICLE_STOPPED": "Стоит на месте",
+      "ROUTE_DEVIATION": "Отклонение от маршрута",
+      "FUEL_DEVIATION": "Перерасход топлива",
+      "PAYMENT_OVERDUE": "Просрочка оплаты"
+    },
+    "types": {
+      "DOC_EXPIRY": "{{label}} ({{docType}}): до окончания срока {{daysLeft}} дн.",
+      "MAINTENANCE_DUE": "Пора на ТО: {{plateNumber}}",
+      "VEHICLE_STOPPED": "{{plateNumber}} не двигается более 2 часов",
+      "ROUTE_DEVIATION": "{{plateNumber}} отклонился от маршрута",
+      "FUEL_DEVIATION": "{{plateNumber}}: расход выше нормы на {{deviationPercent}}% ({{diffLiters}} л)",
+      "PAYMENT_OVERDUE": "Просрочен платёж от {{clientName}} — {{amount}} сум ({{invoiceNumber}})"
+    }
   }
 }

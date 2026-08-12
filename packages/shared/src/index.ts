@@ -131,6 +131,23 @@ export enum LiveStatus {
   IDLE = 'IDLE',
 }
 
+// ---------- Alerts (W-10 ogohlantirishlar markazi) ----------
+
+/**
+ * Machine-readable alert types. The stored notification carries the type and a
+ * JSON params payload; clients render the text through i18n
+ * (`alerts.types.<TYPE>` keys) — no user-facing text is stored.
+ */
+export const ALERT_TYPES = [
+  'DOC_EXPIRY',
+  'MAINTENANCE_DUE',
+  'VEHICLE_STOPPED',
+  'ROUTE_DEVIATION',
+  'FUEL_DEVIATION',
+  'PAYMENT_OVERDUE',
+] as const;
+export type AlertType = (typeof ALERT_TYPES)[number];
+
 // ---------- i18n ----------
 
 export const LOCALES = ['uz-latn', 'uz-cyrl', 'ru'] as const;

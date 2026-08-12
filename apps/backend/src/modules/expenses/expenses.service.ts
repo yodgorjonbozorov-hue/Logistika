@@ -1,9 +1,11 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import type { Expense, Income, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AlertsService } from '../alerts/alerts.service';
 import { AuditService } from '../audit/audit.service';
 import {
   CreateExpenseDto,
@@ -34,9 +36,12 @@ function toIncomeData(dto: CreateIncomeDto | UpdateIncomeDto) {
 
 @Injectable()
 export class ExpensesService {
+  private readonly logger = new Logger(ExpensesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly alerts: AlertsService,
   ) {}
 
   // ---------- Expenses ----------
@@ -162,6 +167,54 @@ export class ExpensesService {
         .income.update({ where: { id }, data: toIncomeData(dto) });
     } catch (error) {
       rethrowPrismaError(error);
+    }
+  }
+
+  /**
+   * Daily payment control (W-10 «Mijoz to'lovi kechikdi»): an unpaid income is
+   * overdue once its own paymentDate has passed, or the trip finished more
+   * than the client's payment-terms days ago. Marks OVERDUE + raises an alert.
+   */
+  @Cron('0 5 * * *')
+  async markOverdueIncomes(): Promise<void> {
+    try {
+      const now = new Date();
+      const companies = await this.prisma.company.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      for (const company of companies) {
+        const db = this.prisma.forCompany(company.id);
+        const candidates = await db.income.findMany({
+          where: { status: { in: ['PENDING', 'PARTIAL'] } },
+          include: { client: true, trip: true },
+        });
+        for (const income of candidates) {
+          let due: Date | null = income.paymentDate;
+          if (!due && income.trip?.finishedAt && income.client?.paymentTermsDays != null) {
+            due = new Date(
+              income.trip.finishedAt.getTime() +
+                income.client.paymentTermsDays * 24 * 60 * 60 * 1000,
+            );
+          }
+          if (!due || due >= now) continue;
+          await db.income.update({ where: { id: income.id }, data: { status: 'OVERDUE' } });
+          await this.alerts.raise(company.id, {
+            type: 'PAYMENT_OVERDUE',
+            params: {
+              clientName: income.client?.name ?? '—',
+              amount: income.amount.toString(),
+              invoiceNumber: income.invoiceNumber ?? '—',
+            },
+            relatedType: 'Income',
+            relatedId: income.id,
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Overdue income check failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

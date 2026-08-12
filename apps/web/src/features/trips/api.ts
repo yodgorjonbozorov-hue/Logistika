@@ -18,6 +18,31 @@ export function useTrip(id: string) {
   });
 }
 
+export interface TripPnl {
+  tripId: string;
+  tripNumber: string;
+  status: TripStatus;
+  distanceKm: number;
+  agreedPrice: string;
+  receivedAmount: string;
+  expensesByCategory: Record<string, string>;
+  expensesTotal: string;
+  driverShareSource: 'COMPUTED' | 'EXPENSES';
+  driverShare: string;
+  amortization: string;
+  totalCost: string;
+  profit: string;
+  costPerKm: string | null;
+}
+
+/** W-4 tab 2: server-computed P&L (TZ §6 — deterministic backend code). */
+export function useTripPnl(tripId: string) {
+  return useQuery({
+    queryKey: ['trips', tripId, 'pnl'],
+    queryFn: async () => (await api<TripPnl>(`/trips/${tripId}/pnl`)).data,
+  });
+}
+
 export function useTripFinance(tripId: string) {
   const expenses = useQuery({
     queryKey: ['expenses', { tripId }],

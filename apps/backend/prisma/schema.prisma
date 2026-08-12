@@ -144,6 +144,7 @@ model Company {
   auditLogs     AuditLog[]
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
+  aiSettings    AiSettings?
 
   @@map("companies")
 }
@@ -231,6 +232,9 @@ model Vehicle {
   fuelNormPer100km     Decimal?    @map("fuel_norm_per_100km") @db.Decimal(6, 2)
   tankCapacity         Decimal?    @map("tank_capacity") @db.Decimal(7, 2)
   currentOdometer      Int?        @map("current_odometer")
+  // Amortization inputs (TZ §6): purchase price in tiyin, planned lifetime mileage.
+  purchasePrice        BigInt?     @map("purchase_price")
+  plannedTotalKm       Int?        @map("planned_total_km")
   insuranceExpiry      DateTime?   @map("insurance_expiry")
   techInspectionExpiry DateTime?   @map("tech_inspection_expiry")
   nextServiceOdometer  Int?        @map("next_service_odometer")
@@ -560,6 +564,22 @@ model StoredFile {
 
   @@index([companyId])
   @@map("stored_files")
+}
+
+// ---------- AI settings (TZ §8.10) ----------
+
+// Created ahead of the AI module: the fuel control threshold (W-8) lives here.
+// Stage 8 adds the remaining AI columns to this table.
+model AiSettings {
+  id                     String   @id @default(uuid())
+  companyId              String   @unique @map("company_id")
+  // Percent, e.g. 7.00 — fuel deviation above this raises an alert (default 7%).
+  fuelDeviationThreshold Decimal  @default(7) @map("fuel_deviation_threshold") @db.Decimal(5, 2)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("ai_settings")
 }
 
 // ---------- Driver login codes (pre-auth, not tenant-scoped) ----------

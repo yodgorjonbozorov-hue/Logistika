@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ExpenseCategory, PaymentStatus, UserRole } from 'shared';
+import { api } from '../../shared/api/client';
 import { useCrudMutations, useList } from '../../shared/api/crud';
-import type { Expense, Income } from '../../shared/api/entities';
+import type { Expense, Income, Receivable } from '../../shared/api/entities';
 import { useAuth } from '../../shared/auth/AuthContext';
 import {
   Badge,
@@ -23,7 +25,7 @@ import {
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
-type Tab = 'expenses' | 'incomes';
+type Tab = 'expenses' | 'incomes' | 'receivables';
 
 export function FinancePage() {
   const { t } = useTranslation();
@@ -33,7 +35,7 @@ export function FinancePage() {
     <div>
       <PageHeader title={t('finance.title')} />
       <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
-        {(['expenses', 'incomes'] as Tab[]).map((key) => (
+        {(['expenses', 'incomes', 'receivables'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -47,7 +49,62 @@ export function FinancePage() {
           </button>
         ))}
       </div>
-      {tab === 'expenses' ? <ExpensesTab /> : <IncomesTab />}
+      {tab === 'expenses' ? (
+        <ExpensesTab />
+      ) : tab === 'incomes' ? (
+        <IncomesTab />
+      ) : (
+        <ReceivablesTab />
+      )}
+    </div>
+  );
+}
+
+/** W-7 qarzdorlar: who owes how much (unpaid incomes grouped by client). */
+function ReceivablesTab() {
+  const { t } = useTranslation();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['receivables'],
+    queryFn: () => api<Receivable[]>('/clients/receivables'),
+  });
+  const rows = data?.data ?? [];
+
+  return (
+    <div>
+      <ErrorMessage error={error} />
+      {isLoading ? (
+        <Spinner />
+      ) : rows.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <Table
+          headers={[
+            t('finance.client'),
+            t('clients.phone'),
+            t('clients.paymentTerms'),
+            t('finance.invoices'),
+            t('finance.outstanding'),
+            t('finance.overdueAmount'),
+          ]}
+        >
+          {rows.map((row) => (
+            <Row key={row.clientId}>
+              <Cell className="font-medium">{row.name}</Cell>
+              <Cell>{row.phone ?? '—'}</Cell>
+              <Cell className="tabular-nums">{row.paymentTermsDays ?? '—'}</Cell>
+              <Cell className="tabular-nums">{row.invoiceCount}</Cell>
+              <Cell className="tabular-nums font-semibold">{formatTiyin(row.outstanding)}</Cell>
+              <Cell className="tabular-nums">
+                {BigInt(row.overdue) > 0n ? (
+                  <span className="font-semibold text-danger">{formatTiyin(row.overdue)}</span>
+                ) : (
+                  '—'
+                )}
+              </Cell>
+            </Row>
+          ))}
+        </Table>
+      )}
     </div>
   );
 }

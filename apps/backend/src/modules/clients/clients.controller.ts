@@ -32,6 +32,12 @@ export class ClientsController {
     return this.clientsService.create(user, dto);
   }
 
+  /** W-7 qarzdorlar ro'yxati — declared before ':id' so the literal path wins. */
+  @Get('receivables')
+  receivables(@CurrentUser() user: CurrentUserPayload) {
+    return this.clientsService.receivables(user);
+  }
+
   @Get(':id')
   getById(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.clientsService.getById(user, id);
