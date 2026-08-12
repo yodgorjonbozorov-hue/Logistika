@@ -34,3 +34,4 @@ mobile/**/.dart_tool/
 mobile/**/.flutter-plugins*
 mobile/**/ios/Pods/
 mobile/**/*.iml
+dist-site
