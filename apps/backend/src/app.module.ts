@@ -23,6 +23,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { FuelModule } from './modules/fuel/fuel.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
@@ -51,6 +52,7 @@ import { PrismaModule } from './prisma/prisma.module';
     MaintenanceModule,
     DocumentsModule,
     AlertsModule,
+    ReportsModule,
     FilesModule,
     PublicLinkModule,
   ],
