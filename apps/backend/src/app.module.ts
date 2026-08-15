@@ -17,6 +17,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
@@ -41,6 +42,7 @@ import { PrismaModule } from './prisma/prisma.module';
     EventsModule,
     TrackingModule,
     ExpensesModule,
+    FinanceModule,
     FilesModule,
     PublicLinkModule,
   ],

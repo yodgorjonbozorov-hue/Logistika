@@ -144,6 +144,7 @@ model Company {
   auditLogs     AuditLog[]
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
+  aiSettings    AiSettings?
 
   @@map("companies")
 }
@@ -207,12 +208,12 @@ model Driver {
   isActive      Boolean     @default(true) @map("is_active")
   createdAt     DateTime    @default(now()) @map("created_at")
 
-  company      Company       @relation(fields: [companyId], references: [id])
-  user         User?         @relation(fields: [userId], references: [id])
-  trips        Trip[]
-  tripEvents   TripEvent[]
-  expenses     Expense[]
-  fuelLogs     FuelLog[]
+  company    Company     @relation(fields: [companyId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+  trips      Trip[]
+  tripEvents TripEvent[]
+  expenses   Expense[]
+  fuelLogs   FuelLog[]
 
   @@index([companyId])
   @@map("drivers")
@@ -231,6 +232,9 @@ model Vehicle {
   fuelNormPer100km     Decimal?    @map("fuel_norm_per_100km") @db.Decimal(6, 2)
   tankCapacity         Decimal?    @map("tank_capacity") @db.Decimal(7, 2)
   currentOdometer      Int?        @map("current_odometer")
+  // Depreciation inputs (TZ §6): purchase price in tiyin ÷ planned lifetime km.
+  purchasePrice        BigInt?     @map("purchase_price")
+  plannedTotalKm       Int?        @map("planned_total_km")
   insuranceExpiry      DateTime?   @map("insurance_expiry")
   techInspectionExpiry DateTime?   @map("tech_inspection_expiry")
   nextServiceOdometer  Int?        @map("next_service_odometer")
@@ -251,16 +255,16 @@ model Vehicle {
 }
 
 model Client {
-  id               String  @id @default(uuid())
-  companyId        String  @map("company_id")
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
   name             String
   inn              String?
-  contactPerson    String? @map("contact_person")
+  contactPerson    String?  @map("contact_person")
   phone            String?
   email            String?
   address          String?
-  paymentTermsDays Int?    @map("payment_terms_days")
-  balance          BigInt  @default(0)
+  paymentTermsDays Int?     @map("payment_terms_days")
+  balance          BigInt   @default(0)
   createdAt        DateTime @default(now()) @map("created_at")
 
   company Company  @relation(fields: [companyId], references: [id])
@@ -305,12 +309,12 @@ model Trip {
   createdById       String?    @map("created_by")
   createdAt         DateTime   @default(now()) @map("created_at")
 
-  company   Company    @relation(fields: [companyId], references: [id])
-  client    Client?    @relation(fields: [clientId], references: [id])
-  vehicle   Vehicle?   @relation("TripVehicle", fields: [vehicleId], references: [id])
-  trailer   Vehicle?   @relation("TripTrailer", fields: [trailerId], references: [id])
-  driver    Driver?    @relation(fields: [driverId], references: [id])
-  createdBy User?      @relation("TripCreatedBy", fields: [createdById], references: [id])
+  company       Company        @relation(fields: [companyId], references: [id])
+  client        Client?        @relation(fields: [clientId], references: [id])
+  vehicle       Vehicle?       @relation("TripVehicle", fields: [vehicleId], references: [id])
+  trailer       Vehicle?       @relation("TripTrailer", fields: [trailerId], references: [id])
+  driver        Driver?        @relation(fields: [driverId], references: [id])
+  createdBy     User?          @relation("TripCreatedBy", fields: [createdById], references: [id])
   events        TripEvent[]
   expenses      Expense[]
   fuelLogs      FuelLog[]
@@ -542,6 +546,40 @@ model Notification {
 
   @@index([companyId, userId, isRead])
   @@map("notifications")
+}
+
+// ---------- Per-company settings (TZ §8.10 ai_settings) ----------
+
+// Created in stage 7 because the alert thresholds below drive the deterministic
+// fuel/idle/route checks; the AI toggles and cost limits are wired in stage 8.
+// Thresholds are integers on purpose — comparisons stay exact (no floats).
+model AiSettings {
+  id        String @id @default(uuid())
+  companyId String @unique @map("company_id")
+
+  voiceEnabled   Boolean @default(true) @map("voice_enabled")
+  ocrEnabled     Boolean @default(true) @map("ocr_enabled")
+  chatEnabled    Boolean @default(true) @map("chat_enabled")
+  anomalyEnabled Boolean @default(true) @map("anomaly_enabled")
+
+  /// Fuel overrun alert threshold in basis points (700 = 7%, TZ default).
+  fuelDeviationThresholdBp Int @default(700) @map("fuel_deviation_threshold_bp")
+  idleAlertHours           Int @default(2) @map("idle_alert_hours")
+  routeDeviationKm         Int @default(20) @map("route_deviation_km")
+
+  /// Daily digest send time as local "HH:MM" (TZ §8.9 — default 20:00).
+  digestTime        String @default("20:00") @map("digest_time")
+  digestChannels    Json?  @map("digest_channels")
+  /// AI spend caps in USD cents (integer — no float money).
+  monthlyAiLimitUsd BigInt @default(5000) @map("monthly_ai_limit_usd")
+  currentMonthUsage BigInt @default(0) @map("current_month_usage")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("ai_settings")
 }
 
 // ---------- Files (MinIO object metadata) ----------
