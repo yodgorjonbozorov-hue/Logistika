@@ -8,7 +8,11 @@
     "drivers": "Ҳайдовчилар",
     "clients": "Мижозлар",
     "finance": "Молия",
-    "map": "Харита"
+    "map": "Харита",
+    "dashboard": "Бошқарув панели",
+    "fuel": "Ёқилғи",
+    "reports": "Ҳисоботлар",
+    "alerts": "Огоҳлантиришлар"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -176,7 +180,24 @@
       "INSURANCE": "Суғурта",
       "TAX": "Солиқ",
       "OTHER": "Бошқа"
-    }
+    },
+    "summary": "Умумий",
+    "receivables": "Қарздорлар",
+    "revenue": "Кирим",
+    "cost": "Чиқим",
+    "profit": "Соф фойда",
+    "margin": "Рентабеллик",
+    "costPerKm": "1 км таннархи",
+    "tripCount": "Рейслар",
+    "expenseStructure": "Харажат структураси",
+    "driverShare": "Ҳайдовчи улуши",
+    "depreciation": "Амортизация",
+    "client": "Мижоз",
+    "pending": "Кутилмоқда",
+    "overdue": "Муддати ўтган",
+    "total": "Жами",
+    "oldest": "Энг эски",
+    "totalDebt": "Умумий қарз"
   },
   "map": {
     "title": "Жонли харита",
@@ -213,5 +234,158 @@
     "EXPENSE": "Йўл харажати",
     "DELIVERED": "Юк топширилди",
     "FINISH": "Рейс тугади"
+  },
+  "period": {
+    "from": "Дан",
+    "to": "Гача"
+  },
+  "dashboard": {
+    "title": "Бошқарув панели",
+    "onRoad": "Йўлдаги машиналар",
+    "tripsToday": "Бугунги рейслар",
+    "monthRevenue": "Ойлик кирим",
+    "monthCost": "Ойлик чиқим",
+    "monthProfit": "Соф фойда",
+    "alerts": "Огоҳлантиришлар",
+    "openAlerts": "Рўйхатни очиш",
+    "profitChart": "Фойда (охирги 12 ой)",
+    "recentEvents": "Охирги ҳодисалар"
+  },
+  "fuel": {
+    "title": "Ёқилғи назорати",
+    "tabs": {
+      "control": "Назорат",
+      "stations": "АЗС таҳлили",
+      "journal": "Журнал"
+    },
+    "vehicle": "Машина",
+    "distance": "Пробег, км",
+    "norm": "Норма бўйича, л",
+    "actual": "Реал қуйилган, л",
+    "deviation": "Фарқ",
+    "loss": "Зарар, сўм",
+    "refuels": "Қуйишлар",
+    "per100": "л/100км",
+    "overThreshold": "Чегарадан ошди",
+    "monthlyLoss": "Давр бўйича йўқотилган ёқилғи",
+    "station": "АЗС",
+    "litres": "Литр",
+    "amount": "Сумма, сўм",
+    "avgPrice": "Ўртача нарх, сўм/л",
+    "attributedOverrun": "Ортиқча сарф, л",
+    "newEntry": "Янги қуйиш",
+    "date": "Сана",
+    "pricePerLitre": "1 литр нархи",
+    "odometer": "Спидометр"
+  },
+  "reports": {
+    "title": "Ҳисоботлар",
+    "exportExcel": "Excel",
+    "exportCsv": "CSV",
+    "keys": {
+      "trips": "Рейслар",
+      "vehicles": "Машиналар",
+      "routes": "Йўналишлар",
+      "drivers": "Ҳайдовчилар",
+      "clients": "Мижозлар",
+      "expenses": "Харажатлар"
+    },
+    "column": {
+      "tripNumber": "Рейс",
+      "date": "Сана",
+      "client": "Мижоз",
+      "vehicle": "Машина",
+      "driver": "Ҳайдовчи",
+      "route": "Йўналиш",
+      "distance": "Пробег, км",
+      "revenue": "Кирим, сўм",
+      "cost": "Харажат, сўм",
+      "profit": "Фойда, сўм",
+      "margin": "Рентабеллик",
+      "trips": "Рейслар",
+      "costPerKm": "1 км таннархи",
+      "roi": "ROI",
+      "profitPerKm": "1 км фойда",
+      "driverShare": "Ҳайдовчи улуши",
+      "debt": "Қарз",
+      "category": "Категория",
+      "amount": "Сумма, сўм",
+      "share": "Улуш"
+    },
+    "trips": {
+      "title": "Рейслар бўйича фойда"
+    },
+    "vehicles": {
+      "title": "Машиналар рентабеллиги"
+    },
+    "routes": {
+      "title": "Йўналишлар рентабеллиги"
+    },
+    "drivers": {
+      "title": "Ҳайдовчилар самарадорлиги"
+    },
+    "clients": {
+      "title": "Мижозлар айланмаси"
+    },
+    "expenses": {
+      "title": "Харажат структураси"
+    },
+    "exportPdf": "PDF"
+  },
+  "alerts": {
+    "title": "Огоҳлантиришлар",
+    "type": "Тури",
+    "message": "Хабар",
+    "date": "Вақти",
+    "markRead": "Ўқилди",
+    "markAllRead": "Ҳаммасини ўқилди деб белгилаш",
+    "showAll": "Ҳаммаси",
+    "showUnread": "Ўқилмаганлар",
+    "expiringDocuments": "Муддати тугаётган ҳужжатлар",
+    "serviceDueList": "ТО яқинлашди",
+    "expired": "Муддати тугаган",
+    "daysLeft": "{{count}} кун қолди",
+    "serviceOverdueBy": "{{km}} км кечикди",
+    "serviceInKm": "{{km}} км қолди",
+    "types": {
+      "DOCUMENT_EXPIRING": "Ҳужжат",
+      "MAINTENANCE_DUE": "ТО",
+      "FUEL_OVERRUN": "Ёқилғи",
+      "VEHICLE_IDLE": "Ҳаракатсиз",
+      "ROUTE_DEVIATION": "Четлаш",
+      "PAYMENT_OVERDUE": "Тўлов"
+    },
+    "documentExpiring": {
+      "title": "Ҳужжат муддати тугаяпти",
+      "message": "{{owner}} — {{docType}}, {{daysLeft}} кун қолди ({{date}})"
+    },
+    "documentExpired": {
+      "title": "Ҳужжат муддати тугади",
+      "message": "{{owner}} — {{docType}}, муддати {{date}} да тугаган"
+    },
+    "fuelOverrun": {
+      "title": "Ёқилғи нормадан ошди",
+      "message": "{{plate}} — {{days}} кунда {{litres}} л ортиқча ({{percent}}%)"
+    },
+    "serviceDue": {
+      "title": "ТО вақти яқинлашди",
+      "message": "{{plate}} — {{km}} км қолди ({{odometer}} км)"
+    },
+    "serviceOverdue": {
+      "title": "ТО муддати ўтди",
+      "message": "{{plate}} — {{km}} км кечикди ({{odometer}} км)"
+    }
+  },
+  "documents": {
+    "types": {
+      "INSURANCE": "Суғурта",
+      "TECH_INSPECTION": "Техкўрик",
+      "DRIVER_LICENSE": "Гувоҳнома",
+      "PERMIT": "Рухсатнома",
+      "TTN": "ТТН",
+      "CMR": "CMR",
+      "INVOICE": "Инвойс",
+      "LICENSE": "Лицензия"
+    }
   }
 }

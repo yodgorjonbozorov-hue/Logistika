@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpenseCategory, PaymentStatus, UserRole } from 'shared';
+import { useFinanceSummary, useReceivables, type Period } from '../../shared/api/analytics';
 import { useCrudMutations, useList } from '../../shared/api/crud';
 import type { Expense, Income } from '../../shared/api/entities';
 import { useAuth } from '../../shared/auth/AuthContext';
 import {
   Badge,
   Button,
+  Card,
   Cell,
   EmptyState,
   ErrorMessage,
@@ -20,20 +22,22 @@ import {
   Spinner,
   Table,
 } from '../../shared/ui';
+import { PeriodPicker, ShareBars, StatCard } from '../../shared/ui/stats';
 import { formatDate } from '../../shared/utils/date';
+import { currentMonthPeriod, formatBp } from '../../shared/utils/format';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
-type Tab = 'expenses' | 'incomes';
+type Tab = 'summary' | 'expenses' | 'incomes' | 'receivables';
 
 export function FinancePage() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<Tab>('expenses');
+  const [tab, setTab] = useState<Tab>('summary');
 
   return (
     <div>
       <PageHeader title={t('finance.title')} />
       <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
-        {(['expenses', 'incomes'] as Tab[]).map((key) => (
+        {(['summary', 'expenses', 'incomes', 'receivables'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -47,7 +51,101 @@ export function FinancePage() {
           </button>
         ))}
       </div>
-      {tab === 'expenses' ? <ExpensesTab /> : <IncomesTab />}
+      {tab === 'summary' && <SummaryTab />}
+      {tab === 'expenses' && <ExpensesTab />}
+      {tab === 'incomes' && <IncomesTab />}
+      {tab === 'receivables' && <ReceivablesTab />}
+    </div>
+  );
+}
+
+/** W-7 overview: what came in, what went out and where the money went. */
+function SummaryTab() {
+  const { t } = useTranslation();
+  const [period, setPeriod] = useState<Period>(() => currentMonthPeriod());
+  const { data, isLoading, error } = useFinanceSummary(period);
+
+  if (error) return <ErrorMessage error={error} />;
+  if (isLoading || !data) return <Spinner />;
+
+  const categories = Object.entries(data.expensesByCategory) as Array<[string, string]>;
+  const total = categories.reduce((sum, [, amount]) => sum + BigInt(amount), 0n);
+
+  return (
+    <div className="space-y-4">
+      <PeriodPicker period={period} onChange={setPeriod} />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard label={t('finance.revenue')} value={formatTiyin(data.revenue)} tone="success" />
+        <StatCard label={t('finance.cost')} value={formatTiyin(data.cost)} tone="danger" />
+        <StatCard
+          label={t('finance.profit')}
+          value={formatTiyin(data.profit)}
+          tone={BigInt(data.profit) >= 0n ? 'success' : 'danger'}
+          hint={`${t('finance.margin')} ${formatBp(data.marginBp)}`}
+        />
+        <StatCard
+          label={t('finance.costPerKm')}
+          value={formatTiyin(data.costPerKm)}
+          hint={data.distanceKm ? `${data.distanceKm} km` : undefined}
+        />
+        <StatCard label={t('finance.tripCount')} value={data.tripCount} />
+      </div>
+
+      <Card>
+        <div className="mb-3 text-sm font-semibold">{t('finance.expenseStructure')}</div>
+        {categories.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <ShareBars
+            rows={categories
+              .map(([category, amount]) => ({
+                label: t(`finance.categories.${category}`),
+                amount,
+                shareBp: total === 0n ? null : Number((BigInt(amount) * 10_000n) / total),
+              }))
+              .sort((a, b) => (BigInt(b.amount) > BigInt(a.amount) ? 1 : -1))}
+          />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/** W-7 «Qarzdorlar» — who owes how much. */
+function ReceivablesTab() {
+  const { t } = useTranslation();
+  const { data, isLoading, error } = useReceivables();
+
+  if (error) return <ErrorMessage error={error} />;
+  if (isLoading) return <Spinner />;
+  const rows = data ?? [];
+  if (rows.length === 0) return <EmptyState />;
+
+  const total = rows.reduce((sum, row) => sum + BigInt(row.total), 0n);
+
+  return (
+    <div className="space-y-3">
+      <StatCard label={t('finance.totalDebt')} value={formatTiyin(total)} tone="danger" />
+      <Table
+        headers={[
+          t('finance.client'),
+          t('finance.pending'),
+          t('finance.overdue'),
+          t('finance.total'),
+          t('finance.oldest'),
+        ]}
+      >
+        {rows.map((row) => (
+          <Row key={row.clientId ?? '—'}>
+            <Cell>{row.clientName ?? '—'}</Cell>
+            <Cell className="tabular-nums">{formatTiyin(row.pending)}</Cell>
+            <Cell className="tabular-nums text-danger">{formatTiyin(row.overdue)}</Cell>
+            <Cell className="tabular-nums font-semibold">{formatTiyin(row.total)}</Cell>
+            <Cell>{formatDate(row.oldestDate)}</Cell>
+          </Row>
+        ))}
+      </Table>
     </div>
   );
 }

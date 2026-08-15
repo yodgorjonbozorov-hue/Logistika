@@ -8,7 +8,11 @@
     "drivers": "Haydovchilar",
     "clients": "Mijozlar",
     "finance": "Moliya",
-    "map": "Xarita"
+    "map": "Xarita",
+    "dashboard": "Boshqaruv paneli",
+    "fuel": "Yoqilg'i",
+    "reports": "Hisobotlar",
+    "alerts": "Ogohlantirishlar"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -176,7 +180,24 @@
       "INSURANCE": "Sug'urta",
       "TAX": "Soliq",
       "OTHER": "Boshqa"
-    }
+    },
+    "summary": "Umumiy",
+    "receivables": "Qarzdorlar",
+    "revenue": "Kirim",
+    "cost": "Chiqim",
+    "profit": "Sof foyda",
+    "margin": "Rentabellik",
+    "costPerKm": "1 km tannarxi",
+    "tripCount": "Reyslar",
+    "expenseStructure": "Xarajat strukturasi",
+    "driverShare": "Haydovchi ulushi",
+    "depreciation": "Amortizatsiya",
+    "client": "Mijoz",
+    "pending": "Kutilmoqda",
+    "overdue": "Muddati o'tgan",
+    "total": "Jami",
+    "oldest": "Eng eski",
+    "totalDebt": "Umumiy qarz"
   },
   "map": {
     "title": "Jonli xarita",
@@ -213,5 +234,158 @@
     "EXPENSE": "Yo'l xarajati",
     "DELIVERED": "Yuk topshirildi",
     "FINISH": "Reys tugadi"
+  },
+  "period": {
+    "from": "Dan",
+    "to": "Gacha"
+  },
+  "dashboard": {
+    "title": "Boshqaruv paneli",
+    "onRoad": "Yo'ldagi mashinalar",
+    "tripsToday": "Bugungi reyslar",
+    "monthRevenue": "Oylik kirim",
+    "monthCost": "Oylik chiqim",
+    "monthProfit": "Sof foyda",
+    "alerts": "Ogohlantirishlar",
+    "openAlerts": "Ro'yxatni ochish",
+    "profitChart": "Foyda (oxirgi 12 oy)",
+    "recentEvents": "Oxirgi hodisalar"
+  },
+  "fuel": {
+    "title": "Yoqilg'i nazorati",
+    "tabs": {
+      "control": "Nazorat",
+      "stations": "AZS tahlili",
+      "journal": "Jurnal"
+    },
+    "vehicle": "Mashina",
+    "distance": "Probeg, km",
+    "norm": "Norma bo'yicha, l",
+    "actual": "Real quyilgan, l",
+    "deviation": "Farq",
+    "loss": "Zarar, so'm",
+    "refuels": "Quyishlar",
+    "per100": "l/100km",
+    "overThreshold": "Chegaradan oshdi",
+    "monthlyLoss": "Davr bo'yicha yo'qotilgan yoqilg'i",
+    "station": "AZS",
+    "litres": "Litr",
+    "amount": "Summa, so'm",
+    "avgPrice": "O'rtacha narx, so'm/l",
+    "attributedOverrun": "Ortiqcha sarf, l",
+    "newEntry": "Yangi quyish",
+    "date": "Sana",
+    "pricePerLitre": "1 litr narxi",
+    "odometer": "Spidometr"
+  },
+  "reports": {
+    "title": "Hisobotlar",
+    "exportExcel": "Excel",
+    "exportCsv": "CSV",
+    "keys": {
+      "trips": "Reyslar",
+      "vehicles": "Mashinalar",
+      "routes": "Yo'nalishlar",
+      "drivers": "Haydovchilar",
+      "clients": "Mijozlar",
+      "expenses": "Xarajatlar"
+    },
+    "column": {
+      "tripNumber": "Reys",
+      "date": "Sana",
+      "client": "Mijoz",
+      "vehicle": "Mashina",
+      "driver": "Haydovchi",
+      "route": "Yo'nalish",
+      "distance": "Probeg, km",
+      "revenue": "Kirim, so'm",
+      "cost": "Xarajat, so'm",
+      "profit": "Foyda, so'm",
+      "margin": "Rentabellik",
+      "trips": "Reyslar",
+      "costPerKm": "1 km tannarxi",
+      "roi": "ROI",
+      "profitPerKm": "1 km foyda",
+      "driverShare": "Haydovchi ulushi",
+      "debt": "Qarz",
+      "category": "Kategoriya",
+      "amount": "Summa, so'm",
+      "share": "Ulush"
+    },
+    "trips": {
+      "title": "Reyslar bo'yicha foyda"
+    },
+    "vehicles": {
+      "title": "Mashinalar rentabelligi"
+    },
+    "routes": {
+      "title": "Yo'nalishlar rentabelligi"
+    },
+    "drivers": {
+      "title": "Haydovchilar samaradorligi"
+    },
+    "clients": {
+      "title": "Mijozlar aylanmasi"
+    },
+    "expenses": {
+      "title": "Xarajat strukturasi"
+    },
+    "exportPdf": "PDF"
+  },
+  "alerts": {
+    "title": "Ogohlantirishlar",
+    "type": "Turi",
+    "message": "Xabar",
+    "date": "Vaqti",
+    "markRead": "O'qildi",
+    "markAllRead": "Hammasini o'qildi deb belgilash",
+    "showAll": "Hammasi",
+    "showUnread": "O'qilmaganlar",
+    "expiringDocuments": "Muddati tugayotgan hujjatlar",
+    "serviceDueList": "TO yaqinlashdi",
+    "expired": "Muddati tugagan",
+    "daysLeft": "{{count}} kun qoldi",
+    "serviceOverdueBy": "{{km}} km kechikdi",
+    "serviceInKm": "{{km}} km qoldi",
+    "types": {
+      "DOCUMENT_EXPIRING": "Hujjat",
+      "MAINTENANCE_DUE": "TO",
+      "FUEL_OVERRUN": "Yoqilg'i",
+      "VEHICLE_IDLE": "Harakatsiz",
+      "ROUTE_DEVIATION": "Chetlash",
+      "PAYMENT_OVERDUE": "To'lov"
+    },
+    "documentExpiring": {
+      "title": "Hujjat muddati tugayapti",
+      "message": "{{owner}} — {{docType}}, {{daysLeft}} kun qoldi ({{date}})"
+    },
+    "documentExpired": {
+      "title": "Hujjat muddati tugadi",
+      "message": "{{owner}} — {{docType}}, muddati {{date}} da tugagan"
+    },
+    "fuelOverrun": {
+      "title": "Yoqilg'i normadan oshdi",
+      "message": "{{plate}} — {{days}} kunda {{litres}} l ortiqcha ({{percent}}%)"
+    },
+    "serviceDue": {
+      "title": "TO vaqti yaqinlashdi",
+      "message": "{{plate}} — {{km}} km qoldi ({{odometer}} km)"
+    },
+    "serviceOverdue": {
+      "title": "TO muddati o'tdi",
+      "message": "{{plate}} — {{km}} km kechikdi ({{odometer}} km)"
+    }
+  },
+  "documents": {
+    "types": {
+      "INSURANCE": "Sug'urta",
+      "TECH_INSPECTION": "Texko'rik",
+      "DRIVER_LICENSE": "Guvohnoma",
+      "PERMIT": "Ruxsatnoma",
+      "TTN": "TTN",
+      "CMR": "CMR",
+      "INVOICE": "Invoys",
+      "LICENSE": "Litsenziya"
+    }
   }
 }

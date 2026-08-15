@@ -8,7 +8,11 @@
     "drivers": "Водители",
     "clients": "Клиенты",
     "finance": "Финансы",
-    "map": "Карта"
+    "map": "Карта",
+    "dashboard": "Панель",
+    "fuel": "Топливо",
+    "reports": "Отчёты",
+    "alerts": "Оповещения"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -176,7 +180,24 @@
       "INSURANCE": "Страховка",
       "TAX": "Налог",
       "OTHER": "Прочее"
-    }
+    },
+    "summary": "Сводка",
+    "receivables": "Должники",
+    "revenue": "Доход",
+    "cost": "Расход",
+    "profit": "Чистая прибыль",
+    "margin": "Рентабельность",
+    "costPerKm": "Себестоимость 1 км",
+    "tripCount": "Рейсы",
+    "expenseStructure": "Структура расходов",
+    "driverShare": "Доля водителя",
+    "depreciation": "Амортизация",
+    "client": "Клиент",
+    "pending": "Ожидает",
+    "overdue": "Просрочено",
+    "total": "Итого",
+    "oldest": "Самый старый",
+    "totalDebt": "Общий долг"
   },
   "map": {
     "title": "Живая карта",
@@ -213,5 +234,158 @@
     "EXPENSE": "Дорожный расход",
     "DELIVERED": "Груз сдан",
     "FINISH": "Рейс завершён"
+  },
+  "period": {
+    "from": "С",
+    "to": "По"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "onRoad": "Машины в рейсе",
+    "tripsToday": "Рейсы сегодня",
+    "monthRevenue": "Доход за месяц",
+    "monthCost": "Расход за месяц",
+    "monthProfit": "Чистая прибыль",
+    "alerts": "Оповещения",
+    "openAlerts": "Открыть список",
+    "profitChart": "Прибыль (последние 12 месяцев)",
+    "recentEvents": "Последние события"
+  },
+  "fuel": {
+    "title": "Контроль топлива",
+    "tabs": {
+      "control": "Контроль",
+      "stations": "Анализ АЗС",
+      "journal": "Журнал"
+    },
+    "vehicle": "Машина",
+    "distance": "Пробег, км",
+    "norm": "По норме, л",
+    "actual": "Залито, л",
+    "deviation": "Разница",
+    "loss": "Убыток, сум",
+    "refuels": "Заправки",
+    "per100": "л/100км",
+    "overThreshold": "Превышен порог",
+    "monthlyLoss": "Потери топлива за период",
+    "station": "АЗС",
+    "litres": "Литры",
+    "amount": "Сумма, сум",
+    "avgPrice": "Средняя цена, сум/л",
+    "attributedOverrun": "Перерасход, л",
+    "newEntry": "Новая заправка",
+    "date": "Дата",
+    "pricePerLitre": "Цена за литр",
+    "odometer": "Спидометр"
+  },
+  "reports": {
+    "title": "Отчёты",
+    "exportExcel": "Excel",
+    "exportCsv": "CSV",
+    "keys": {
+      "trips": "Рейсы",
+      "vehicles": "Машины",
+      "routes": "Направления",
+      "drivers": "Водители",
+      "clients": "Клиенты",
+      "expenses": "Расходы"
+    },
+    "column": {
+      "tripNumber": "Рейс",
+      "date": "Дата",
+      "client": "Клиент",
+      "vehicle": "Машина",
+      "driver": "Водитель",
+      "route": "Направление",
+      "distance": "Пробег, км",
+      "revenue": "Доход, сум",
+      "cost": "Расход, сум",
+      "profit": "Прибыль, сум",
+      "margin": "Рентабельность",
+      "trips": "Рейсы",
+      "costPerKm": "Себестоимость 1 км",
+      "roi": "ROI",
+      "profitPerKm": "Прибыль на 1 км",
+      "driverShare": "Доля водителя",
+      "debt": "Долг",
+      "category": "Категория",
+      "amount": "Сумма, сум",
+      "share": "Доля"
+    },
+    "trips": {
+      "title": "Прибыль по рейсам"
+    },
+    "vehicles": {
+      "title": "Рентабельность машин"
+    },
+    "routes": {
+      "title": "Рентабельность направлений"
+    },
+    "drivers": {
+      "title": "Эффективность водителей"
+    },
+    "clients": {
+      "title": "Оборот по клиентам"
+    },
+    "expenses": {
+      "title": "Структура расходов"
+    },
+    "exportPdf": "PDF"
+  },
+  "alerts": {
+    "title": "Оповещения",
+    "type": "Тип",
+    "message": "Сообщение",
+    "date": "Время",
+    "markRead": "Прочитано",
+    "markAllRead": "Отметить всё прочитанным",
+    "showAll": "Все",
+    "showUnread": "Непрочитанные",
+    "expiringDocuments": "Документы с истекающим сроком",
+    "serviceDueList": "Приближается ТО",
+    "expired": "Срок истёк",
+    "daysLeft": "осталось {{count}} дн.",
+    "serviceOverdueBy": "просрочено на {{km}} км",
+    "serviceInKm": "через {{km}} км",
+    "types": {
+      "DOCUMENT_EXPIRING": "Документ",
+      "MAINTENANCE_DUE": "ТО",
+      "FUEL_OVERRUN": "Топливо",
+      "VEHICLE_IDLE": "Простой",
+      "ROUTE_DEVIATION": "Отклонение",
+      "PAYMENT_OVERDUE": "Оплата"
+    },
+    "documentExpiring": {
+      "title": "Истекает срок документа",
+      "message": "{{owner}} — {{docType}}, осталось {{daysLeft}} дн. ({{date}})"
+    },
+    "documentExpired": {
+      "title": "Срок документа истёк",
+      "message": "{{owner}} — {{docType}}, срок истёк {{date}}"
+    },
+    "fuelOverrun": {
+      "title": "Перерасход топлива",
+      "message": "{{plate}} — за {{days}} дн. перерасход {{litres}} л ({{percent}}%)"
+    },
+    "serviceDue": {
+      "title": "Приближается ТО",
+      "message": "{{plate}} — осталось {{km}} км ({{odometer}} км)"
+    },
+    "serviceOverdue": {
+      "title": "ТО просрочено",
+      "message": "{{plate}} — просрочено на {{km}} км ({{odometer}} км)"
+    }
+  },
+  "documents": {
+    "types": {
+      "INSURANCE": "Страховка",
+      "TECH_INSPECTION": "Техосмотр",
+      "DRIVER_LICENSE": "Права",
+      "PERMIT": "Разрешение",
+      "TTN": "ТТН",
+      "CMR": "CMR",
+      "INVOICE": "Инвойс",
+      "LICENSE": "Лицензия"
+    }
   }
 }

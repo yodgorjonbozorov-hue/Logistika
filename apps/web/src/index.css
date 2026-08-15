@@ -10,3 +10,45 @@
     @apply bg-gray-100 text-gray-900 dark:bg-navy dark:text-gray-100;
   }
 }
+
+/*
+ * Print / «save as PDF» for W-9 reports. The browser owns the PDF here: it is
+ * the only renderer that already has fonts for uz-latn, uz-cyrl and ru, so the
+ * server exports the data (xlsx/csv) and the page prints the document.
+ * Everything outside the marked area is hidden and colours flatten to paper.
+ */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+  .print-area * {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  th,
+  td {
+    border: 1px solid #999 !important;
+    padding: 4px 6px !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}

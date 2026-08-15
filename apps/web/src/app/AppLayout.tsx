@@ -10,12 +10,16 @@ import { cn } from '../shared/utils/cn';
 const THEME_KEY = 'tc.theme';
 
 const NAV_ITEMS = [
+  { to: '/', key: 'nav.dashboard' },
   { to: '/map', key: 'nav.map' },
   { to: '/trips', key: 'nav.trips' },
   { to: '/vehicles', key: 'nav.vehicles' },
   { to: '/drivers', key: 'nav.drivers' },
   { to: '/clients', key: 'nav.clients' },
   { to: '/finance', key: 'nav.finance' },
+  { to: '/fuel', key: 'nav.fuel' },
+  { to: '/reports', key: 'nav.reports' },
+  { to: '/alerts', key: 'nav.alerts' },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -36,7 +40,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-white/10 dark:bg-navy">
+      <aside className="no-print flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-white/10 dark:bg-navy">
         <div className="border-b border-gray-200 px-4 py-4 dark:border-white/10">
           <span className="text-lg font-extrabold">
             Truck<span className="text-accent">Control</span>
@@ -48,6 +52,7 @@ export function AppLayout() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.to === '/'}
               className={({ isActive }) =>
                 cn(
                   'block rounded-lg px-3 py-2 text-sm font-medium transition',

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
+import { useTripPnl } from '../../shared/api/analytics';
 import { api } from '../../shared/api/client';
 import {
   Badge,
@@ -19,8 +20,10 @@ import {
   Spinner,
   Table,
 } from '../../shared/ui';
+import { StatCard } from '../../shared/ui/stats';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
-import { formatTiyin, sumTiyin } from '../../shared/utils/money';
+import { formatBp } from '../../shared/utils/format';
+import { formatTiyin } from '../../shared/utils/money';
 import { StatusBadge } from './StatusBadge';
 import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
 
@@ -108,7 +111,7 @@ export function TripDetailPage() {
       </div>
 
       {tab === 'timeline' && <TimelineTab trip={trip} />}
-      {tab === 'finance' && <FinanceTab tripId={trip.id} agreedPrice={trip.agreedPrice} />}
+      {tab === 'finance' && <FinanceTab tripId={trip.id} />}
       {tab === 'documents' && (
         <Card>
           <p className="text-sm text-muted">{t('trips.documentsNote')}</p>
@@ -230,44 +233,37 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
   );
 }
 
-function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: string }) {
+/**
+ * W-4 finance tab. The numbers come from the backend P&L (TZ §6) — including the
+ * driver share and the depreciation the raw expense list cannot know about.
+ */
+function FinanceTab({ tripId }: { tripId: string }) {
   const { t } = useTranslation();
-  const { expenses, incomes } = useTripFinance(tripId);
-  if (expenses.isLoading || incomes.isLoading) return <Spinner />;
+  const { expenses } = useTripFinance(tripId);
+  const { data: pnl, isLoading, error } = useTripPnl(tripId);
 
-  const expenseTotal = sumTiyin((expenses.data ?? []).map((e) => e.amount));
-  const incomeTotal = sumTiyin((incomes.data ?? []).map((i) => i.amount));
-  const planned = BigInt(agreedPrice);
-  const income = incomeTotal > 0n ? incomeTotal : planned;
-  const balance = income - expenseTotal;
+  if (isLoading || expenses.isLoading) return <Spinner />;
+  if (error || !pnl) return <ErrorMessage error={error ?? new Error()} />;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeIncome')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-success">
-            {formatTiyin(income)}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeExpenses')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-danger">
-            {formatTiyin(expenseTotal)}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeBalance')}</div>
-          <div
-            className={
-              balance >= 0n
-                ? 'mt-1 text-lg font-bold tabular-nums text-success'
-                : 'mt-1 text-lg font-bold tabular-nums text-danger'
-            }
-          >
-            {formatTiyin(balance)}
-          </div>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard label={t('trips.financeIncome')} value={formatTiyin(pnl.income)} tone="success" />
+        <StatCard
+          label={t('trips.financeExpenses')}
+          value={formatTiyin(pnl.expensesTotal)}
+          tone="danger"
+        />
+        <StatCard label={t('finance.driverShare')} value={formatTiyin(pnl.driverShare)} />
+        <StatCard label={t('finance.depreciation')} value={formatTiyin(pnl.depreciation)} />
+        <StatCard
+          label={t('trips.financeBalance')}
+          value={formatTiyin(pnl.profit)}
+          tone={BigInt(pnl.profit) >= 0n ? 'success' : 'danger'}
+          hint={`${t('finance.margin')} ${formatBp(pnl.marginBp)}${
+            pnl.profitPerKm ? ` · ${formatTiyin(pnl.profitPerKm)}/km` : ''
+          }`}
+        />
       </div>
       {(expenses.data ?? []).length === 0 ? (
         <EmptyState />

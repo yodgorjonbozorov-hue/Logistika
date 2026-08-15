@@ -91,19 +91,21 @@
 - [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
       autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
-## 7-bosqich — Moliya yadrosi
+## 7-bosqich — Moliya yadrosi ✅
 
-- [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
-      (faqat deterministik kod, BigInt)
-- [ ] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
-      chegara oshsa signal (default 7%, `ai_settings.fuel_deviation_threshold`)
-- [ ] `maintenance`: TO tarixi, keyingi TO rejasi
-- [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
-- [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
-- [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
-      xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
-- [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
+- [x] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
+      (faqat deterministik kod, BigInt; nisbatlar bazis punktda)
+- [x] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
+      chegara oshsa signal (default 7%, `ai_settings.fuel_deviation_threshold_bp`)
+- [x] `maintenance`: TO tarixi, keyingi TO rejasi (≤1000 km qolganda «due»)
+- [x] `documents`: muddat eslatmalari 15/7/1 kun — kunlik cron (`@nestjs/schedule`;
+      BullMQ AI navbati uchun qoldirildi), mashina/haydovchi kartochkasidagi muddatlar ham
+- [x] `alerts`: ogohlantirishlar markazi (W-10), matn bazada i18n kalit + parametr sifatida
+- [x] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
+      xarajat strukturasi), eksport — server `xlsx`/`csv`, PDF brauzer print oynasi orqali
+- [x] Web: W-1 dashboard, W-7 moliya (umumiy + qarzdorlar), W-8 yoqilg'i, W-9 hisobotlar,
+      W-10 ogohlantirishlar; W-4 moliya tabi endi real P&L'dan
+- [x] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
 
 ## 8-bosqich — AI funksiyalari (TZ §8)
 
