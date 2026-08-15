@@ -1,6 +1,7 @@
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { periodOf } from './dto/finance.dto';
-import { FinanceService, tripDistanceKmTenths } from './finance.service';
+import { tripDistanceKmTenths } from './finance.calc';
+import { FinanceService } from './finance.service';
 
 const PERIOD = periodOf(new Date('2026-08-01T00:00:00Z'), new Date('2026-08-31T23:59:59Z'));
 

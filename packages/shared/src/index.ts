@@ -123,6 +123,16 @@ export enum MaintenanceType {
   REPAIR = 'REPAIR',
 }
 
+/** Alert kinds shown in the W-10 alert centre (TZ §4.1). */
+export enum AlertType {
+  DOCUMENT_EXPIRING = 'DOCUMENT_EXPIRING',
+  MAINTENANCE_DUE = 'MAINTENANCE_DUE',
+  FUEL_OVERRUN = 'FUEL_OVERRUN',
+  VEHICLE_IDLE = 'VEHICLE_IDLE',
+  ROUTE_DEVIATION = 'ROUTE_DEVIATION',
+  PAYMENT_OVERDUE = 'PAYMENT_OVERDUE',
+}
+
 /** Live map colors — TZ §4.1 W-2: 🟢 moving, 🟡 rest, 🔴 breakdown, ⚪️ idle. */
 export enum LiveStatus {
   MOVING = 'MOVING',

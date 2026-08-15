@@ -6,10 +6,15 @@ import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
 import { CompaniesService } from './companies.service';
 import { AdminCreateCompanyDto, AdminUpdateCompanyDto } from './dto/admin-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { UpdateSettingsDto } from './dto/settings.dto';
+import { SettingsService } from './settings.service';
 
 @Controller('company')
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+  constructor(
+    private readonly companiesService: CompaniesService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   @Get()
   getOwn(@CurrentUser() user: CurrentUserPayload) {
@@ -20,6 +25,18 @@ export class CompaniesController {
   @Roles(UserRole.OWNER)
   updateOwn(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateCompanyDto) {
     return this.companiesService.updateOwn(user.companyId, user.userId, dto);
+  }
+
+  /** W-11: alert thresholds (fuel deviation, idle, route deviation). */
+  @Get('settings')
+  settings(@CurrentUser() user: CurrentUserPayload) {
+    return this.settingsService.thresholds(user.companyId as string);
+  }
+
+  @Patch('settings')
+  @Roles(UserRole.OWNER)
+  updateSettings(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateSettingsDto) {
+    return this.settingsService.update(user.companyId as string, dto);
   }
 }
 

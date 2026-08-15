@@ -9,7 +9,7 @@
  *   ratios     — basis points (number, 1% = 100 bp)
  */
 import type { ExpenseCategory, SalaryType } from '@prisma/client';
-import { applyBp, divRound, ratioBp } from '../../common/money';
+import { applyBp, divRound, ratioBp, toScaledInt } from '../../common/money';
 
 export const KM_SCALE = 1; // Decimal(9,1) km
 export const LITRE_SCALE = 2; // Decimal(8,2) litres
@@ -54,6 +54,26 @@ export interface TripFinance {
   /** Profit per km in tiyin; null when the distance is unknown. */
   profitPerKm: bigint | null;
   distanceKmTenths: bigint | null;
+}
+
+/**
+ * Distance the formulas run on: the measured one first, the odometer delta next,
+ * the plan only as a last resort. Returned in tenths of a km.
+ */
+export function tripDistanceKmTenths(trip: {
+  actualDistanceKm: unknown;
+  startOdometer: number | null;
+  endOdometer: number | null;
+  plannedDistanceKm: unknown;
+}): bigint | null {
+  const actual = toScaledInt(trip.actualDistanceKm as string | null, KM_SCALE);
+  if (actual !== null && actual > 0n) return actual;
+  if (trip.startOdometer !== null && trip.endOdometer !== null) {
+    const driven = trip.endOdometer - trip.startOdometer;
+    if (driven > 0) return BigInt(driven) * 10n;
+  }
+  const planned = toScaledInt(trip.plannedDistanceKm as string | null, KM_SCALE);
+  return planned !== null && planned > 0n ? planned : null;
 }
 
 /**

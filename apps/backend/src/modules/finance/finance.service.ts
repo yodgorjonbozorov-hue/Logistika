@@ -2,12 +2,13 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import type { ExpenseCategory, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { fromScaledInt, toScaledInt } from '../../common/money';
+import { fromScaledInt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   calcTripFinance,
   costPerKm,
   roiBp,
+  tripDistanceKmTenths,
   type ExpenseLine,
   type TripFinance,
 } from './finance.calc';
@@ -67,23 +68,6 @@ export interface VehicleEconomics {
   depreciation: bigint;
   costPerKm: bigint | null;
   roiBp: number | null;
-}
-
-/** Distance actually used by the formulas: measured first, planned only as a fallback. */
-export function tripDistanceKmTenths(trip: {
-  actualDistanceKm: unknown;
-  startOdometer: number | null;
-  endOdometer: number | null;
-  plannedDistanceKm: unknown;
-}): bigint | null {
-  const actual = toScaledInt(trip.actualDistanceKm as string | null, 1);
-  if (actual !== null && actual > 0n) return actual;
-  if (trip.startOdometer !== null && trip.endOdometer !== null) {
-    const driven = trip.endOdometer - trip.startOdometer;
-    if (driven > 0) return BigInt(driven) * 10n;
-  }
-  const planned = toScaledInt(trip.plannedDistanceKm as string | null, 1);
-  return planned !== null && planned > 0n ? planned : null;
 }
 
 function financeOf(trip: TripWithFinance): TripFinance {

@@ -5,9 +5,18 @@ function startOfCurrentMonth(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 }
 
+/** ISO string → Date; missing «from» means «since the start of this month». */
+export const resolveFrom = (from?: string): Date =>
+  from ? new Date(from) : startOfCurrentMonth(new Date());
+
+/** Missing «to» means «up to now». */
+export const resolveTo = (to?: string): Date => (to ? new Date(to) : new Date());
+
 /**
  * Reporting window shared by finance, fuel and report endpoints.
  * Dates travel as ISO strings and are stored/compared in UTC (CLAUDE.md).
+ * Both ends are resolved once per request so every query in one response
+ * sees exactly the same window.
  */
 export class PeriodDto {
   @IsOptional()
@@ -22,12 +31,12 @@ export class PeriodDto {
   private cachedTo?: Date;
 
   get fromDate(): Date {
-    this.cachedFrom ??= this.from ? new Date(this.from) : startOfCurrentMonth(new Date());
+    this.cachedFrom ??= resolveFrom(this.from);
     return this.cachedFrom;
   }
 
   get toDate(): Date {
-    this.cachedTo ??= this.to ? new Date(this.to) : new Date();
+    this.cachedTo ??= resolveTo(this.to);
     return this.cachedTo;
   }
 }
