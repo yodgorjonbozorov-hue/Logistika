@@ -15,8 +15,30 @@ export interface AlertInput {
   params?: Record<string, string | number>;
   relatedType?: string;
   relatedId?: string;
-  /** Alert stays deduplicated while an unread copy of the same subject exists. */
   userId?: string | null;
+  /**
+   * Name of a param that makes an alert a NEW one rather than a repeat: a
+   * document reminder at 7 days left is not the 15-day reminder again. When the
+   * value differs from the unread alert on the same subject, that stale alert is
+   * marked read and the fresh one takes its place.
+   */
+  dedupeParam?: string;
+}
+
+/** Notification.message payload — an i18n key with its params. */
+export interface AlertMessage {
+  key: string;
+  params: Record<string, string | number>;
+}
+
+export function parseAlertMessage(message: string): AlertMessage {
+  try {
+    const parsed = JSON.parse(message) as Partial<AlertMessage>;
+    if (typeof parsed?.key === 'string') return { key: parsed.key, params: parsed.params ?? {} };
+  } catch {
+    // Pre-JSON rows (or anything hand-written) are treated as a bare key.
+  }
+  return { key: message, params: {} };
 }
 
 @Injectable()
@@ -37,9 +59,16 @@ export class AlertsService {
         relatedId: alert.relatedId ?? null,
         isRead: false,
       },
-      select: { id: true },
+      select: { id: true, message: true },
     });
-    if (duplicate) return null;
+    if (duplicate) {
+      if (!alert.dedupeParam) return null;
+      const previous = parseAlertMessage(duplicate.message).params[alert.dedupeParam];
+      const current = alert.params?.[alert.dedupeParam];
+      if (String(previous) === String(current)) return null;
+      // Superseded: the older, less urgent alert stops competing for attention.
+      await db.notification.update({ where: { id: duplicate.id }, data: { isRead: true } });
+    }
 
     return db.notification.create({
       data: {

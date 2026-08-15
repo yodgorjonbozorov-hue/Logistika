@@ -39,7 +39,7 @@ describe('AlertsService.raise', () => {
 
   it('does not raise a second copy while the first is unread', async () => {
     const { service, db } = setup();
-    db.notification!.findFirst!.mockResolvedValue({ id: 'n1' });
+    db.notification!.findFirst!.mockResolvedValue({ id: 'n1', message: '{}' });
 
     expect(await service.raise('company-a', FUEL_ALERT)).toBeNull();
     expect(db.notification!.create).not.toHaveBeenCalled();
@@ -50,9 +50,50 @@ describe('AlertsService.raise', () => {
     });
   });
 
+  it('replaces a stale reminder when the dedupe param moved on', async () => {
+    const { service, db } = setup();
+    db.notification!.findFirst!.mockResolvedValue({
+      id: 'n-old',
+      message: JSON.stringify({ key: 'k', params: { daysLeft: 15 } }),
+    });
+    db.notification!.create!.mockResolvedValue({ id: 'n-new' });
+
+    const created = await service.raise('company-a', {
+      ...FUEL_ALERT,
+      params: { daysLeft: 7 },
+      dedupeParam: 'daysLeft',
+    });
+
+    expect(created).toEqual({ id: 'n-new' });
+    expect(db.notification!.update!.mock.calls[0][0]).toEqual({
+      where: { id: 'n-old' },
+      data: { isRead: true },
+    });
+  });
+
+  it('still deduplicates when the dedupe param has not changed', async () => {
+    const { service, db } = setup();
+    db.notification!.findFirst!.mockResolvedValue({
+      id: 'n-old',
+      message: JSON.stringify({ key: 'k', params: { daysLeft: 7 } }),
+    });
+
+    const created = await service.raise('company-a', {
+      ...FUEL_ALERT,
+      params: { daysLeft: 7 },
+      dedupeParam: 'daysLeft',
+    });
+
+    expect(created).toBeNull();
+    expect(db.notification!.update).not.toHaveBeenCalled();
+  });
+
   it('counts only the alerts it actually created', async () => {
     const { service, db } = setup();
-    db.notification!.findFirst!.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'dup' });
+    db.notification!.findFirst!.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 'dup',
+      message: '{}',
+    });
     db.notification!.create!.mockResolvedValue({ id: 'n1' });
 
     expect(await service.raiseMany('company-a', [FUEL_ALERT, FUEL_ALERT])).toBe(1);
