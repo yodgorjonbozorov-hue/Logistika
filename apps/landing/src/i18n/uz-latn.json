@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "tagline": "Furangiz qayerda emas — qancha foyda keltiryapti"
+  },
+  "nav": {
+    "problem": "Muammo",
+    "features": "Imkoniyatlar",
+    "ai": "AI",
+    "results": "Natija",
+    "pricing": "Tariflar",
+    "contact": "Bog'lanish",
+    "demo": "Demo so'rash",
+    "login": "Tizimga kirish"
+  },
+  "hero": {
+    "title": "Furangiz qayerda emas — <1>qancha foyda keltiryapti</1>",
+    "subtitle": "5–40 texnikali logistika firmalari uchun: reys boshqaruvi, GPS-kuzatuv, yoqilg'i nazorati va har reysning aniq foydasi — bitta tizimda.",
+    "primary": "Bepul demo so'rash",
+    "secondary": "Imkoniyatlarni ko'rish",
+    "note": "Pilot davri — 2 oy bepul. Shartimiz bitta: natijani raqamda ko'rsatishga ruxsat."
+  },
+  "stats": {
+    "fuel": {
+      "value": "10–20%",
+      "label": "Nazoratsiz firmada oyiga «yo'qoladigan» yoqilg'i"
+    },
+    "saving": {
+      "value": "8–15 mln",
+      "label": "Oyiga taxminiy tejov, so'm"
+    },
+    "report": {
+      "value": "Bir zumda",
+      "label": "2–3 kun o'rniga hisobot tayyorlash"
+    }
+  },
+  "problem": {
+    "title": "Tanish holat",
+    "subtitle": "Daftar va Excel bilan ishlaydigan firmada har oy takrorlanadigan muammolar.",
+    "consequence": "Oqibati",
+    "items": [
+      {
+        "problem": "Hisob-kitob daftar yoki Excelda",
+        "consequence": "Ma'lumot yo'qoladi, tahlil qilib bo'lmaydi"
+      },
+      {
+        "problem": "Yoqilg'i nazorati yo'q",
+        "consequence": "Oyiga 10–20% yoqilg'i «yo'qoladi»"
+      },
+      {
+        "problem": "Mashina qayerdaligi noma'lum",
+        "consequence": "Mijozga aniq javob berilmaydi"
+      },
+      {
+        "problem": "Har bir reys foydami yoki zararmi — bilinmaydi",
+        "consequence": "Zararli yo'nalishlarda yillab ishlanadi"
+      },
+      {
+        "problem": "Hujjat muddatlari qo'lda kuzatiladi",
+        "consequence": "Shtraflar, yo'lda ushlanib qolish"
+      },
+      {
+        "problem": "Haydovchi hisoboti og'zaki",
+        "consequence": "Nizolar, ishonchsizlik"
+      }
+    ]
+  },
+  "audience": {
+    "title": "Uchta ekran — uchta odam",
+    "subtitle": "Har kim faqat o'ziga kerakli narsani ko'radi.",
+    "driver": {
+      "title": "Haydovchi — mobil ilova",
+      "text": "10 ta katta tugma: yo'lga chiqdim, yukladim, dam olaman, yoqilg'i quydim… Har bosishda vaqt, GPS va kerak bo'lsa foto saqlanadi. Internet yo'q joyda ham ishlaydi — aloqa paydo bo'lishi bilan o'zi yuboradi."
+    },
+    "logist": {
+      "title": "Logist — web panel",
+      "text": "Reys ochish, mashina va haydovchi biriktirish, jonli xarita, xarajat va hujjatlar. Mijozga login talab qilmaydigan kuzatuv havolasi."
+    },
+    "owner": {
+      "title": "Boshliq — hisobot va Telegram",
+      "text": "Bosh sahifada oylik kirim, chiqim va sof foyda. Har mashina rentabelligi, har yo'nalish foydasi. Kunlik xulosa Telegramga tushadi."
+    }
+  },
+  "features": {
+    "title": "Nima qiladi",
+    "fuel": {
+      "title": "Yoqilg'i nazorati",
+      "text": "Probeg × norma bilan real quyilgan litr solishtiriladi. Farq foizdan oshsa — darhol qizil signal va qaysi AZSda ko'p farq chiqayotgani ko'rinadi."
+    },
+    "profit": {
+      "title": "Har reysning foydasi",
+      "text": "Kelishilgan narxdan yoqilg'i, yo'l boji, bojxona, haydovchi ulushi, shtraf va amortizatsiya ayiriladi. Natija — reys sof foydasi va 1 km tannarxi."
+    },
+    "map": {
+      "title": "Jonli xarita",
+      "text": "Har mashina rangli nuqta: yurmoqda, dam olmoqda, nosozlik yoki bo'sh. Marshrut tarixi va rejadan chetlash ogohlantirishi."
+    },
+    "docs": {
+      "title": "Hujjat muddatlari",
+      "text": "Sug'urta, texko'rik, guvohnoma va ruxsatnomalar 15/7/1 kun qolganda o'zi eslatadi. Shtraf va yo'lda ushlanib qolish yo'qoladi."
+    },
+    "reports": {
+      "title": "Hisobotlar",
+      "text": "Reys, mashina, yo'nalish, haydovchi va mijoz kesimida foyda. Excel yoki PDFga eksport — bir bosishda."
+    },
+    "offline": {
+      "title": "Offline ishlaydi",
+      "text": "Haydovchi ilovasi aloqasiz hududda ham yozadi. Sinxronlashda takroriy yozuv paydo bo'lmaydi."
+    }
+  },
+  "ai": {
+    "title": "AI nima qiladi — va nima qilmaydi",
+    "subtitle": "Sun'iy intellekt fotoni o'qiydi, savolga javob beradi va anomaliyani topadi. Moliyaviy raqamni esa AI emas, oddiy kod hisoblaydi — foyda va tannarx har doim tekshirib chiqiladigan formula asosida.",
+    "does": "AI qiladi",
+    "doesNot": "AI qilmaydi",
+    "items": [
+      {
+        "title": "Chek fotosini o'qiydi",
+        "text": "Suratga oling — litr, summa va sana o'zi yoziladi. Odam faqat tasdiqlaydi."
+      },
+      {
+        "title": "Ovozdan yozadi",
+        "text": "Haydovchi rulda qo'l bilan yozmaydi, gapiradi."
+      },
+      {
+        "title": "Savolga javob beradi",
+        "text": "«Shu oy qaysi mashina zarar keltirdi?» — javob hisobotdan, matn bilan."
+      },
+      {
+        "title": "Anomaliyani topadi",
+        "text": "G'ayrioddiy sarf, uzoq to'xtash yoki takroriy chekni o'zi belgilaydi."
+      }
+    ],
+    "guards": [
+      "Bazaga o'zi hech narsa yozmaydi — faqat taklif qiladi, odam tasdiqlaydi",
+      "Foyda, tannarx va yoqilg'i farqini kod hisoblaydi, AI emas",
+      "Har taklif tarixda qoladi: kim, qachon, nimani tuzatgan"
+    ]
+  },
+  "results": {
+    "title": "10 ta furali firmada natija",
+    "metric": "Ko'rsatkich",
+    "before": "Oldin",
+    "after": "Keyin",
+    "items": [
+      {
+        "metric": "Yoqilg'i yo'qotish",
+        "before": "~15%",
+        "after": "3–5%"
+      },
+      {
+        "metric": "Hisobot tayyorlash",
+        "before": "2–3 kun",
+        "after": "Bir zumda"
+      },
+      {
+        "metric": "Zararli reyslar",
+        "before": "Sezilmaydi",
+        "after": "Darhol ko'rinadi"
+      },
+      {
+        "metric": "Hujjat shtraflari",
+        "before": "Yiliga bir necha marta",
+        "after": "0"
+      },
+      {
+        "metric": "Mijozga javob berish",
+        "before": "Telefon qilib so'rash",
+        "after": "Havola yuborish"
+      }
+    ],
+    "note": "Taxminiy tejov oyiga 8–15 mln so'm. Dastur narxi — 1.8 mln so'mdan."
+  },
+  "pricing": {
+    "title": "Tariflar",
+    "subtitle": "Narx texnika soniga bog'liq. Barcha tariflarda funksiyalar bir xil.",
+    "vehicles": "Texnika soni",
+    "perMonth": "oyiga",
+    "cta": "Tanlash",
+    "custom": "Kelishuv asosida",
+    "plans": [
+      {
+        "name": "Start",
+        "vehicles": "1–5 texnika",
+        "price": "800 000"
+      },
+      {
+        "name": "Standart",
+        "vehicles": "6–15 texnika",
+        "price": "1 800 000",
+        "badge": "Ommabop"
+      },
+      {
+        "name": "Biznes",
+        "vehicles": "16–40 texnika",
+        "price": "3 500 000"
+      },
+      {
+        "name": "Korporativ",
+        "vehicles": "40+ texnika",
+        "price": ""
+      }
+    ],
+    "extras": "Qo'shimcha: o'rnatish va sozlash 3–5 mln so'm (bir martalik), xodimlarni o'qitish 1–2 mln so'm."
+  },
+  "advantage": {
+    "title": "Boshqa dasturlardan farqi",
+    "them": "Oddiy GPS dasturi",
+    "us": "TruckControl AI",
+    "items": [
+      {
+        "them": "Mashina qayerda ekanini ko'rsatadi",
+        "us": "Qancha foyda qolganini ko'rsatadi"
+      },
+      {
+        "them": "Ma'lumotni qo'lda kiritish kerak",
+        "us": "AI chek fotosidan o'zi kiritadi"
+      },
+      {
+        "them": "Hisobot izlab topish kerak",
+        "us": "Boshliq savol beradi, AI javob beradi"
+      },
+      {
+        "them": "Muammoni odam sezishi kerak",
+        "us": "AI o'zi topib, sababini aytadi"
+      }
+    ]
+  },
+  "contact": {
+    "title": "Demo 20 daqiqa oladi",
+    "subtitle": "Sizning bitta real reysingizni jonli kiritamiz va foydasini ekranda ko'rsatamiz.",
+    "phone": "Qo'ng'iroq qilish",
+    "telegram": "Telegram orqali yozish",
+    "email": "Xat yuborish",
+    "notConfigured": "Bog'lanish kanallari hali sozlanmagan."
+  },
+  "footer": {
+    "rights": "Barcha huquqlar himoyalangan.",
+    "builtFor": "O'zbekiston logistika firmalari uchun."
+  }
+}

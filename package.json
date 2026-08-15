@@ -10,6 +10,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --parallel --filter backend --filter web dev",
+    "dev:landing": "pnpm --filter landing dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "eslint .",

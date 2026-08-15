@@ -38,6 +38,11 @@ Logistika/
 │   │           ├── alerts/        ├── ai/            ├── chat/
 │   │           ├── notifications/ ├── files/         ├── audit/
 │   │           └── public-link/   # mijoz kuzatuv havolasi (TZ §4.2)
+│   ├── landing/               # React 18 + Vite — ommaviy sayt (mahsulot taqdimoti)
+│   │   └── src/
+│   │       ├── App.tsx        # bo'limlar: hero, muammo, imkoniyat, AI, tarif, kontakt
+│   │       ├── contacts.ts    # bog'lanish kanallari env orqali (repoda telefon yo'q)
+│   │       └── i18n/          # uz-latn, uz-cyrl, ru — sayt matnlari
 │   └── web/                   # React 18 + Vite (logist, boshliq, buxgalter)
 │       └── src/
 │           ├── app/           # router, provider'lar, layout
@@ -274,4 +279,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Davriy tekshiruvlar (yoqilg'i, TO, hujjat) — `@nestjs/schedule` cron                      | Ular yengil, bir martalik va idempotent; BullMQ AI navbati uchun saqlanadi (TZ §7).                                                            |
 | Hisobot eksporti: server `xlsx`/`csv`, PDF — brauzer print oynasi orqali                  | uz-latn/uz-cyrl/ru shriftlari brauzerda tayyor; serverda PDF shrift joylash keraksiz og'irlik.                                                 |
 | Ogohlantirish matni bazada i18n kalit + parametr sifatida saqlanadi                       | Bitta yozuv uch tilda ham to'g'ri o'qiladi; til o'zgarsa eski ogohlantirishlar ham tarjima bo'ladi.                                            |
+| Web panel bitta moslashuvchan qurilish: telefon uchun drawer menyu va kartochka-jadval    | Logist yo'lda telefondan kiradi; alohida mobil web-versiya ikki marta qo'llab-quvvatlashni talab qiladi.                                       |
+| Ommaviy sayt alohida ilova (`apps/landing`), panel bundle'iga qo'shilmaydi                | Sayt anonim va statik; uni panel autentifikatsiyasi va og'ir kutubxonalari bilan yuklash keraksiz.                                             |
+| Saytdagi telefon/Telegram/email — `VITE_CONTACT_*` env orqali                             | Shaxsiy aloqa ma'lumotlari repoda saqlanmaydi; sozlanmagan kanal umuman ko'rsatilmaydi.                                                        |
 | Qorong'i rejim — web va mobilda boshidan                                                  | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

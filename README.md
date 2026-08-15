@@ -32,7 +32,8 @@ Flutter · MinIO · Anthropic Claude API · Whisper · OpenStreetMap/Leaflet · 
 
 ```
 apps/backend/      NestJS API (Prisma, BullMQ, AI)
-apps/web/          React web (logist + boshliq)
+apps/web/          React web panel (logist + boshliq), telefon va desktopga mos
+apps/landing/      Ommaviy sayt (mahsulot taqdimoti, 3 til)
 packages/shared/   Umumiy TS tiplari (API kontrakt)
 mobile/            Flutter haydovchi ilovasi
 docs/              TZ, arxitektura, roadmap
@@ -44,7 +45,12 @@ docs/              TZ, arxitektura, roadmap
 docker compose up -d      # postgres, redis, minio
 cp .env.example .env      # qiymatlarni to'ldiring
 pnpm install
-pnpm dev                  # backend + web
+pnpm dev                  # backend + web panel
+pnpm dev:landing          # ommaviy sayt (http://localhost:5174)
 ```
+
+Ommaviy saytdagi bog'lanish tugmalari `apps/landing/.env` orqali sozlanadi
+(`VITE_CONTACT_PHONE`, `VITE_CONTACT_TELEGRAM`, `VITE_CONTACT_EMAIL`, `VITE_PANEL_URL`) —
+namuna uchun `apps/landing/.env.example`. Sozlanmagan kanal saytda ko'rsatilmaydi.
 
 Batafsil — [`CLAUDE.md`](CLAUDE.md).

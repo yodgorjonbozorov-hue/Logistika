@@ -126,6 +126,10 @@
 
 ## 9-bosqich — Sayqal va pilot
 
+- [x] Web panel moslashuvchan: telefon/planshetda drawer menyu, jadvallar kartochka
+      ko'rinishida, forma va xarita qayta joylashadi (i18n kalitlari yechilishi ham tuzatildi)
+- [x] `apps/landing` — ommaviy sayt: muammo, imkoniyatlar, AI, natija, tariflar (TZ §12.1),
+      demo CTA; uz-latn/uz-cyrl/ru, bog'lanish kanallari env orqali
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)

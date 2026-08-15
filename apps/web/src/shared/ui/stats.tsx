@@ -28,7 +28,12 @@ export function StatCard({
     <Card>
       <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
       {/* Money runs to nine digits, so the phone size steps down instead of wrapping. */}
-      <div className={cn('mt-1 text-base font-bold leading-tight tabular-nums sm:text-lg xl:text-xl', tones[tone])}>
+      <div
+        className={cn(
+          'mt-1 text-base font-bold leading-tight tabular-nums sm:text-lg xl:text-xl',
+          tones[tone],
+        )}
+      >
         {value}
       </div>
       {hint ? <div className="mt-0.5 text-xs text-muted">{hint}</div> : null}
