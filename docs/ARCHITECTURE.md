@@ -46,6 +46,7 @@ Logistika/
 │   └── web/                   # React 18 + Vite (logist, boshliq, buxgalter)
 │       └── src/
 │           ├── app/           # router, provider'lar, layout
+│           ├── demo/         # backendsiz demo: fixture ma'lumot + fetch-taqlid
 │           ├── shared/        # api-klient, ui-kit, i18n, util
 │           ├── features/      # dashboard, map, trips, fleet, drivers, clients,
 │           │                  # finance, fuel, maintenance, docs, reports,
@@ -281,5 +282,6 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Ogohlantirish matni bazada i18n kalit + parametr sifatida saqlanadi                       | Bitta yozuv uch tilda ham to'g'ri o'qiladi; til o'zgarsa eski ogohlantirishlar ham tarjima bo'ladi.                                            |
 | Web panel bitta moslashuvchan qurilish: telefon uchun drawer menyu va kartochka-jadval    | Logist yo'lda telefondan kiradi; alohida mobil web-versiya ikki marta qo'llab-quvvatlashni talab qiladi.                                       |
 | Ommaviy sayt alohida ilova (`apps/landing`), panel bundle'iga qo'shilmaydi                | Sayt anonim va statik; uni panel autentifikatsiyasi va og'ir kutubxonalari bilan yuklash keraksiz.                                             |
+| Panel demo rejimi alohida kirish nuqtasi (`src/demo/`, `vite.demo.config.ts`)             | Sotuvda va dizayn ko'rigida panelni bazasiz ko'rsatish kerak; ishlab chiqarish bundle'i o'zgarishsiz qoladi.                                   |
 | Saytdagi telefon/Telegram/email — `VITE_CONTACT_*` env orqali                             | Shaxsiy aloqa ma'lumotlari repoda saqlanmaydi; sozlanmagan kanal umuman ko'rsatilmaydi.                                                        |
 | Qorong'i rejim — web va mobilda boshidan                                                  | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

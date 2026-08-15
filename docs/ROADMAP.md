@@ -137,6 +137,8 @@
 - [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
 - [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
 - [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
+- [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
+      (bazaga yoziladigan seed hali qilinmadi)
 - [ ] Seed/demo ma'lumotlar, pilot firma onboarding qo'llanmasi (TZ §12.2 — 2 firma, 2 oy bepul)
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
       tasdiqlash → reys P&L → dashboard

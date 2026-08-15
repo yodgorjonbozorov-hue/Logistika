@@ -49,6 +49,16 @@ pnpm dev                  # backend + web panel
 pnpm dev:landing          # ommaviy sayt (http://localhost:5174)
 ```
 
+Panelni backendsiz ko'rsatish kerak bo'lsa (demo, dizayn ko'rigi, telefonda ulashish):
+
+```bash
+pnpm --filter web dev:demo     # namunaviy ma'lumot bilan, login talab qilmaydi
+pnpm --filter web build:demo   # apps/web/dist-demo — statik fayl
+```
+
+Demo ma'lumot `apps/web/src/demo/` da; ishlab chiqarish kirish nuqtasi undan hech narsa
+import qilmaydi.
+
 Ommaviy saytdagi bog'lanish tugmalari `apps/landing/.env` orqali sozlanadi
 (`VITE_CONTACT_PHONE`, `VITE_CONTACT_TELEGRAM`, `VITE_CONTACT_EMAIL`, `VITE_PANEL_URL`) —
 namuna uchun `apps/landing/.env.example`. Sozlanmagan kanal saytda ko'rsatilmaydi.
