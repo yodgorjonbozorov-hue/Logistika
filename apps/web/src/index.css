@@ -12,6 +12,49 @@
 }
 
 /*
+ * Phone layout for data tables. A logistics table has 5–8 columns, which no
+ * 360px screen can show side by side, so below `sm` every row becomes a card of
+ * «column name → value» lines. The caption comes from `data-label`, which the
+ * Table component fills in from its headers.
+ */
+@media (max-width: 639px) {
+  .tc-table thead {
+    display: none;
+  }
+  .tc-table,
+  .tc-table tbody,
+  .tc-table tr,
+  .tc-table td {
+    display: block;
+    width: 100%;
+  }
+  .tc-table tr {
+    padding: 0.25rem 0;
+  }
+  .tc-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: right;
+  }
+  .tc-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: #8a94a6;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  /* Action-only columns have no caption — keep them as a plain right-aligned row. */
+  .tc-table td:not([data-label])::before,
+  .tc-table td[data-label='']::before {
+    content: none;
+  }
+}
+
+/*
  * Print / «save as PDF» for W-9 reports. The browser owns the PDF here: it is
  * the only renderer that already has fonts for uz-latn, uz-cyrl and ru, so the
  * server exports the data (xlsx/csv) and the page prints the document.

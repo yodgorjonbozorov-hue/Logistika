@@ -65,7 +65,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('trips.cargoName')}>
             <Input value={form.cargoName} onChange={set('cargoName')} />
           </Field>
@@ -79,7 +79,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('trips.loadingAddress')}>
             <Input value={form.loadingAddress} onChange={set('loadingAddress')} />
           </Field>
@@ -87,7 +87,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             <Input type="date" value={form.loadingDate} onChange={set('loadingDate')} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('trips.unloadingAddress')}>
             <Input value={form.unloadingAddress} onChange={set('unloadingAddress')} />
           </Field>
@@ -95,7 +95,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             <Input type="date" value={form.unloadingDate} onChange={set('unloadingDate')} />
           </Field>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label={t('trips.vehicle')}>
             <Select value={form.vehicleId} onChange={set('vehicleId')}>
               <option value="">{t('common.select')}</option>
@@ -129,7 +129,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             </Select>
           </Field>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label={t('trips.plannedKm')}>
             <Input
               type="number"

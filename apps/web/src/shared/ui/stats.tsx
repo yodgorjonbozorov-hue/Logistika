@@ -27,7 +27,10 @@ export function StatCard({
   return (
     <Card>
       <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
-      <div className={cn('mt-1 text-xl font-bold tabular-nums', tones[tone])}>{value}</div>
+      {/* Money runs to nine digits, so the phone size steps down instead of wrapping. */}
+      <div className={cn('mt-1 text-base font-bold leading-tight tabular-nums sm:text-lg xl:text-xl', tones[tone])}>
+        {value}
+      </div>
       {hint ? <div className="mt-0.5 text-xs text-muted">{hint}</div> : null}
     </Card>
   );
@@ -93,12 +96,17 @@ export function ProfitChart({ data }: { data: TrendPoint[] }) {
           const height = Math.round((Math.abs(point.profitNumber) / peak) * 100);
           const negative = point.profitNumber < 0;
           return (
-            <div key={point.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <div
-                title={`${point.month}: ${formatTiyin(point.profit)}`}
-                style={{ height: `${Math.max(height, 2)}%` }}
-                className={cn('w-full rounded-t', negative ? 'bg-danger/70' : 'bg-accent')}
-              />
+            <div key={point.month} className="flex h-full flex-1 flex-col items-center gap-1">
+              {/* The bar sizes itself against this column, so the column must own
+                  the full height — otherwise a percentage has nothing to resolve
+                  against and every bar collapses to zero. */}
+              <div className="flex h-full w-full items-end">
+                <div
+                  title={`${point.month}: ${formatTiyin(point.profit)}`}
+                  style={{ height: `${Math.max(height, 2)}%` }}
+                  className={cn('w-full rounded-t', negative ? 'bg-danger/70' : 'bg-accent')}
+                />
+              </div>
               <span className="text-[10px] text-muted">{point.month.slice(5)}</span>
             </div>
           );

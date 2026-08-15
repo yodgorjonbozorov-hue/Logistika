@@ -1,4 +1,12 @@
-import { useEffect, type ReactNode } from 'react';
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useContext,
+  useEffect,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../utils/cn';
 
@@ -68,9 +76,9 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <h1 className="text-xl font-bold">{title}</h1>
-      <div className="flex items-center gap-2">{actions}</div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 className="text-lg font-bold sm:text-xl">{title}</h1>
+      <div className="flex flex-wrap items-center gap-2">{actions}</div>
     </div>
   );
 }
@@ -90,26 +98,36 @@ export function Card({ children, className }: { children: ReactNode; className?:
 
 // ---------- Table ----------
 
+/**
+ * Column headers travel down to the cells so that on a phone every row can be
+ * rendered as a label→value card (`.tc-table` rules in index.css) instead of
+ * forcing a horizontal scroll.
+ */
+const TableHeadersContext = createContext<string[]>([]);
+
 export function Table({ headers, children }: { headers: string[]; children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
-      <table className="w-full min-w-[640px] border-collapse bg-white text-sm dark:bg-white/5">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase text-muted dark:border-white/10">
-            {headers.map((header, index) => (
-              <th key={index} className="px-3 py-2 font-semibold">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <TableHeadersContext.Provider value={headers}>
+      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
+        <table className="tc-table w-full border-collapse bg-white text-sm sm:min-w-[640px] dark:bg-white/5">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-xs uppercase text-muted dark:border-white/10">
+              {headers.map((header, index) => (
+                <th key={index} className="px-3 py-2 font-semibold">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </TableHeadersContext.Provider>
   );
 }
 
 export function Row({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+  const headers = useContext(TableHeadersContext);
   return (
     <tr
       onClick={onClick}
@@ -118,13 +136,28 @@ export function Row({ children, onClick }: { children: ReactNode; onClick?: () =
         onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/10',
       )}
     >
-      {children}
+      {Children.map(children, (child, index) =>
+        isValidElement<CellProps>(child) && child.type === Cell
+          ? cloneElement(child, { label: child.props.label ?? headers[index] })
+          : child,
+      )}
     </tr>
   );
 }
 
-export function Cell({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn('px-3 py-2', className)}>{children}</td>;
+interface CellProps {
+  children: ReactNode;
+  className?: string;
+  /** Injected by Row; shown as the column caption in the phone card layout. */
+  label?: string;
+}
+
+export function Cell({ children, className, label }: CellProps) {
+  return (
+    <td data-label={label} className={cn('px-3 py-2', className)}>
+      {children}
+    </td>
+  );
 }
 
 // ---------- Badge ----------
@@ -173,11 +206,11 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3 pt-6 sm:p-4 sm:pt-16"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
+        className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl sm:p-5 dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-bold">{title}</h2>

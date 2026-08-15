@@ -36,15 +36,15 @@ export function FinancePage() {
   return (
     <div>
       <PageHeader title={t('finance.title')} />
-      <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
+      <div className="mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-white/10">
         {(['summary', 'expenses', 'incomes', 'receivables'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={
               tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'shrink-0 border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
+                : 'shrink-0 px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
             }
           >
             {t(`finance.${key}`)}
@@ -249,7 +249,7 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal title={t('finance.newExpense')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('finance.category')}>
             <Select value={form.category} onChange={set('category')}>
               {Object.values(ExpenseCategory).map((category) => (
@@ -376,7 +376,7 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Modal title={t('finance.newIncome')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('finance.amount')}>
             <Input inputMode="numeric" value={form.amount} onChange={set('amount')} required />
           </Field>

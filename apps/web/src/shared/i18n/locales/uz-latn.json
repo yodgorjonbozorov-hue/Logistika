@@ -43,7 +43,8 @@
     "select": "Tanlang…",
     "notSet": "—",
     "theme": "Tungi rejim",
-    "language": "Til"
+    "language": "Til",
+    "menu": "Menyu"
   },
   "status": {
     "DRAFT": "Qoralama",

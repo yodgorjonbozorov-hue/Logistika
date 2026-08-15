@@ -20,7 +20,7 @@ export function DashboardPage() {
     <div className="space-y-4">
       <PageHeader title={t('dashboard.title')} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
         <StatCard
           label={t('dashboard.onRoad')}
           value={`${data.vehiclesOnRoad}/${data.vehiclesTotal}`}

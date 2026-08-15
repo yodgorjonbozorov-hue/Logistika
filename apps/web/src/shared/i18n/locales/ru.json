@@ -43,7 +43,8 @@
     "select": "Выберите…",
     "notSet": "—",
     "theme": "Тёмная тема",
-    "language": "Язык"
+    "language": "Язык",
+    "menu": "Меню"
   },
   "status": {
     "DRAFT": "Черновик",

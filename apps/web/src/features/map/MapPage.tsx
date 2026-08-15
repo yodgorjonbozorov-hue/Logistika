@@ -85,7 +85,7 @@ function LiveMap() {
   if (isLoading) return <Spinner />;
 
   return (
-    <div className="flex min-h-0 flex-1 gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
       <Card className="w-52 shrink-0 self-start">
         <ul className="space-y-2 text-sm">
           {Object.values(LiveStatus).map((status) => (
@@ -100,7 +100,7 @@ function LiveMap() {
           ))}
         </ul>
       </Card>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
+      <div className="min-h-[320px] flex-1 overflow-hidden rounded-xl sm:min-h-[480px]">
         <MapContainer
           center={TASHKENT}
           zoom={6}
@@ -216,7 +216,7 @@ function HistoryMap({
           <span className="self-center text-sm text-muted">{t('map.noTrack')}</span>
         )}
       </div>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
+      <div className="min-h-[320px] flex-1 overflow-hidden rounded-xl sm:min-h-[480px]">
         <MapContainer
           center={TASHKENT}
           zoom={6}

@@ -20,6 +20,9 @@ void i18n.use(initReactI18next).init({
   },
   lng: initialLocale,
   fallbackLng: DEFAULT_LOCALE,
+  // i18next normalises "uz-latn" to "uz-Latn" when resolving, which would never
+  // match our lowercase resource keys and would leave raw keys on screen.
+  lowerCaseLng: true,
   interpolation: { escapeValue: false },
 });
 

@@ -43,15 +43,15 @@ export function FuelPage() {
         title={t('fuel.title')}
         actions={<PeriodPicker period={period} onChange={setPeriod} />}
       />
-      <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
+      <div className="mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-white/10">
         {(['control', 'stations', 'journal'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={
               tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'shrink-0 border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
+                : 'shrink-0 px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
             }
           >
             {t(`fuel.tabs.${key}`)}
@@ -252,7 +252,7 @@ function FuelFormModal({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Modal title={t('fuel.newEntry')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('fuel.vehicle')}>
             <Select value={form.vehicleId} onChange={set('vehicleId')} required>
               <option value="">{t('common.select')}</option>

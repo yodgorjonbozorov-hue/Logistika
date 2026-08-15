@@ -94,15 +94,15 @@ export function TripDetailPage() {
         </div>
       </Card>
 
-      <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
+      <div className="mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-white/10">
         {(['timeline', 'finance', 'documents'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={
               tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'shrink-0 border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
+                : 'shrink-0 px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
             }
           >
             {t(`trips.tabs.${key}`)}

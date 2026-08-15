@@ -137,7 +137,7 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal title={t('vehicles.new')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('vehicles.plate')}>
             <Input value={form.plateNumber} onChange={set('plateNumber')} required />
           </Field>

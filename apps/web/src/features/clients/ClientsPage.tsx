@@ -102,7 +102,7 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
         <Field label={t('clients.name')}>
           <Input value={form.name} onChange={set('name')} required />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('clients.inn')}>
             <Input value={form.inn} onChange={set('inn')} />
           </Field>

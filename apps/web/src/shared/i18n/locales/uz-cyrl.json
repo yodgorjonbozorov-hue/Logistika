@@ -43,7 +43,8 @@
     "select": "Танланг…",
     "notSet": "—",
     "theme": "Тунги режим",
-    "language": "Тил"
+    "language": "Тил",
+    "menu": "Меню"
   },
   "status": {
     "DRAFT": "Қоралама",

@@ -41,7 +41,7 @@ export function PublicTrackPage() {
         {data && (
           <>
             <Card>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <Info label="№">{data.tripNumber}</Info>
                 <Info label={t('trips.status')}>{t(`status.${data.status}`)}</Info>
                 <Info label={t('track.route')}>
