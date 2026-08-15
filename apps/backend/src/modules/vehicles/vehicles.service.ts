@@ -8,9 +8,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 
 function toData<T extends UpdateVehicleDto>(dto: T) {
-  const { insuranceExpiry, techInspectionExpiry, ...rest } = dto;
+  const { insuranceExpiry, techInspectionExpiry, purchasePrice, ...rest } = dto;
   return {
     ...rest,
+    // Money stays BigInt tiyin all the way down (CLAUDE.md).
+    purchasePrice: purchasePrice === undefined ? undefined : BigInt(purchasePrice),
     insuranceExpiry: insuranceExpiry === undefined ? undefined : new Date(insuranceExpiry),
     techInspectionExpiry:
       techInspectionExpiry === undefined ? undefined : new Date(techInspectionExpiry),

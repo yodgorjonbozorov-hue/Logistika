@@ -13,6 +13,7 @@ import {
   Min,
 } from 'class-validator';
 import { VehicleType } from 'shared';
+import { IsTiyin } from '../../../common/dto/money';
 
 export class CreateVehicleDto {
   @IsString()
@@ -66,6 +67,17 @@ export class CreateVehicleDto {
   @IsInt()
   @Min(0)
   currentOdometer?: number;
+
+  /** Purchase price in tiyin — the numerator of the depreciation formula (TZ §6). */
+  @IsOptional()
+  @IsTiyin()
+  purchasePrice?: string;
+
+  /** Planned lifetime mileage in km — the denominator of the same formula. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  plannedTotalKm?: number;
 
   @IsOptional()
   @IsDateString()

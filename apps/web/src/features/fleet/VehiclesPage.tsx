@@ -21,6 +21,7 @@ import {
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { dateInputToIso } from '../../shared/utils/date';
+import { somToTiyin } from '../../shared/utils/money';
 
 export function VehiclesPage() {
   const { t } = useTranslation();
@@ -104,6 +105,8 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
     year: '',
     fuelNormPer100km: '',
     currentOdometer: '',
+    purchasePrice: '',
+    plannedTotalKm: '',
     insuranceExpiry: '',
     techInspectionExpiry: '',
   });
@@ -120,6 +123,9 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
       year: form.year ? Number(form.year) : undefined,
       fuelNormPer100km: form.fuelNormPer100km ? Number(form.fuelNormPer100km) : undefined,
       currentOdometer: form.currentOdometer ? Number(form.currentOdometer) : undefined,
+      // Depreciation inputs (TZ §6): without them a trip P&L carries no wear cost.
+      purchasePrice: form.purchasePrice ? (somToTiyin(form.purchasePrice) ?? undefined) : undefined,
+      plannedTotalKm: form.plannedTotalKm ? Number(form.plannedTotalKm) : undefined,
       insuranceExpiry: form.insuranceExpiry ? dateInputToIso(form.insuranceExpiry) : undefined,
       techInspectionExpiry: form.techInspectionExpiry
         ? dateInputToIso(form.techInspectionExpiry)
@@ -168,6 +174,17 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
               min="0"
               value={form.currentOdometer}
               onChange={set('currentOdometer')}
+            />
+          </Field>
+          <Field label={t('vehicles.purchasePrice')} hint={t('common.som')}>
+            <Input inputMode="numeric" value={form.purchasePrice} onChange={set('purchasePrice')} />
+          </Field>
+          <Field label={t('vehicles.plannedTotalKm')} hint={t('vehicles.plannedTotalKmHint')}>
+            <Input
+              type="number"
+              min="1"
+              value={form.plannedTotalKm}
+              onChange={set('plannedTotalKm')}
             />
           </Field>
           <Field label={t('vehicles.insuranceExpiry')}>

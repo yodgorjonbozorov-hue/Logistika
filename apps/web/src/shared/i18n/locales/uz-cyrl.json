@@ -112,7 +112,10 @@
       "TRUCK": "Фура",
       "TRAILER": "Тиркама",
       "SPECIAL": "Махсус"
-    }
+    },
+    "purchasePrice": "Сотиб олинган нархи",
+    "plannedTotalKm": "Режадаги умумий пробег",
+    "plannedTotalKmHint": "Амортизация учун, км"
   },
   "drivers": {
     "title": "Ҳайдовчилар",

@@ -112,7 +112,10 @@
       "TRUCK": "Fura",
       "TRAILER": "Tirkama",
       "SPECIAL": "Maxsus"
-    }
+    },
+    "purchasePrice": "Sotib olingan narxi",
+    "plannedTotalKm": "Rejadagi umumiy probeg",
+    "plannedTotalKmHint": "Amortizatsiya uchun, km"
   },
   "drivers": {
     "title": "Haydovchilar",

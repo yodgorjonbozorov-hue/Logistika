@@ -112,7 +112,10 @@
       "TRUCK": "Фура",
       "TRAILER": "Прицеп",
       "SPECIAL": "Спецтехника"
-    }
+    },
+    "purchasePrice": "Цена покупки",
+    "plannedTotalKm": "Плановый общий пробег",
+    "plannedTotalKmHint": "Для амортизации, км"
   },
   "drivers": {
     "title": "Водители",

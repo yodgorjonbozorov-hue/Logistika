@@ -33,6 +33,8 @@ export interface Vehicle {
   fuelNormPer100km: string | null;
   tankCapacity: string | null;
   currentOdometer: number | null;
+  purchasePrice: string | null;
+  plannedTotalKm: number | null;
   insuranceExpiry: string | null;
   techInspectionExpiry: string | null;
   nextServiceOdometer: number | null;
