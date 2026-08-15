@@ -7,9 +7,18 @@ import uzLatn from './uz-latn.json';
 
 const STORAGE_KEY = 'tc.landing.locale';
 
+/** Storage is blocked in some embedded contexts — a preview must not die over it. */
+function readStored(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /** A visitor arriving with a Russian browser should land on the Russian copy. */
 function detectLocale(): Locale {
-  const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+  const stored = readStored();
   if ((LOCALES as readonly string[]).includes(stored ?? '')) return stored as Locale;
 
   const browser = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : '';
@@ -33,7 +42,11 @@ void i18n.use(initReactI18next).init({
 });
 
 export function setLocale(locale: Locale): void {
-  localStorage.setItem(STORAGE_KEY, locale);
+  try {
+    localStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // Remembering the choice is a nicety; switching the language is not.
+  }
   document.documentElement.lang = locale.startsWith('uz') ? 'uz' : locale;
   void i18n.changeLanguage(locale);
 }
