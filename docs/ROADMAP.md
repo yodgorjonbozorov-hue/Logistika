@@ -149,7 +149,6 @@
       va tiklash skripti; oylik tiklash tekshiruvi tartibi `docs/DEPLOY.md` §7 da
 - [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
 - [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
-      (bazaga yoziladigan seed hali qilinmadi)
 - [x] Seed/demo ma'lumotlar (`pnpm --filter backend seed`, idempotent, ma'lumotlar
       testlar bilan tekshiriladi), pilot onboarding qo'llanmasi — `docs/PILOT.md`
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
