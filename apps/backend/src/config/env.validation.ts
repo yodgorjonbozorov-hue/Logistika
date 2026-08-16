@@ -51,6 +51,25 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DEFAULT_TIMEZONE = 'Asia/Tashkent';
+
+  /**
+   * AI is a convenience, not an obligation (TZ §8.12 rule 5): without a key the
+   * app still boots and every manual flow keeps working — only the AI endpoints
+   * answer with AI_NOT_CONFIGURED.
+   */
+  @IsOptional()
+  @IsString()
+  ANTHROPIC_API_KEY = '';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  AI_TIMEOUT_MS = 60000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  AI_MAX_RETRIES = 2;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

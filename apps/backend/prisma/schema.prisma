@@ -114,6 +114,48 @@ enum MaintenanceType {
   @@map("maintenance_type")
 }
 
+// ---------- AI (TZ §8) ----------
+
+/// The eight points where AI is allowed to run (TZ §8.1).
+enum AiFeature {
+  VOICE
+  OCR
+  CHAT
+  ANOMALY
+  PRICING
+  ETA
+  DIAGNOSIS
+  DIGEST
+
+  @@map("ai_feature")
+}
+
+enum AiRequestStatus {
+  SUCCEEDED
+  FAILED
+
+  @@map("ai_request_status")
+}
+
+enum AiInsightSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@map("ai_insight_severity")
+}
+
+enum AiInsightStatus {
+  NEW
+  REVIEWED
+  CONFIRMED
+  FALSE_POSITIVE
+  RESOLVED
+
+  @@map("ai_insight_status")
+}
+
 // ---------- Tenant root ----------
 
 model Company {
@@ -145,6 +187,8 @@ model Company {
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
   aiSettings    AiSettings?
+  aiRequests    AiRequest[]
+  aiInsights    AiInsight[]
 
   @@map("companies")
 }
@@ -570,9 +614,13 @@ model AiSettings {
   /// Daily digest send time as local "HH:MM" (TZ §8.9 — default 20:00).
   digestTime        String @default("20:00") @map("digest_time")
   digestChannels    Json?  @map("digest_channels")
-  /// AI spend caps in USD cents (integer — no float money).
-  monthlyAiLimitUsd BigInt @default(5000) @map("monthly_ai_limit_usd")
-  currentMonthUsage BigInt @default(0) @map("current_month_usage")
+  /// AI spend cap and running usage in micro-USD (1 USD = 1_000_000).
+  /// Integers on purpose — token prices are fractions of a cent (no float money).
+  /// Default 50_000_000 = $50/month, against the ~$32 TZ §8.11 estimate.
+  monthlyLimitMicroUsd BigInt @default(50000000) @map("monthly_limit_micro_usd")
+  currentUsageMicroUsd BigInt @default(0) @map("current_usage_micro_usd")
+  /// UTC month the usage above belongs to ("2026-08"); a new month resets it.
+  usageMonth           String @default("") @map("usage_month")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -580,6 +628,83 @@ model AiSettings {
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("ai_settings")
+}
+
+/// Log of every AI call (TZ §8.10). Used for the cost limit, for the monthly
+/// accuracy report and — through `correctedData` — for improving the prompts.
+model AiRequest {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  userId    String? @map("user_id")
+
+  feature   AiFeature
+  /// What was sent: "photo" | "text" | "audio" | "system".
+  inputType String    @map("input_type")
+  /// Pointer to the input (file key, trip id, …) — never the raw payload.
+  inputRef  String?   @map("input_ref")
+  modelUsed String    @map("model_used")
+
+  promptTokens     Int    @default(0) @map("prompt_tokens")
+  completionTokens Int    @default(0) @map("completion_tokens")
+  /// Cost in micro-USD, same unit as the AiSettings cap.
+  costMicroUsd     BigInt @default(0) @map("cost_micro_usd")
+
+  responseJson Json?           @map("response_json")
+  /// Model self-reported confidence in basis points (10000 = 1.0).
+  confidenceBp Int?            @map("confidence_bp")
+  status       AiRequestStatus
+  /// Machine-readable failure key when status is FAILED.
+  errorCode    String?         @map("error_code")
+
+  /// TZ §8.0: nothing an AI proposes reaches the business tables until a
+  /// person confirms it. These three columns record that decision.
+  isConfirmed   Boolean   @default(false) @map("is_confirmed")
+  confirmedBy   String?   @map("confirmed_by")
+  confirmedAt   DateTime? @map("confirmed_at")
+  correctedData Json?     @map("corrected_data")
+
+  latencyMs Int      @default(0) @map("latency_ms")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, feature, createdAt])
+  @@map("ai_requests")
+}
+
+/// Anomalies found by the detector (TZ §8.5 / §8.10). The numbers come from
+/// deterministic code; AI only writes the explanation, so the narrative text is
+/// stored together with the locale it was generated in.
+model AiInsight {
+  id        String @id @default(uuid())
+  companyId String @map("company_id")
+
+  /// Machine key of the anomaly kind ("fuel_overrun", "idle_too_long", …).
+  type     String
+  severity AiInsightSeverity
+  locale   String            @default("uz-latn")
+
+  title          String
+  description    String
+  recommendation String?
+
+  relatedType String? @map("related_type")
+  relatedId   String? @map("related_id")
+  /// Money at stake, in tiyin (BigInt — never float).
+  estimatedLoss BigInt? @map("estimated_loss")
+  /// Deterministic figures the explanation was built from (TZ §8.12 rule 6).
+  data          Json?
+
+  status     AiInsightStatus @default(NEW)
+  reviewedBy String?         @map("reviewed_by")
+  reviewedAt DateTime?       @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, status, createdAt])
+  @@map("ai_insights")
 }
 
 // ---------- Files (MinIO object metadata) ----------
