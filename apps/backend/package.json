@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI — NestJS API",
+  "description": "TruckControl AI \u2014 NestJS API",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json",
-    "prisma": "prisma"
+    "prisma": "prisma",
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
@@ -59,5 +60,8 @@
       "^shared$": "<rootDir>/../../../packages/shared/src/index.ts",
       "^@/(.*)$": "<rootDir>/$1"
     }
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

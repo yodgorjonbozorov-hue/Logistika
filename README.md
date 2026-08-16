@@ -21,6 +21,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/TZ.md`](docs/TZ.md)                     | Texnik topshiriq — barcha talablar manbasi |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
+| [`docs/PILOT.md`](docs/PILOT.md)               | Pilot firmani ishga tushirish qo'llanmasi  |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek
@@ -45,9 +46,14 @@ docs/              TZ, arxitektura, roadmap
 docker compose up -d      # postgres, redis, minio
 cp .env.example .env      # qiymatlarni to'ldiring
 pnpm install
+pnpm --filter backend prisma migrate dev
+pnpm --filter backend seed   # ixtiyoriy: demo firma (boshliq@demo.uz / demo1234)
 pnpm dev                  # backend + web panel
 pnpm dev:landing          # ommaviy sayt (http://localhost:5174)
 ```
+
+Seed bitta alohida tenant yaratadi va qayta ishga tushirilsa dublikat qilmaydi;
+`NODE_ENV=production` da `SEED_FORCE=1` bo'lmasa ishlashdan bosh tortadi.
 
 Panelni backendsiz ko'rsatish kerak bo'lsa (demo, dizayn ko'rigi, telefonda ulashish):
 
