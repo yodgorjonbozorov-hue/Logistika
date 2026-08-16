@@ -246,7 +246,8 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 ### notifications
 
 - `GET /notifications` · `POST /notifications/read`
-- `POST /notifications/telegram/link` · `POST /notifications/fcm/register`
+- `GET/PATCH/DELETE /notifications/telegram` — boshliq Telegram chat'ini ulash/uzish
+- `POST /notifications/fcm/register` — haydovchi push tokeni (mobil bilan birga)
 
 ### files
 
@@ -296,4 +297,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Anomaliya 7 kun ichida ochiq bo'lsa qayta yozilmaydi                                                                        | Tungi cron har kuni ishlaydi; aks holda bitta muammo bir hafta ichida 7 marta ko'rinadi.                                                       |
 | AI-3 javobi bilan birga manba ko'rsatiladi (so'rov nomi, davr, yozuv soni)                                                  | TZ §8.12.6; izlanmaydigan raqamga boshliq baribir ishonmaydi.                                                                                  |
 | AI-3 so'rovi panel ishlatadigan servislarning aynan o'zini chaqiradi                                                        | Javobdagi raqam ekrandagi raqamdan farq qilishi mumkin emas; formulalar bitta joyda qoladi.                                                    |
+| Kunlik xulosa cron'i har soat uyg'onadi, firma vaqt mintaqasidagi soatni tekshiradi                                         | «20:00» boshliq uchun o'z soati bo'lishi kerak; baza baribir UTC'da qoladi.                                                                    |
+| Telegramga yuborish hech qachon xato tashlamaydi (log + `false`)                                                            | Yetib bormagan xabar — yo'qolgan qulaylik, buzilgan cron esa keyingi barcha firmani o'tkazib yuboradi.                                         |
+| Hech narsa bo'lmagan kunda xulosa yuborilmaydi                                                                              | Har kuni keladigan bo'sh xabar bir haftada o'qilmay qoladi va kerakli xabar ham ko'zdan qochadi.                                               |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

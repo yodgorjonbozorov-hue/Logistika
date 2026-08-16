@@ -23,6 +23,7 @@ import { FilesModule } from './modules/files/files.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { FuelModule } from './modules/fuel/fuel.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
@@ -56,6 +57,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ReportsModule,
     FilesModule,
     PublicLinkModule,
+    NotificationsModule,
     AiModule,
   ],
   controllers: [HealthController],

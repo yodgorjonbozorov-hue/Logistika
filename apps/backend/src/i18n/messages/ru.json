@@ -57,5 +57,10 @@
   "insights.FREQUENT_BREAKDOWN.recommendation": "Поговорите с водителем и осмотрите техническое состояние машины.",
   "insights.TRIP_TOO_LONG.title": "{tripNumber} — рейс занял дольше обычного",
   "insights.TRIP_TOO_LONG.description": "На маршруте «{route}» ушло {hours} часов при медиане {medianHours} часов (по {sampleSize} рейсам).",
-  "insights.TRIP_TOO_LONG.recommendation": "Выясните у водителя причину: очередь на границе, ремонт или режим отдыха."
+  "insights.TRIP_TOO_LONG.recommendation": "Выясните у водителя причину: очередь на границе, ремонт или режим отдыха.",
+  "digest.title": "📊 Итоги {date}",
+  "digest.fleet": "В рейсе: {onRoad}/{total} машин • Завершено рейсов: {finished} • Начато: {started}",
+  "digest.money": "Приход: {revenue} сум • Расход: {expenses} сум • Прибыль: {profit} сум",
+  "digest.attention": "⚠️ Требует внимания ({count}):",
+  "digest.tomorrow": "📅 Завтра: погрузок — {loadings}, документов на исходе — {documents}"
 }

@@ -57,5 +57,10 @@
   "insights.FREQUENT_BREAKDOWN.recommendation": "Haydovchi bilan suhbatlashing va mashinaning texnik holatini ko'zdan kechiring.",
   "insights.TRIP_TOO_LONG.title": "{tripNumber} — reys odatdagidan uzoq davom etdi",
   "insights.TRIP_TOO_LONG.description": "«{route}» yo'nalishida {hours} soat ketdi, bu yo'nalishning medianasi {medianHours} soat ({sampleSize} ta reys asosida).",
-  "insights.TRIP_TOO_LONG.recommendation": "Kechikish sababini haydovchidan aniqlang: chegara navbati, ta'mir yoki dam olish rejimi."
+  "insights.TRIP_TOO_LONG.recommendation": "Kechikish sababini haydovchidan aniqlang: chegara navbati, ta'mir yoki dam olish rejimi.",
+  "digest.title": "📊 {date} yakuni",
+  "digest.fleet": "Yo'lda: {onRoad}/{total} mashina • Tugagan reys: {finished} • Boshlangan: {started}",
+  "digest.money": "Kirim: {revenue} so'm • Chiqim: {expenses} so'm • Foyda: {profit} so'm",
+  "digest.attention": "⚠️ E'tibor talab qiladi ({count}):",
+  "digest.tomorrow": "📅 Ertaga: {loadings} ta yuklash, {documents} ta hujjat muddati yaqin"
 }

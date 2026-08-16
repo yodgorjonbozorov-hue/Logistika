@@ -122,8 +122,10 @@
 - [x] **AI-3 AI-boshliq**: 2 bosqichli function calling (whitelist: get_vehicle_profit,
       get_driver_stats, get_fuel_anomalies, get_route_profitability, get_receivables,
       compare_periods) + W-12 savol-javob sahifasi; Telegram kanali keyingi punktda
-- [ ] **AI-8 kunlik xulosa**: har kuni 20:00 Telegramga (BullMQ cron)
-- [ ] Telegram bot ulash + FCM push
+- [x] **AI-8 kunlik xulosa**: har kuni 20:00 (firma o'z vaqt mintaqasida) Telegramga —
+      raqamlar kodda, matn AI'da, AI yo'q bo'lsa i18n katalogidan
+- [x] Telegram kanali: bot token env orqali, `PATCH/DELETE /notifications/telegram`,
+      W-11 sozlamalarida ulash; FCM push — haydovchi ilovasi bilan birga
 - [ ] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit
 
 ## 9-bosqich — Sayqal va pilot

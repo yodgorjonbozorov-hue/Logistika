@@ -57,5 +57,10 @@
   "insights.FREQUENT_BREAKDOWN.recommendation": "Ҳайдовчи билан суҳбатлашинг ва машинанинг техник ҳолатини кўздан кечиринг.",
   "insights.TRIP_TOO_LONG.title": "{tripNumber} — рейс одатдагидан узоқ давом этди",
   "insights.TRIP_TOO_LONG.description": "«{route}» йўналишида {hours} соат кетди, бу йўналишнинг медианаси {medianHours} соат ({sampleSize} та рейс асосида).",
-  "insights.TRIP_TOO_LONG.recommendation": "Кечикиш сабабини ҳайдовчидан аниқланг: чегара навбати, таъмир ёки дам олиш режими."
+  "insights.TRIP_TOO_LONG.recommendation": "Кечикиш сабабини ҳайдовчидан аниқланг: чегара навбати, таъмир ёки дам олиш режими.",
+  "digest.title": "📊 {date} якуни",
+  "digest.fleet": "Йўлда: {onRoad}/{total} машина • Тугаган рейс: {finished} • Бошланган: {started}",
+  "digest.money": "Кирим: {revenue} сўм • Чиқим: {expenses} сўм • Фойда: {profit} сўм",
+  "digest.attention": "⚠️ Эътибор талаб қилади ({count}):",
+  "digest.tomorrow": "📅 Эртага: {loadings} та юклаш, {documents} та ҳужжат муддати яқин"
 }

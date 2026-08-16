@@ -167,6 +167,8 @@ model Company {
   logo              String?
   /// Language the company reads reports and AI explanations in (TZ §3.1).
   locale            String    @default("uz-latn")
+  /// IANA zone the daily digest time is read in; storage stays UTC (CLAUDE.md).
+  timezone          String    @default("Asia/Tashkent")
   tariffPlan        String?   @map("tariff_plan")
   subscriptionUntil DateTime? @map("subscription_until")
   isActive          Boolean   @default(true) @map("is_active")
@@ -198,18 +200,20 @@ model Company {
 // ---------- Users & auth ----------
 
 model User {
-  id           String    @id @default(uuid())
+  id             String    @id @default(uuid())
   // Null only for SUPERADMIN (platform staff); enforced in application code.
-  companyId    String?   @map("company_id")
-  fullName     String    @map("full_name")
-  phone        String?   @unique
-  email        String?   @unique
-  passwordHash String    @map("password_hash")
-  role         UserRole
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLogin    DateTime? @map("last_login")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  companyId      String?   @map("company_id")
+  fullName       String    @map("full_name")
+  phone          String?   @unique
+  email          String?   @unique
+  passwordHash   String    @map("password_hash")
+  role           UserRole
+  isActive       Boolean   @default(true) @map("is_active")
+  /// Telegram chat the daily digest goes to (TZ §8.9); null means not linked.
+  telegramChatId String?   @unique @map("telegram_chat_id")
+  lastLogin      DateTime? @map("last_login")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   company       Company?       @relation(fields: [companyId], references: [id])
   driverProfile Driver?
@@ -614,8 +618,8 @@ model AiSettings {
   routeDeviationKm         Int @default(20) @map("route_deviation_km")
 
   /// Daily digest send time as local "HH:MM" (TZ §8.9 — default 20:00).
-  digestTime        String @default("20:00") @map("digest_time")
-  digestChannels    Json?  @map("digest_channels")
+  digestTime           String @default("20:00") @map("digest_time")
+  digestChannels       Json?  @map("digest_channels")
   /// AI spend cap and running usage in micro-USD (1 USD = 1_000_000).
   /// Integers on purpose — token prices are fractions of a cent (no float money).
   /// Default 50_000_000 = $50/month, against the ~$32 TZ §8.11 estimate.
@@ -695,8 +699,8 @@ model AiInsight {
   description    String
   recommendation String?
 
-  relatedType String? @map("related_type")
-  relatedId   String? @map("related_id")
+  relatedType   String? @map("related_type")
+  relatedId     String? @map("related_id")
   /// Money at stake, in tiyin (BigInt — never float).
   estimatedLoss BigInt? @map("estimated_loss")
   /// Deterministic figures the explanation was built from (TZ §8.12 rule 6).
