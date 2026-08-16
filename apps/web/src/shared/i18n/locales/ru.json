@@ -357,7 +357,8 @@
       "FUEL_OVERRUN": "Топливо",
       "VEHICLE_IDLE": "Простой",
       "ROUTE_DEVIATION": "Отклонение",
-      "PAYMENT_OVERDUE": "Оплата"
+      "PAYMENT_OVERDUE": "Оплата",
+      "DUPLICATE_RECEIPT": "Дубль чека"
     },
     "documentExpiring": {
       "title": "Истекает срок документа",
@@ -378,6 +379,10 @@
     "serviceOverdue": {
       "title": "ТО просрочено",
       "message": "{{plate}} — просрочено на {{km}} км ({{odometer}} км)"
+    },
+    "duplicateReceipt": {
+      "title": "Загружен повторный чек",
+      "message": "Точно такое же фото чека уже было принято (№ {{previousRequestId}})"
     }
   },
   "documents": {

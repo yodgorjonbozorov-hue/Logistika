@@ -357,7 +357,8 @@
       "FUEL_OVERRUN": "Ёқилғи",
       "VEHICLE_IDLE": "Ҳаракатсиз",
       "ROUTE_DEVIATION": "Четлаш",
-      "PAYMENT_OVERDUE": "Тўлов"
+      "PAYMENT_OVERDUE": "Тўлов",
+      "DUPLICATE_RECEIPT": "Такрорий чек"
     },
     "documentExpiring": {
       "title": "Ҳужжат муддати тугаяпти",
@@ -378,6 +379,10 @@
     "serviceOverdue": {
       "title": "ТО муддати ўтди",
       "message": "{{plate}} — {{km}} км кечикди ({{odometer}} км)"
+    },
+    "duplicateReceipt": {
+      "title": "Такрорий чек юкланди",
+      "message": "Худди шу чек фотоси илгари қабул қилинган (№ {{previousRequestId}})"
     }
   },
   "documents": {

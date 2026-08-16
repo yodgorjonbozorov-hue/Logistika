@@ -663,12 +663,17 @@ model AiRequest {
   confirmedAt   DateTime? @map("confirmed_at")
   correctedData Json?     @map("corrected_data")
 
+  /// SHA-256 of the photographed document — the same receipt handed in twice is
+  /// a fraud signal worth an immediate alert (TZ §8.3).
+  receiptHash String? @map("receipt_hash")
+
   latencyMs Int      @default(0) @map("latency_ms")
   createdAt DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
   @@index([companyId, feature, createdAt])
+  @@index([companyId, receiptHash])
   @@map("ai_requests")
 }
 

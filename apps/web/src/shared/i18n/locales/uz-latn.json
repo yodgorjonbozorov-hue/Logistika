@@ -357,7 +357,8 @@
       "FUEL_OVERRUN": "Yoqilg'i",
       "VEHICLE_IDLE": "Harakatsiz",
       "ROUTE_DEVIATION": "Chetlash",
-      "PAYMENT_OVERDUE": "To'lov"
+      "PAYMENT_OVERDUE": "To'lov",
+      "DUPLICATE_RECEIPT": "Takroriy chek"
     },
     "documentExpiring": {
       "title": "Hujjat muddati tugayapti",
@@ -378,6 +379,10 @@
     "serviceOverdue": {
       "title": "TO muddati o'tdi",
       "message": "{{plate}} — {{km}} km kechikdi ({{odometer}} km)"
+    },
+    "duplicateReceipt": {
+      "title": "Takroriy chek yuklandi",
+      "message": "Xuddi shu chek fotosi ilgari qabul qilingan (№ {{previousRequestId}})"
     }
   },
   "documents": {

@@ -43,6 +43,8 @@ export interface AiRunOptions<T> {
   maxTokens?: number;
   /** Model self-reported confidence, in basis points, for the accuracy report. */
   confidenceBp?: (value: T) => number | null;
+  /** SHA-256 of a photographed document, for the duplicate-receipt check. */
+  receiptHash?: string | null;
 }
 
 export interface AiRunResult<T> {
@@ -169,6 +171,7 @@ export class AiService {
         responseJson: raw.json as Prisma.InputJsonValue,
         confidenceBp: confidence,
         status: AiRequestStatus.SUCCEEDED,
+        receiptHash: options.receiptHash ?? null,
         latencyMs,
       } as Prisma.AiRequestUncheckedCreateInput,
     });
@@ -198,6 +201,21 @@ export class AiService {
         confirmedAt: new Date(),
         correctedData: (correctedData ?? Prisma.DbNull) as Prisma.InputJsonValue,
       },
+    });
+  }
+
+  /**
+   * An earlier reading of the very same photo that a person already accepted —
+   * i.e. the receipt is being handed in twice (TZ §8.3).
+   */
+  async previousReceipt(
+    companyId: string,
+    receiptHash: string,
+    excludeRequestId: string,
+  ): Promise<AiRequest | null> {
+    return this.prisma.forCompany(companyId).aiRequest.findFirst({
+      where: { receiptHash, isConfirmed: true, id: { not: excludeRequestId } },
+      orderBy: { createdAt: 'asc' },
     });
   }
 

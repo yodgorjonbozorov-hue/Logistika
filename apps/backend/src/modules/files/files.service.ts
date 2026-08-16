@@ -87,6 +87,27 @@ export class FilesService {
     });
   }
 
+  /**
+   * Raw bytes of a stored file, for server-side processing such as AI Vision.
+   * The tenant-scoped lookup is what keeps one company's photos out of another's
+   * request — the object key alone is never trusted.
+   */
+  async read(companyId: string, id: string): Promise<{ body: Buffer; mimeType: string }> {
+    const file = await this.prisma.forCompany(companyId).storedFile.findUnique({ where: { id } });
+    if (!file) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    try {
+      const stream = await this.client.getObject(this.bucket, file.key);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) chunks.push(chunk as Buffer);
+      return { body: Buffer.concat(chunks), mimeType: file.mimeType };
+    } catch (error) {
+      this.logger.error(
+        `MinIO read failed for ${file.key}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new AppException('INTERNAL_ERROR', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   /** Short-lived signed URL; the tenant-scoped lookup guards cross-company access. */
   async getSignedUrl(
     actor: CurrentUserPayload,

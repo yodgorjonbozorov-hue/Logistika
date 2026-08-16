@@ -131,6 +131,7 @@ export enum AlertType {
   VEHICLE_IDLE = 'VEHICLE_IDLE',
   ROUTE_DEVIATION = 'ROUTE_DEVIATION',
   PAYMENT_OVERDUE = 'PAYMENT_OVERDUE',
+  DUPLICATE_RECEIPT = 'DUPLICATE_RECEIPT',
 }
 
 /** Live map colors — TZ §4.1 W-2: 🟢 moving, 🟡 rest, 🔴 breakdown, ⚪️ idle. */
