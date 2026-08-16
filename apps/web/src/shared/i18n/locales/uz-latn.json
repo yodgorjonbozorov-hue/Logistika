@@ -385,6 +385,14 @@
     "duplicateReceipt": {
       "title": "Takroriy chek yuklandi",
       "message": "Xuddi shu chek fotosi ilgari qabul qilingan (№ {{previousRequestId}})"
+    },
+    "vehicleIdle": {
+      "title": "Mashina qimirlamayapti",
+      "message": "{{plate}} — {{hours}} soatdan beri bir joyda ({{tripNumber}}), «dam» belgilanmagan"
+    },
+    "routeDeviation": {
+      "title": "Marshrutdan chetlashdi",
+      "message": "{{plate}} — yo'ldan {{deviationKm}} km chetda ({{tripNumber}}, chegara {{limitKm}} km)"
     }
   },
   "documents": {

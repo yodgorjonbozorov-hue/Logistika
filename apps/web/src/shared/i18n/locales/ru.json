@@ -385,6 +385,14 @@
     "duplicateReceipt": {
       "title": "Загружен повторный чек",
       "message": "Точно такое же фото чека уже было принято (№ {{previousRequestId}})"
+    },
+    "vehicleIdle": {
+      "title": "Машина не двигается",
+      "message": "{{plate}} — стоит {{hours}} ч на одном месте ({{tripNumber}}), «отдых» не отмечен"
+    },
+    "routeDeviation": {
+      "title": "Отклонение от маршрута",
+      "message": "{{plate}} — в {{deviationKm}} км от маршрута ({{tripNumber}}, предел {{limitKm}} км)"
     }
   },
   "documents": {

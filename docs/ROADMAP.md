@@ -140,7 +140,8 @@
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
-- [ ] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
+- [x] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
+      (har 15 daqiqada cron, chegaralar W-11 dan, dam belgilangan bo'lsa signal bermaydi)
 - [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
 - [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
 - [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)

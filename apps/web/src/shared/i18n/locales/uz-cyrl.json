@@ -385,6 +385,14 @@
     "duplicateReceipt": {
       "title": "Такрорий чек юкланди",
       "message": "Худди шу чек фотоси илгари қабул қилинган (№ {{previousRequestId}})"
+    },
+    "vehicleIdle": {
+      "title": "Машина қимирламаяпти",
+      "message": "{{plate}} — {{hours}} соатдан бери бир жойда ({{tripNumber}}), «дам» белгиланмаган"
+    },
+    "routeDeviation": {
+      "title": "Маршрутдан четлашди",
+      "message": "{{plate}} — йўлдан {{deviationKm}} км четда ({{tripNumber}}, чегара {{limitKm}} км)"
     }
   },
   "documents": {
