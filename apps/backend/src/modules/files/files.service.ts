@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
 import type { StoredFile } from '@prisma/client';
 import * as Minio from 'minio';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +14,26 @@ const MAX_IMAGE_DIMENSION = 1500;
 const SIGNED_URL_TTL_SECONDS = 15 * 60;
 
 const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const ALLOWED_MIMES = new Set([...IMAGE_MIMES, 'application/pdf']);
+/** Voice notes from the driver app (TZ §8.2); kept for 30 days, then deleted. */
+const AUDIO_MIMES = new Set([
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/m4a',
+  'audio/ogg',
+  'audio/webm',
+  'audio/wav',
+  'audio/x-wav',
+]);
+const ALLOWED_MIMES = new Set([...IMAGE_MIMES, ...AUDIO_MIMES, 'application/pdf']);
+
+/** TZ §8.2: a voice note is evidence in a dispute, but only for a month. */
+export const AUDIO_RETENTION_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function extensionFor(mimeType: string): string {
+  if (mimeType === 'application/pdf') return '.pdf';
+  return AUDIO_MIMES.has(mimeType) ? '.audio' : '.jpg';
+}
 
 export interface UploadedFileInput {
   buffer: Buffer;
@@ -69,7 +89,7 @@ export class FilesService {
     }
 
     // Object keys are tenant-prefixed so bucket listings can never cross companies.
-    const key = `${actor.companyId}/${randomUUID()}${mimeType === 'application/pdf' ? '.pdf' : '.jpg'}`;
+    const key = `${actor.companyId}/${randomUUID()}${extensionFor(mimeType)}`;
     await this.ensureBucket();
     await this.client.putObject(this.bucket, key, body, body.length, {
       'Content-Type': mimeType,
@@ -83,8 +103,42 @@ export class FilesService {
         size: body.length,
         originalName: file.originalname,
         createdById: actor.userId,
+        expiresAt: AUDIO_MIMES.has(mimeType)
+          ? new Date(Date.now() + AUDIO_RETENTION_DAYS * MS_PER_DAY)
+          : null,
       },
     });
+  }
+
+  /**
+   * Deletes files whose retention has run out — voice notes, today (TZ §8.2).
+   *
+   * Runs across every tenant, so it uses the bare client on purpose: this is a
+   * platform job, not a request, and `expires_at` is what scopes it. The row is
+   * removed only once the object is gone, so a failed delete is retried
+   * tomorrow instead of leaving an orphan in the bucket.
+   */
+  @Cron('15 3 * * *')
+  async purgeExpired(now: Date = new Date()): Promise<number> {
+    const expired = await this.prisma.storedFile.findMany({
+      where: { expiresAt: { not: null, lte: now } },
+      select: { id: true, key: true },
+      take: 500,
+    });
+
+    let purged = 0;
+    for (const file of expired) {
+      try {
+        await this.client.removeObject(this.bucket, file.key);
+        await this.prisma.storedFile.delete({ where: { id: file.id } });
+        purged += 1;
+      } catch (error) {
+        this.logger.warn(
+          `Could not purge ${file.key}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    return purged;
   }
 
   /**

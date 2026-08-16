@@ -5,11 +5,13 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { AiService } from './ai.service';
 import { AnomalyService } from './anomaly.service';
 import { ChatService } from './chat.service';
+import { VoiceService } from './voice.service';
 import {
   AskDto,
   ConfirmAiRequestDto,
   ListInsightsDto,
   ReadDocumentDto,
+  ReadVoiceNoteDto,
   SetInsightStatusDto,
 } from './dto/ai.dto';
 import { OcrService } from './ocr.service';
@@ -26,6 +28,7 @@ export class AiController {
     private readonly ocr: OcrService,
     private readonly anomaly: AnomalyService,
     private readonly chat: ChatService,
+    private readonly voice: VoiceService,
   ) {}
 
   /** Whether AI is usable at all — the UI hides the buttons when it is not. */
@@ -36,10 +39,19 @@ export class AiController {
     return {
       available: this.ai.available && !usage.exhausted,
       configured: this.ai.available,
+      /** Voice needs a recogniser on top of the model (TZ §8.2). */
+      voiceAvailable: this.voice.available && !usage.exhausted,
       month: usage.month,
       usedMicroUsd: usage.usedMicroUsd,
       limitMicroUsd: usage.limitMicroUsd,
     };
+  }
+
+  /** AI-1: turn a driver's voice note into a proposal they then confirm. */
+  @Post('voice')
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT, UserRole.DRIVER)
+  readVoiceNote(@CurrentUser() user: CurrentUserPayload, @Body() dto: ReadVoiceNoteDto) {
+    return this.voice.readNote(user, dto.fileId, dto.language);
   }
 
   /** AI-2: read a photographed receipt or document into a proposal. */

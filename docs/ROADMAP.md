@@ -107,15 +107,15 @@
       W-10 ogohlantirishlar; W-4 moliya tabi endi real P&L'dan
 - [x] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
 
-## 8-bosqich — AI funksiyalari (TZ §8)
+## 8-bosqich — AI funksiyalari (TZ §8) ✅
 
 - [x] `ai` moduli asosi: Claude klienti (Haiku/Sonnet tanlash, timeout, retry),
       `ai_requests`/`ai_insights`/`ai_settings` jadvallari, xarajat-log (mikro-USD) va oylik limit
 - [x] **AI-2 chek/hujjat OCR** (TZ MVP funksiyasi): foto → JSON taklif → avto-tekshiruvlar
       (summa=litr×narx, sana, GPS-joy, takroriy chek hash) → tasdiqlash/tuzatish oqimi;
       W-8 yoqilg'i formasida «chekni skanerlash» oynasi (tuzatishlar `corrected_data` ga)
-- [ ] **AI-1 ovozli kiritish**: Whisper → strukturalash, confidence < 0.7 → qayta so'rash,
-      ovoz fayli 30 kun saqlanadi
+- [x] **AI-1 ovozli kiritish**: Whisper → strukturalash, confidence < 0.7 → qayta so'rash,
+      ovoz fayli 30 kun saqlanadi (`stored_files.expires_at` + tungi tozalash)
 - [x] **AI-4 anomaliya detektori**: statistika kodda (yoqilg'i, qimmat ta'mir, tez-tez
       nosozlik, cho'zilgan reys), izoh/tavsiya AI'da — AI yo'q bo'lsa i18n katalogidan;
       tungi cron, `ai_insights` holatlari (false_positive bilan), W-10 dagi kartochka
@@ -126,7 +126,8 @@
       raqamlar kodda, matn AI'da, AI yo'q bo'lsa i18n katalogidan
 - [x] Telegram kanali: bot token env orqali, `PATCH/DELETE /notifications/telegram`,
       W-11 sozlamalarida ulash; FCM push — haydovchi ilovasi bilan birga
-- [ ] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit
+- [x] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit
+      (`ai.boundaries.spec.ts` — qoidalar modulning o'ziga qarshi tekshiriladi)
 
 ## 9-bosqich — Sayqal va pilot
 

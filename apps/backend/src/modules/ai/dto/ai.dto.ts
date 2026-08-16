@@ -2,6 +2,7 @@ import { AiInsightStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsLatitude,
   IsLongitude,
   IsObject,
@@ -63,4 +64,15 @@ export class AskDto {
   @IsString()
   @Length(3, 500)
   question!: string;
+}
+
+export class ReadVoiceNoteDto {
+  /** Uploaded audio note; the tenant-scoped lookup proves it belongs here. */
+  @IsUUID()
+  fileId!: string;
+
+  /** Recogniser hint, e.g. "uz" or "ru"; omitted means let it detect. */
+  @IsOptional()
+  @IsIn(['uz', 'ru'])
+  language?: string;
 }

@@ -4,12 +4,14 @@ import { FilesService } from './files.service';
 
 const putObject = jest.fn();
 const presignedGetObject = jest.fn();
+const removeObject = jest.fn();
 const bucketExists = jest.fn().mockResolvedValue(true);
 
 jest.mock('minio', () => ({
   Client: jest.fn().mockImplementation(() => ({
     putObject,
     presignedGetObject,
+    removeObject,
     bucketExists,
     makeBucket: jest.fn(),
   })),
@@ -32,8 +34,11 @@ const config = {
 describe('FilesService', () => {
   function setup() {
     const { prisma, db } = createTenantDbMock(['storedFile']);
+    // Retention runs across tenants, so it uses the bare client.
+    const root = { findMany: jest.fn().mockResolvedValue([]), delete: jest.fn() };
+    (prisma as unknown as { storedFile: typeof root }).storedFile = root;
     const service = new FilesService(prisma, config);
-    return { service, db };
+    return { service, db, root };
   }
 
   beforeEach(() => jest.clearAllMocks());
@@ -86,5 +91,38 @@ describe('FilesService', () => {
       code: 'NOT_FOUND',
     });
     expect(presignedGetObject).not.toHaveBeenCalled();
+  });
+
+  it('gives a voice note 30 days and a photo none (TZ §8.2)', async () => {
+    const { service, db } = setup();
+    db.storedFile!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'f1', ...data }),
+    );
+
+    await service.upload(ACTOR, { buffer: Buffer.from('note'), mimetype: 'audio/mp4' });
+    const audio = db.storedFile!.create!.mock.calls[0][0].data as { expiresAt: Date; key: string };
+    const days = (audio.expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(Math.round(days)).toBe(30);
+    expect(audio.key).toMatch(/\.audio$/);
+
+    await service.upload(ACTOR, { buffer: Buffer.from('photo'), mimetype: 'image/jpeg' });
+    expect(
+      (db.storedFile!.create!.mock.calls[1][0].data as { expiresAt: null }).expiresAt,
+    ).toBeNull();
+  });
+
+  it('purges expired files, dropping the row only once the object is gone', async () => {
+    const { service, root } = setup();
+    root.findMany.mockResolvedValue([
+      { id: 'f1', key: 'company-a/one.audio' },
+      { id: 'f2', key: 'company-a/two.audio' },
+    ]);
+    removeObject.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('bucket down'));
+
+    expect(await service.purgeExpired(new Date())).toBe(1);
+    expect(root.delete).toHaveBeenCalledTimes(1);
+    expect(root.delete.mock.calls[0][0]).toEqual({ where: { id: 'f1' } });
+    // The failed one keeps its row, so tomorrow's run tries it again.
+    expect(root.findMany.mock.calls[0][0].where.expiresAt).toMatchObject({ not: null });
   });
 });

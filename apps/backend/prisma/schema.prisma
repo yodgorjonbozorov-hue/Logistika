@@ -721,18 +721,22 @@ model AiInsight {
 // ---------- Files (MinIO object metadata) ----------
 
 model StoredFile {
-  id           String   @id @default(uuid())
-  companyId    String   @map("company_id")
-  key          String   @unique
-  mimeType     String   @map("mime_type")
+  id           String    @id @default(uuid())
+  companyId    String    @map("company_id")
+  key          String    @unique
+  mimeType     String    @map("mime_type")
   size         Int
-  originalName String?  @map("original_name")
-  createdById  String?  @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
+  originalName String?   @map("original_name")
+  createdById  String?   @map("created_by")
+  /// Set for files kept only for a while — voice notes live 30 days (TZ §8.2).
+  /// Null means keep indefinitely, which is the case for every photo.
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
 
   @@index([companyId])
+  @@index([expiresAt])
   @@map("stored_files")
 }
 

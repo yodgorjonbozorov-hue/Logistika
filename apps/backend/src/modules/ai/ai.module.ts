@@ -13,6 +13,8 @@ import { AiService } from './ai.service';
 import { AnomalyService } from './anomaly.service';
 import { ChatService } from './chat.service';
 import { DigestService } from './digest.service';
+import { TranscribeClient, WhisperTranscribeClient } from './transcribe.client';
+import { VoiceService } from './voice.service';
 import { OcrService } from './ocr.service';
 
 @Module({
@@ -33,7 +35,9 @@ import { OcrService } from './ocr.service';
     AnomalyService,
     ChatService,
     DigestService,
+    VoiceService,
     { provide: AiClient, useClass: AnthropicAiClient },
+    { provide: TranscribeClient, useClass: WhisperTranscribeClient },
   ],
   exports: [AiService, AnomalyService, DigestService],
 })

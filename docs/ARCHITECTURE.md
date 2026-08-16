@@ -232,7 +232,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 - `PATCH /ai/requests/:id/confirm` — odam tasdiqladi; tuzatish `corrected_data` ga yoziladi.
   Yozuvning o'zini (fuel_log/expense) foydalanuvchi oddiy `/fuel`, `/expenses` orqali yaratadi —
   AI moduli biznes jadvallariga hech qachon yozmaydi (TZ §8.0)
-- `POST /ai/voice` — AI-1: ovoz → Whisper → strukturalangan taklif (confidence < 0.7 → qayta so'rash)
+- `POST /ai/voice` — AI-1: ovoz → Whisper → strukturalangan taklif (confidence < 0.7 → `needsRetry`)
 - `POST /ai/chat` — AI-3: savol → function calling (faqat whitelist) → tizim so'rovni o'zi bajaradi → javob + grafik turi + manba (qaysi so'rov, qaysi davr, nechta yozuv)
 - `GET  /ai/insights?status=` · `PATCH /ai/insights/:id/status` — AI-4 anomaliyalar (confirmed/false_positive/resolved)
 - `POST /ai/pricing` — AI-5: marshrut → tannarx + tavsiya narx (4-bosqich)
@@ -300,4 +300,8 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Kunlik xulosa cron'i har soat uyg'onadi, firma vaqt mintaqasidagi soatni tekshiradi                                         | «20:00» boshliq uchun o'z soati bo'lishi kerak; baza baribir UTC'da qoladi.                                                                    |
 | Telegramga yuborish hech qachon xato tashlamaydi (log + `false`)                                                            | Yetib bormagan xabar — yo'qolgan qulaylik, buzilgan cron esa keyingi barcha firmani o'tkazib yuboradi.                                         |
 | Hech narsa bo'lmagan kunda xulosa yuborilmaydi                                                                              | Har kuni keladigan bo'sh xabar bir haftada o'qilmay qoladi va kerakli xabar ham ko'zdan qochadi.                                               |
+| Ovoz fayli `stored_files.expires_at` bilan 30 kun yashaydi, tungi cron tozalaydi                                            | TZ §8.2: nizoda dalil kerak, lekin abadiy saqlash — keraksiz xarajat va shaxsiy ma'lumot yuki.                                                 |
+| Fayl obyekti o'chgandan keyingina yozuv o'chiriladi                                                                         | Aks holda buketda egasiz obyekt qoladi va uni hech kim topa olmaydi.                                                                           |
+| Nutqni matnga o'girish endpoint'i env orqali (`WHISPER_API_URL`)                                                            | Provayder almashishi mumkin; kod bitta HTTP shakliga bog'lanadi, xizmatga emas.                                                                |
+| AI qoidalari modul kodiga qarshi test qilinadi (`ai.boundaries.spec.ts`)                                                    | TZ §8.12 qoidalari yangi AI funksiyasi qo'shilganda ham buzilmasligi kerak — har oqim uchun alohida test buni ushlamaydi.                      |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |
