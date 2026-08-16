@@ -124,9 +124,8 @@
       compare_periods) + W-12 savol-javob sahifasi; Telegram kanali keyingi punktda
 - [x] **AI-8 kunlik xulosa**: har kuni 20:00 (firma o'z vaqt mintaqasida) Telegramga —
       raqamlar kodda, matn AI'da, AI yo'q bo'lsa i18n katalogidan
-- [x] Telegram kanali: bot token env orqali, `GET/PATCH/DELETE /notifications/telegram`
-      (backend tayyor; ulash tugmasi W-11 sozlamalar sahifasi bilan birga — 9-bosqich);
-      FCM push — haydovchi ilovasi bilan birga
+- [x] Telegram kanali: bot token env orqali, `GET/PATCH/DELETE /notifications/telegram`,
+      W-11 sozlamalarida ulash; FCM push — haydovchi ilovasi bilan birga
 - [x] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit
       (`ai.boundaries.spec.ts` — qoidalar modulning o'ziga qarshi tekshiriladi)
 
@@ -136,6 +135,8 @@
       ko'rinishida, forma va xarita qayta joylashadi (i18n kalitlari yechilishi ham tuzatildi)
 - [x] `apps/landing` — ommaviy sayt: muammo, imkoniyatlar, AI, natija, tariflar (TZ §12.1),
       demo CTA; uz-latn/uz-cyrl/ru, bog'lanish kanallari env orqali
+- [x] W-11 sozlamalar sahifasi: firma ma'lumoti (til, vaqt mintaqasi), ogohlantirish
+      chegaralari, AI kalitlari va oylik limit, Telegram ulash
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)

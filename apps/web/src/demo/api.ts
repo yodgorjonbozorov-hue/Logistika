@@ -19,6 +19,8 @@ import {
   demoLive,
   demoServiceDue,
   demoTrips,
+  demoCompany,
+  demoSettings,
   demoUser,
   demoVehicles,
   iso,
@@ -615,6 +617,25 @@ export function resolve(
   const [head, second, third] = parts;
 
   if (path === '/auth/me') return { data: demoUser };
+
+  // W-11 settings. The demo accepts a save and echoes it back so the form
+  // behaves; nothing persists past a reload, and nothing pretends to.
+  if (path === '/company') {
+    if (method === 'PATCH') Object.assign(demoCompany, body);
+    return { data: demoCompany };
+  }
+  if (path === '/company/settings') {
+    if (method === 'PATCH') {
+      const { monthlyLimitUsd, ...rest } = body as { monthlyLimitUsd?: number };
+      Object.assign(demoSettings, rest);
+      if (monthlyLimitUsd !== undefined) {
+        demoSettings.monthlyLimitMicroUsd = String(BigInt(monthlyLimitUsd) * 1_000_000n);
+      }
+    }
+    return { data: demoSettings };
+  }
+  // No bot in a static demo, so the Telegram card hides itself.
+  if (path === '/notifications/telegram') return { data: { linked: false, available: false } };
   // Nothing has run the nightly scan in a static demo, so there is nothing
   // to show — better an empty card than invented anomalies.
   if (path === '/ai/insights') return { data: [] };

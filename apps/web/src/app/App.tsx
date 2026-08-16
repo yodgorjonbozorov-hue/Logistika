@@ -10,6 +10,7 @@ import { VehiclesPage } from '../features/fleet/VehiclesPage';
 import { FuelPage } from '../features/fuel/FuelPage';
 import { MapPage } from '../features/map/MapPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { PublicTrackPage } from '../features/track/PublicTrackPage';
 import { TripDetailPage } from '../features/trips/TripDetailPage';
 import { TripsPage } from '../features/trips/TripsPage';
@@ -35,6 +36,7 @@ export function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/ai" element={<AiChatPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

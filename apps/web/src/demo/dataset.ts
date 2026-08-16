@@ -14,6 +14,33 @@ const som = (value: number): string => String(BigInt(value) * 100n);
 
 export const DEMO_COMPANY = "Yo'lbars Logistika";
 
+export const demoCompany = {
+  id: 'c1',
+  name: DEMO_COMPANY,
+  inn: '301234567',
+  address: "Toshkent sh., Yunusobod t., Amir Temur ko'chasi 108",
+  phone: '+998 71 200 40 40',
+  locale: 'uz-latn',
+  timezone: 'Asia/Tashkent',
+  tariffPlan: 'STANDARD',
+  subscriptionUntil: null,
+};
+
+/** W-11 defaults, i.e. exactly what the backend falls back to (TZ §8.10). */
+export const demoSettings = {
+  fuelDeviationThresholdBp: 700,
+  idleAlertHours: 2,
+  routeDeviationKm: 20,
+  digestTime: '20:00',
+  voiceEnabled: true,
+  ocrEnabled: true,
+  chatEnabled: true,
+  anomalyEnabled: true,
+  monthlyLimitMicroUsd: '50000000',
+  currentUsageMicroUsd: '0',
+  usageMonth: '',
+};
+
 export const demoUser = {
   id: 'u1',
   companyId: 'c1',

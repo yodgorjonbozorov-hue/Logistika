@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/reports', key: 'nav.reports' },
   { to: '/alerts', key: 'nav.alerts' },
   { to: '/ai', key: 'nav.ai' },
+  { to: '/settings', key: 'nav.settings' },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {

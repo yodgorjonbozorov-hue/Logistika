@@ -140,11 +140,10 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 ### companies (OWNER; superadmin — alohida `/admin` prefiksi)
 
-- `GET/PATCH /company/settings` — ogohlantirish chegaralari: yoqilg'i farqi (default 7%),
-  qimirlamaslik soati, marshrutdan chetlash km (TZ §8.10 `ai_settings`)
-
-- `GET/PATCH /company` — o'z firmasi, sozlamalar
-- `GET/PATCH /company/ai-settings` — AI sozlamalari (TZ §8.10 ai_settings)
+- `GET/PATCH /company` — o'z firmasi: nomi, aloqa, til (`locale`), vaqt mintaqasi (`timezone`)
+- `GET/PATCH /company/settings` — W-11: ogohlantirish chegaralari (yoqilg'i farqi default 7%,
+  qimirlamaslik soati, marshrutdan chetlash km, kunlik xulosa vaqti) + AI kalitlari va oylik
+  limit; limit formada dollarda, bazada mikro-USD'da (TZ §8.10 `ai_settings`)
 - `ADMIN: GET/POST/PATCH /admin/companies` — firmalar, obuna
 
 ### users (OWNER)
@@ -304,4 +303,5 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Fayl obyekti o'chgandan keyingina yozuv o'chiriladi                                                                         | Aks holda buketda egasiz obyekt qoladi va uni hech kim topa olmaydi.                                                                           |
 | Nutqni matnga o'girish endpoint'i env orqali (`WHISPER_API_URL`)                                                            | Provayder almashishi mumkin; kod bitta HTTP shakliga bog'lanadi, xizmatga emas.                                                                |
 | AI qoidalari modul kodiga qarshi test qilinadi (`ai.boundaries.spec.ts`)                                                    | TZ §8.12 qoidalari yangi AI funksiyasi qo'shilganda ham buzilmasligi kerak — har oqim uchun alohida test buni ushlamaydi.                      |
+| AI limiti foydalanuvchiga dollarda, bazada mikro-USD'da                                                                     | Egasi butun dollarda o'ylaydi; saqlash birligini formaga chiqarish faqat xatoga olib keladi.                                                   |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

@@ -13,7 +13,8 @@
     "fuel": "Yoqilg'i",
     "reports": "Hisobotlar",
     "alerts": "Ogohlantirishlar",
-    "ai": "AI-boshliq"
+    "ai": "AI-boshliq",
+    "settings": "Sozlamalar"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -483,6 +484,56 @@
         "get_receivables": "qarzdorlar",
         "compare_periods": "davrlarni taqqoslash"
       }
+    }
+  },
+  "settings": {
+    "title": "Sozlamalar",
+    "saved": "Saqlandi",
+    "locales": {
+      "uz-latn": "O'zbekcha (lotin)",
+      "uz-cyrl": "Ўзбекча (кирилл)",
+      "ru": "Русский"
+    },
+    "company": {
+      "title": "Firma ma'lumotlari",
+      "name": "Nomi",
+      "phone": "Telefon",
+      "address": "Manzil",
+      "locale": "Til",
+      "localeHint": "Hisobot, AI izohi va kunlik xulosa shu tilda yoziladi",
+      "timezone": "Vaqt mintaqasi",
+      "timezoneHint": "Kunlik xulosa vaqti shu mintaqada o'qiladi"
+    },
+    "thresholds": {
+      "title": "Ogohlantirish chegaralari",
+      "fuel": "Yoqilg'i chetlashishi, %",
+      "fuelHint": "Normadan shuncha oshsa signal (TZ bo'yicha 7%)",
+      "idle": "Harakatsizlik, soat",
+      "route": "Marshrutdan chetlash, km",
+      "digest": "Kunlik xulosa vaqti",
+      "digestHint": "Firma vaqt mintaqasida"
+    },
+    "ai": {
+      "title": "AI funksiyalari",
+      "notConfigured": "AI kaliti ulanmagan — bu sozlamalar kalit qo'shilgach ishlaydi",
+      "ocrEnabled": "Chek va hujjat OCR",
+      "ocrEnabledHint": "Foto → tayyor forma, siz tasdiqlaysiz",
+      "voiceEnabled": "Ovozli kiritish",
+      "voiceEnabledHint": "Haydovchi rulda gapirib kiritadi",
+      "chatEnabled": "AI-boshliq",
+      "chatEnabledHint": "Hisobotlar bo'yicha savol-javob",
+      "anomalyEnabled": "Anomaliya detektori",
+      "anomalyEnabledHint": "Tungi tekshiruv: yoqilg'i, ta'mir, nosozlik",
+      "limit": "Oylik AI limiti, $",
+      "limitHint": "Limit tugasa AI o'chadi, qo'lda kiritish ishlayveradi",
+      "usage": "{{month}} oyida sarflandi: ${{used}} / ${{cap}}"
+    },
+    "telegram": {
+      "title": "Telegram",
+      "hint": "Kunlik xulosa shu chatga boradi. Bot bilan suhbatni boshlang va u bergan chat ID ni kiriting",
+      "chatId": "Chat ID",
+      "linked": "Ulangan",
+      "unlink": "Uzish"
     }
   }
 }

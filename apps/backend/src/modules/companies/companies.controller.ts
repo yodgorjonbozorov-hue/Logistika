@@ -27,10 +27,10 @@ export class CompaniesController {
     return this.companiesService.updateOwn(user.companyId, user.userId, dto);
   }
 
-  /** W-11: alert thresholds (fuel deviation, idle, route deviation). */
+  /** W-11: thresholds, AI switches and the monthly spend cap. */
   @Get('settings')
   settings(@CurrentUser() user: CurrentUserPayload) {
-    return this.settingsService.thresholds(user.companyId as string);
+    return this.settingsService.settings(user.companyId as string);
   }
 
   @Patch('settings')
