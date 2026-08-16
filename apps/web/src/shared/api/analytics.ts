@@ -232,3 +232,25 @@ export function useServiceDue() {
     queryFn: async () => (await api<ServiceDue[]>('/maintenance/due')).data,
   });
 }
+
+/** W-6 driver rating: hundredths of a star, with the inputs that produced it. */
+export interface DriverRating {
+  driverId: string;
+  driverName: string;
+  trips: number;
+  lateTrips: number;
+  breakdowns: number;
+  fuelDeviationBp: number | null;
+  /** 100–500; null until the driver has enough trips to be judged. */
+  ratingCentis: number | null;
+  penalties: { lateness: number; fuel: number; breakdowns: number };
+  lateShareBp: number;
+  breakdownRateBp: number;
+}
+
+export function useDriverRatings() {
+  return useQuery({
+    queryKey: ['drivers', 'ratings'],
+    queryFn: async () => (await api<DriverRating[]>('/drivers/ratings')).data,
+  });
+}

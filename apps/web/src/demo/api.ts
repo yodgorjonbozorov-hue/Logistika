@@ -345,6 +345,43 @@ interface ReportTable {
 
 const column = (key: string, labelKey: string, type: string) => ({ key, labelKey, type });
 
+/** W-6 rating on the demo dataset — the same shape the backend produces. */
+function driverRatings() {
+  return store.drivers
+    .map((driver) => {
+      const trips = completedTrips().filter((trip) => trip.driverId === driver.id);
+      const lateTrips = trips.filter(
+        (trip) => trip.unloadingDate && trip.finishedAt && trip.finishedAt > trip.unloadingDate,
+      ).length;
+      const breakdowns = demoEvents.filter(
+        (event) => event.driverId === driver.id && event.eventType === 'BREAKDOWN',
+      ).length;
+      const lateShareBp = trips.length === 0 ? 0 : Math.round((lateTrips * 10_000) / trips.length);
+      const breakdownRateBp =
+        trips.length === 0 ? 0 : Math.round((breakdowns * 10_000) / trips.length);
+      const penalties = {
+        lateness: Math.min(150, Math.round((lateShareBp * 150) / 10_000)),
+        fuel: 0,
+        breakdowns: Math.min(150, Math.round((breakdownRateBp * 150) / 2_000)),
+      };
+      const scored = 500 - penalties.lateness - penalties.fuel - penalties.breakdowns;
+
+      return {
+        driverId: driver.id,
+        driverName: driver.fullName,
+        trips: trips.length,
+        lateTrips,
+        breakdowns,
+        fuelDeviationBp: null,
+        ratingCentis: trips.length < 3 ? null : Math.max(100, scored),
+        penalties,
+        lateShareBp,
+        breakdownRateBp,
+      };
+    })
+    .sort((a, b) => (b.ratingCentis ?? -1) - (a.ratingCentis ?? -1));
+}
+
 function reportTable(key: string): ReportTable {
   const trips = completedTrips();
 
@@ -639,6 +676,7 @@ export function resolve(
   // Nothing has run the nightly scan in a static demo, so there is nothing
   // to show — better an empty card than invented anomalies.
   if (path === '/ai/insights') return { data: [] };
+  if (path === '/drivers/ratings') return { data: driverRatings() };
   // The demo has no backend and no API key, so AI is off: the receipt-scan
   // button hides itself rather than pretending to read a photo.
   if (path === '/ai/status') {

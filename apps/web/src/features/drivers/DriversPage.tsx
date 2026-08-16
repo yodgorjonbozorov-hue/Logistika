@@ -20,6 +20,7 @@ import {
   Table,
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
+import { RatingCard } from './RatingCard';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
 export function DriversPage() {
@@ -94,6 +95,8 @@ export function DriversPage() {
           <Pagination page={page} limit={20} total={total} onPage={setPage} />
         </>
       )}
+      <RatingCard />
+
       <DriverFormModal open={showForm} onClose={() => setShowForm(false)} />
     </div>
   );

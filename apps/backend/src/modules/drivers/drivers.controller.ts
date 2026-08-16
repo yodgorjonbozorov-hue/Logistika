@@ -15,11 +15,21 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import { DriversService } from './drivers.service';
+import { RatingService } from './rating.service';
 
 @Controller('drivers')
 @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT)
 export class DriversController {
-  constructor(private readonly driversService: DriversService) {}
+  constructor(
+    private readonly driversService: DriversService,
+    private readonly ratingService: RatingService,
+  ) {}
+
+  /** W-6 rating: lateness, fuel deviation and breakdowns, with the inputs shown. */
+  @Get('ratings')
+  ratings(@CurrentUser() user: CurrentUserPayload) {
+    return this.ratingService.ratings(user);
+  }
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {

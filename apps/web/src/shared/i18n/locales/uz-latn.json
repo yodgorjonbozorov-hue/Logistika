@@ -135,6 +135,17 @@
       "FIXED": "Oylik",
       "PERCENT": "Foiz",
       "PER_KM": "Km ga"
+    },
+    "rating": {
+      "title": "Haydovchi reytingi",
+      "hint": "Ball 5.00 dan boshlanadi: kechikish, normadan ortiq yoqilg'i va nosozliklar uchun kamayadi",
+      "score": "Ball",
+      "trips": "Reys",
+      "late": "Kechikkan",
+      "fuel": "Yoqilg'i farqi",
+      "breakdowns": "Nosozlik",
+      "none": "yo'q",
+      "tooFew": "ma'lumot kam"
     }
   },
   "clients": {

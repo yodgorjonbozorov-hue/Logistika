@@ -153,6 +153,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 ### drivers
 
 - `GET/POST /drivers` · `GET/PATCH/DELETE /drivers/:id`
+- `GET /drivers/ratings` — W-6 reyting: kechikish, yoqilg'i farqi, nosozlik + jarima taqsimoti
 - `GET /drivers/:id/trips` · `GET /drivers/:id/balance` — avans/qoldiq
 - `GET /drivers/:id/rating` — reyting (kechikish, yoqilg'i farqi, nosozlik)
 
@@ -307,4 +308,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Qimirlamaslik oxirgi nuqtadan orqaga o'lchanadi (radius 500 m), oldingi harakat to'sqinlik qilmaydi                         | Bir soat yurib keyin ikki soat turgan mashina ham topilishi kerak; GPS qabul qiluvchining 200–400 m siljishi harakat emas.                     |
 | Oxirgi GPS nuqtasi chegaradan eski bo'lsa — signal berilmaydi                                                               | Bu «turibdi» emas, «aloqa yo'q»: boshqa muammo va boshqa signal.                                                                               |
 | Chetlash km jonli xarita hisobidan olinadi, qayta hisoblanmaydi                                                             | Signaldagi raqam ekrandagi raqamdan farq qilsa, ikkalasiga ham ishonch yo'qoladi.                                                              |
+| Reyting yulduzning yuzdan bir ulushida butun son sifatida hisoblanadi                                                       | Bir xil ko'rsatkichli ikki haydovchi doim bir xil saralanadi; float bunga kafolat bermaydi.                                                    |
+| Reyting bilan birga uch ko'rsatkich ham qaytariladi                                                                         | Sababi ko'rinmagan ball bo'yicha haydovchi bilan gaplashib bo'lmaydi va xato ham tuzatilmaydi.                                                 |
+| Normasi yoki masofasi yo'q reys yoqilg'i bo'yicha hisobga kirmaydi                                                          | Aks holda haydovchi to'ldirilmagan maydon uchun jazolangan bo'lardi.                                                                           |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

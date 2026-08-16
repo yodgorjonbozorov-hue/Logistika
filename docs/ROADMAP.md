@@ -138,7 +138,8 @@
 - [x] W-11 sozlamalar sahifasi: firma ma'lumoti (til, vaqt mintaqasi), ogohlantirish
       chegaralari, AI kalitlari va oylik limit, Telegram ulash
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
-- [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
+- [x] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — W-6 kartochkasi,
+      `GET /drivers/ratings`, tungi kesh; E-7 dagi ko'rsatish mobil bilan birga
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
 - [x] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
       (har 15 daqiqada cron, chegaralar W-11 dan, dam belgilangan bo'lsa signal bermaydi)
