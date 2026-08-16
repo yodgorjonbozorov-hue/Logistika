@@ -12,7 +12,8 @@
     "dashboard": "Бошқарув панели",
     "fuel": "Ёқилғи",
     "reports": "Ҳисоботлар",
-    "alerts": "Огоҳлантиришлар"
+    "alerts": "Огоҳлантиришлар",
+    "ai": "AI-бошлиқ"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -458,6 +459,29 @@
         "CONFIRMED": "Тасдиқлайман",
         "RESOLVED": "Ҳал қилинди",
         "FALSE_POSITIVE": "Нотўғри сигнал"
+      }
+    },
+    "chat": {
+      "title": "AI-бошлиқ",
+      "ask": "Сўраш",
+      "thinking": "Ўйланмоқда…",
+      "placeholder": "Саволингизни оддий гап билан ёзинг",
+      "notConfigured": "AI хизмати уланмаган. Ҳисоботларни W-9 бўлимидан кўринг",
+      "limitReached": "Бу ойга ажратилган AI лимити тугади",
+      "source": "Манба: {{query}}, {{from}} — {{to}}, {{count}} та ёзув",
+      "examples": {
+        "losingVehicle": "Шу ой қайси машина зарар келтирди?",
+        "fuelGap": "Қайси машинада ёқилғи фарқи энг катта?",
+        "profitTrend": "Ўтган ойга нисбатан фойда ўсдими?",
+        "receivables": "Ким менга қарздор?"
+      },
+      "functions": {
+        "get_vehicle_profit": "машиналар фойдаси",
+        "get_driver_stats": "ҳайдовчилар статистикаси",
+        "get_fuel_anomalies": "ёқилғи назорати",
+        "get_route_profitability": "йўналишлар рентабеллиги",
+        "get_receivables": "қарздорлар",
+        "compare_periods": "даврларни таққослаш"
       }
     }
   }

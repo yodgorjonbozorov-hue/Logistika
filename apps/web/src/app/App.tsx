@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { AiChatPage } from '../features/ai/AiChatPage';
 import { AlertsPage } from '../features/alerts/AlertsPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ClientsPage } from '../features/clients/ClientsPage';
@@ -33,6 +34,7 @@ export function App() {
           <Route path="/fuel" element={<FuelPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/ai" element={<AiChatPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

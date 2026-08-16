@@ -4,7 +4,9 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AiService } from './ai.service';
 import { AnomalyService } from './anomaly.service';
+import { ChatService } from './chat.service';
 import {
+  AskDto,
   ConfirmAiRequestDto,
   ListInsightsDto,
   ReadDocumentDto,
@@ -23,6 +25,7 @@ export class AiController {
     private readonly ai: AiService,
     private readonly ocr: OcrService,
     private readonly anomaly: AnomalyService,
+    private readonly chat: ChatService,
   ) {}
 
   /** Whether AI is usable at all — the UI hides the buttons when it is not. */
@@ -76,5 +79,15 @@ export class AiController {
     @Body() dto: SetInsightStatusDto,
   ) {
     return this.anomaly.setStatus(user.companyId as string, id, dto.status, user.userId);
+  }
+
+  /**
+   * AI-3: a question in plain language. The model picks one prepared query and
+   * words the result — it never sees the database and never writes SQL (TZ §8.4).
+   */
+  @Post('chat')
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT)
+  ask(@CurrentUser() user: CurrentUserPayload, @Body() dto: AskDto) {
+    return this.chat.ask(user, dto.question);
   }
 }

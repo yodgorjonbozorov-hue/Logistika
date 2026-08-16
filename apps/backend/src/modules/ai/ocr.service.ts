@@ -97,7 +97,7 @@ export class OcrService {
       receiptHash,
       system: OCR_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: [image] }],
-      tool: OCR_TOOL,
+      tools: [OCR_TOOL],
       parse: parseOcr,
       confidenceBp: (fields) => fields.confidenceBp,
       maxTokens: 1500,

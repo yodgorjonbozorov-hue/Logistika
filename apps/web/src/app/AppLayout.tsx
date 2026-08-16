@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { to: '/fuel', key: 'nav.fuel' },
   { to: '/reports', key: 'nav.reports' },
   { to: '/alerts', key: 'nav.alerts' },
+  { to: '/ai', key: 'nav.ai' },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {

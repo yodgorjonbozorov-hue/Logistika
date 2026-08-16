@@ -119,9 +119,9 @@
 - [x] **AI-4 anomaliya detektori**: statistika kodda (yoqilg'i, qimmat ta'mir, tez-tez
       nosozlik, cho'zilgan reys), izoh/tavsiya AI'da — AI yo'q bo'lsa i18n katalogidan;
       tungi cron, `ai_insights` holatlari (false_positive bilan), W-10 dagi kartochka
-- [ ] **AI-3 AI-boshliq**: 2 bosqichli function calling (whitelist: get_vehicle_profit,
+- [x] **AI-3 AI-boshliq**: 2 bosqichli function calling (whitelist: get_vehicle_profit,
       get_driver_stats, get_fuel_anomalies, get_route_profitability, get_receivables,
-      compare_periods), web + Telegram
+      compare_periods) + W-12 savol-javob sahifasi; Telegram kanali keyingi punktda
 - [ ] **AI-8 kunlik xulosa**: har kuni 20:00 Telegramga (BullMQ cron)
 - [ ] Telegram bot ulash + FCM push
 - [ ] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit

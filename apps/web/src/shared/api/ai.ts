@@ -162,3 +162,23 @@ export function useSetInsightStatus() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['ai', 'insights'] }),
   });
 }
+
+// ---------- AI-3 the boss asks (TZ §8.4) ----------
+
+export type ChartType = 'none' | 'bar' | 'line' | 'pie';
+
+export interface ChatReply {
+  answer: string;
+  chart: ChartType;
+  /** Which prepared query the figures came from — shown so the answer is checkable. */
+  source: { function: string; from: string; to: string; rowCount: number };
+  data: unknown;
+  requestIds: string[];
+}
+
+export function useAskAi() {
+  return useMutation({
+    mutationFn: (question: string) =>
+      api<ChatReply>('/ai/chat', { method: 'POST', body: { question } }).then((r) => r.data),
+  });
+}

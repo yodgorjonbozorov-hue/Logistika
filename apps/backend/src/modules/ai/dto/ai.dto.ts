@@ -1,6 +1,15 @@
 import { AiInsightStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsLatitude, IsLongitude, IsObject, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsLatitude,
+  IsLongitude,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+} from 'class-validator';
 
 export class ReadDocumentDto {
   /** Stored file to read; the tenant-scoped lookup proves it belongs here. */
@@ -47,4 +56,11 @@ export class ListInsightsDto {
 export class SetInsightStatusDto {
   @IsEnum(AiInsightStatus)
   status!: AiInsightStatus;
+}
+
+export class AskDto {
+  /** The owner's question, in their own words. */
+  @IsString()
+  @Length(3, 500)
+  question!: string;
 }

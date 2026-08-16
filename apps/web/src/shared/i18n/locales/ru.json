@@ -12,7 +12,8 @@
     "dashboard": "Панель",
     "fuel": "Топливо",
     "reports": "Отчёты",
-    "alerts": "Оповещения"
+    "alerts": "Оповещения",
+    "ai": "AI-директор"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -458,6 +459,29 @@
         "CONFIRMED": "Подтверждаю",
         "RESOLVED": "Решено",
         "FALSE_POSITIVE": "Ложный сигнал"
+      }
+    },
+    "chat": {
+      "title": "AI-директор",
+      "ask": "Спросить",
+      "thinking": "Думает…",
+      "placeholder": "Задайте вопрос обычными словами",
+      "notConfigured": "AI-сервис не подключён. Смотрите отчёты в разделе W-9",
+      "limitReached": "Месячный лимит AI исчерпан",
+      "source": "Источник: {{query}}, {{from}} — {{to}}, записей: {{count}}",
+      "examples": {
+        "losingVehicle": "Какая машина принесла убыток в этом месяце?",
+        "fuelGap": "У какой машины самый большой перерасход топлива?",
+        "profitTrend": "Выросла ли прибыль по сравнению с прошлым месяцем?",
+        "receivables": "Кто мне должен?"
+      },
+      "functions": {
+        "get_vehicle_profit": "прибыль по машинам",
+        "get_driver_stats": "статистика водителей",
+        "get_fuel_anomalies": "контроль топлива",
+        "get_route_profitability": "рентабельность маршрутов",
+        "get_receivables": "задолженности",
+        "compare_periods": "сравнение периодов"
       }
     }
   }

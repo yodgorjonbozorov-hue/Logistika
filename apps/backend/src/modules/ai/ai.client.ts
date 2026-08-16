@@ -15,11 +15,16 @@ export interface AiPrompt {
   model: string;
   system: string;
   messages: MessageParam[];
-  tool: AiToolSpec;
+  /** Everything the model is allowed to call. It must call one of them. */
+  tools: AiToolSpec[];
+  /** Name of the tool it has to pick; omitted means "whichever fits". */
+  forceTool?: string;
   maxTokens: number;
 }
 
 export interface AiRawResult {
+  /** Which tool the model chose — the whole answer in AI-3's first step. */
+  toolName: string;
   /** Raw tool input as the model produced it — still untrusted at this point. */
   json: unknown;
   promptTokens: number;
@@ -38,11 +43,12 @@ export abstract class AiClient {
 /**
  * Anthropic implementation.
  *
- * Answers always come back through a forced tool call rather than free text:
- * the model then has to produce an object of our schema, and there is no prose
- * to strip or a half-written JSON to repair. Retries and the timeout are handled
- * by the SDK; anything left over surfaces as AI_UNAVAILABLE so the caller can
- * fall back to the manual flow (TZ §8.12 rule 5).
+ * Answers always come back through a tool call rather than free text: the model
+ * then has to produce an object of our schema, and there is no prose to strip or
+ * a half-written JSON to repair. With several tools on offer the choice itself
+ * is the answer — that is exactly how AI-3 stays away from SQL (TZ §8.4).
+ * Retries and the timeout are handled by the SDK; anything left over surfaces as
+ * AI_UNAVAILABLE so the caller can fall back to the manual flow (§8.12 rule 5).
  */
 @Injectable()
 export class AnthropicAiClient extends AiClient {
@@ -75,14 +81,12 @@ export class AnthropicAiClient extends AiClient {
         max_tokens: prompt.maxTokens,
         system: prompt.system,
         messages: prompt.messages,
-        tools: [
-          {
-            name: prompt.tool.name,
-            description: prompt.tool.description,
-            input_schema: prompt.tool.schema as Anthropic.Tool['input_schema'],
-          },
-        ],
-        tool_choice: { type: 'tool', name: prompt.tool.name },
+        tools: prompt.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          input_schema: tool.schema as Anthropic.Tool['input_schema'],
+        })),
+        tool_choice: prompt.forceTool ? { type: 'tool', name: prompt.forceTool } : { type: 'any' },
       });
     } catch (error) {
       // Logged, never swallowed: the caller decides whether to degrade or fail.
@@ -96,6 +100,7 @@ export class AnthropicAiClient extends AiClient {
     }
 
     return {
+      toolName: block.name,
       json: block.input,
       promptTokens: message.usage.input_tokens,
       completionTokens: message.usage.output_tokens,

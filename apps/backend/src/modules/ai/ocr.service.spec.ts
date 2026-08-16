@@ -33,8 +33,8 @@ function setup(
   const sent: Record<string, unknown>[] = [];
   const run = jest.fn(async (opts: Record<string, unknown>) => {
     sent.push(opts);
-    const parse = opts.parse as (raw: unknown) => { confidenceBp: number | null };
-    const data = parse(options.json ?? FUEL_RECEIPT);
+    const parse = opts.parse as (raw: unknown, tool: string) => { confidenceBp: number | null };
+    const data = parse(options.json ?? FUEL_RECEIPT, 'report_document');
     return { requestId: 'req-1', data, confidenceBp: data.confidenceBp, costMicroUsd: 2500n };
   });
   const previousReceipt = jest.fn().mockResolvedValue(options.duplicate ?? null);

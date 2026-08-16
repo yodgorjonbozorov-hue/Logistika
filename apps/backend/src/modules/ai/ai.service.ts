@@ -33,12 +33,14 @@ export interface AiRunOptions<T> {
   inputRef?: string | null;
   system: string;
   messages: MessageParam[];
-  tool: AiToolSpec;
+  /** Every tool the model may call; with one entry it is forced to call it. */
+  tools: AiToolSpec[];
   /**
-   * Turns the raw tool input into a domain object, rejecting anything it does
-   * not recognise (see ai.validation.ts). Runs before the value is returned.
+   * Turns the chosen tool and its raw input into a domain object, rejecting
+   * anything it does not recognise (see ai.validation.ts). Runs before the
+   * value is returned, so nothing unvalidated ever leaves this service.
    */
-  parse: (raw: unknown) => T;
+  parse: (raw: unknown, toolName: string) => T;
   tier?: AiModelTier;
   maxTokens?: number;
   /** Model self-reported confidence, in basis points, for the accuracy report. */
@@ -136,7 +138,8 @@ export class AiService {
         model,
         system: options.system,
         messages: options.messages,
-        tool: options.tool,
+        tools: options.tools,
+        forceTool: options.tools.length === 1 ? options.tools[0]?.name : undefined,
         maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
       });
     } catch (error) {
@@ -149,7 +152,7 @@ export class AiService {
 
     let data: T;
     try {
-      data = options.parse(raw.json);
+      data = options.parse(raw.json, raw.toolName);
     } catch (error) {
       await this.charge(options.companyId, cost, now);
       await this.logFailure(options, model, latencyMs, error, raw, cost);

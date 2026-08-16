@@ -245,7 +245,7 @@ export class AnomalyService {
         inputRef: `${finding.relatedType}:${finding.relatedId}`,
         system: anomalySystemPrompt(locale),
         messages: [{ role: 'user', content: anomalyUserMessage(finding) }],
-        tool: ANOMALY_TOOL,
+        tools: [ANOMALY_TOOL],
         parse: parseNarrative,
         tier: 'smart',
         maxTokens: 700,

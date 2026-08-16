@@ -34,7 +34,13 @@ function setup(
 
   const complete = jest.fn(
     options.complete ??
-      (() => Promise.resolve({ json: OCR_JSON, promptTokens: 1500, completionTokens: 200 })),
+      (() =>
+        Promise.resolve({
+          toolName: 'receipt',
+          json: OCR_JSON,
+          promptTokens: 1500,
+          completionTokens: 200,
+        })),
   );
   const client = { configured: options.configured ?? true, complete } as unknown as AiClient;
   return { service: new AiService(prisma, client), db, forCompany, complete };
@@ -48,7 +54,7 @@ const RUN: AiRunOptions<Parsed> = {
   inputRef: 'company-a/receipts/1.jpg',
   system: 'extract the receipt',
   messages: [{ role: 'user', content: 'photo' }],
-  tool: { name: 'receipt', description: 'receipt fields', schema: { type: 'object' } },
+  tools: [{ name: 'receipt', description: 'receipt fields', schema: { type: 'object' } }],
   parse: parseReceipt,
   confidenceBp: (value) => value.confidenceBp,
 };
@@ -182,7 +188,12 @@ describe('AiService.run', () => {
   it('rejects an answer that does not validate, but still charges the tokens', async () => {
     const { service, db } = setup({
       complete: () =>
-        Promise.resolve({ json: { station: null }, promptTokens: 1500, completionTokens: 200 }),
+        Promise.resolve({
+          toolName: 'receipt',
+          json: { station: null },
+          promptTokens: 1500,
+          completionTokens: 200,
+        }),
     });
 
     await expectCode(() => service.run(RUN), 'AI_INVALID_RESPONSE');

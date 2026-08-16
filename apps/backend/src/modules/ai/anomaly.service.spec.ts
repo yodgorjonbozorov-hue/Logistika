@@ -46,8 +46,13 @@ function setup(options: { aiFails?: boolean; open?: { id: string } | null } = {}
   const run = jest.fn(async (opts: Record<string, unknown>) => {
     sent.push(opts);
     if (options.aiFails) throw new AppException('AI_LIMIT_REACHED', 429 as never);
-    const parse = opts.parse as (raw: unknown) => unknown;
-    return { requestId: 'req-1', data: parse(NARRATIVE), confidenceBp: null, costMicroUsd: 900n };
+    const parse = opts.parse as (raw: unknown, tool: string) => unknown;
+    return {
+      requestId: 'req-1',
+      data: parse(NARRATIVE, 'explain_anomaly'),
+      confidenceBp: null,
+      costMicroUsd: 900n,
+    };
   });
   const ai = { run } as unknown as AiService;
 

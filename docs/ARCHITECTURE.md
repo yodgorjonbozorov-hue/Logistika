@@ -233,7 +233,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
   Yozuvning o'zini (fuel_log/expense) foydalanuvchi oddiy `/fuel`, `/expenses` orqali yaratadi —
   AI moduli biznes jadvallariga hech qachon yozmaydi (TZ §8.0)
 - `POST /ai/voice` — AI-1: ovoz → Whisper → strukturalangan taklif (confidence < 0.7 → qayta so'rash)
-- `POST /ai/chat` — AI-3: savol → function calling (faqat whitelist) → javob
+- `POST /ai/chat` — AI-3: savol → function calling (faqat whitelist) → tizim so'rovni o'zi bajaradi → javob + grafik turi + manba (qaysi so'rov, qaysi davr, nechta yozuv)
 - `GET  /ai/insights?status=` · `PATCH /ai/insights/:id/status` — AI-4 anomaliyalar (confirmed/false_positive/resolved)
 - `POST /ai/pricing` — AI-5: marshrut → tannarx + tavsiya narx (4-bosqich)
 - `GET  /ai/eta/:tripId` — AI-6 (4-bosqich)
@@ -294,4 +294,6 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | AI-4 statistikasi kodda, izoh AI'da; AI yo'q bo'lsa izoh i18n katalogidan olinadi                                           | TZ §8.12.5+7: nazorat AI'ga bog'liq bo'lmasligi kerak, lekin anomaliya baribir yozilishi shart.                                                |
 | `ai_insights` matni tayyor satr sifatida saqlanadi (kalit emas), `locale` ustuni bilan                                      | AI izohi erkin matn — uni kalitga aylantirib bo'lmaydi; qaysi tilda yozilgani bilinib tursin.                                                  |
 | Anomaliya 7 kun ichida ochiq bo'lsa qayta yozilmaydi                                                                        | Tungi cron har kuni ishlaydi; aks holda bitta muammo bir hafta ichida 7 marta ko'rinadi.                                                       |
+| AI-3 javobi bilan birga manba ko'rsatiladi (so'rov nomi, davr, yozuv soni)                                                  | TZ §8.12.6; izlanmaydigan raqamga boshliq baribir ishonmaydi.                                                                                  |
+| AI-3 so'rovi panel ishlatadigan servislarning aynan o'zini chaqiradi                                                        | Javobdagi raqam ekrandagi raqamdan farq qilishi mumkin emas; formulalar bitta joyda qoladi.                                                    |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |
