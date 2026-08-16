@@ -615,6 +615,19 @@ export function resolve(
   const [head, second, third] = parts;
 
   if (path === '/auth/me') return { data: demoUser };
+  // The demo has no backend and no API key, so AI is off: the receipt-scan
+  // button hides itself rather than pretending to read a photo.
+  if (path === '/ai/status') {
+    return {
+      data: {
+        available: false,
+        configured: false,
+        month: new Date().toISOString().slice(0, 7),
+        usedMicroUsd: '0',
+        limitMicroUsd: '50000000',
+      },
+    };
+  }
   if (path === '/auth/login') return { data: { accessToken: 'demo', refreshToken: 'demo' } };
   if (path === '/auth/logout') return { data: {} };
 

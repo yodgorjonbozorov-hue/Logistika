@@ -396,5 +396,53 @@
       "INVOICE": "Invoys",
       "LICENSE": "Litsenziya"
     }
+  },
+  "ai": {
+    "scan": {
+      "title": "Chekni fotodan o'qish",
+      "hint": "Fotoni tanlang — AI raqamlarni o'qib beradi, siz tasdiqlaysiz",
+      "action": "📷 Chekni skanerlash",
+      "reading": "O'qilmoqda…",
+      "confidence": "ishonch {{percent}}%",
+      "apply": "Formaga qo'yish",
+      "discard": "Bekor qilish",
+      "disclaimer": "AI faqat taklif qiladi. Raqamlarni tekshirib, o'zingiz saqlaysiz"
+    },
+    "docType": {
+      "fuel_receipt": "AZS cheki",
+      "waybill": "Yuk xati (TTN)",
+      "cmr": "CMR",
+      "customs": "Bojxona to'lovi",
+      "repair": "Ta'mir cheki",
+      "fine": "Shtraf qarori",
+      "odometer": "Spidometr fotosi",
+      "other": "Boshqa hujjat"
+    },
+    "check": {
+      "AMOUNT_MISMATCH": {
+        "label": "Summa mos emas",
+        "message": "Litr × narx {{expected}} tiyin chiqadi, chekda {{actual}} tiyin"
+      },
+      "DATE_OUT_OF_TRIP": {
+        "label": "Sana reysdan tashqarida",
+        "message": "Chek sanasi reys muddatiga tushmaydi"
+      },
+      "LOCATION_MISMATCH": {
+        "label": "Joy mos emas",
+        "message": "Foto mashinadan {{distanceKm}} km uzoqda olingan (chegara {{limitKm}} km)"
+      },
+      "LOCATION_UNVERIFIED": {
+        "label": "Joy tekshirilmadi",
+        "message": "Bu vaqtda mashinaning GPS nuqtasi yo'q"
+      },
+      "DUPLICATE_RECEIPT": {
+        "label": "Takroriy chek",
+        "message": "Xuddi shu chek ilgari qabul qilingan"
+      },
+      "LOW_CONFIDENCE": {
+        "label": "Ishonch past",
+        "message": "AI ishonchi {{confidenceBp}} bp — raqamlarni diqqat bilan tekshiring"
+      }
+    }
   }
 }

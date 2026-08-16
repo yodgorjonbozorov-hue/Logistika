@@ -102,3 +102,43 @@ export async function api<T>(
   }
   return { data: result.data as T, meta: result.meta };
 }
+
+/**
+ * Multipart upload — the one request that does not carry a JSON body, so it
+ * bypasses `api()` rather than teaching it about FormData. The envelope and the
+ * single refresh retry work exactly the same.
+ */
+export async function uploadFile<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append('file', file);
+
+  const send = async (): Promise<ApiResponse<T>> => {
+    const headers: Record<string, string> = { 'accept-language': i18n.language };
+    if (tokenStore.access) headers.authorization = `Bearer ${tokenStore.access}`;
+    // No content-type: the browser sets it with the multipart boundary.
+    const response = await fetch(new URL(API_URL + path, window.location.origin).toString(), {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    return (await response.json().catch(() => ({
+      success: false,
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: i18n.t('common.errorGeneric') },
+      meta: null,
+    }))) as ApiResponse<T>;
+  };
+
+  let result = await send();
+  if (!result.success && result.error?.code === 'AUTH_TOKEN_EXPIRED' && (await tryRefresh())) {
+    result = await send();
+  }
+  if (!result.success || result.error) {
+    const error = result.error ?? {
+      code: 'INTERNAL_ERROR',
+      message: i18n.t('common.errorGeneric'),
+    };
+    throw new ApiError(error.code, error.message, error.details);
+  }
+  return result.data as T;
+}

@@ -28,3 +28,33 @@ describe('i18n resource resolution', () => {
     expect(i18n.t('alerts.serviceInKm', { km: 500 })).toContain('500');
   });
 });
+
+/** Flattens a resource bundle to "a.b.c" keys so locales can be compared. */
+function flatten(value: unknown, prefix = ''): string[] {
+  if (typeof value !== 'object' || value === null) return [prefix];
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    flatten(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
+describe('locale coverage', () => {
+  const bundles = Object.fromEntries(
+    LOCALES.map((locale) => [locale, flatten(i18n.getResourceBundle(locale, 'translation'))]),
+  );
+
+  it.each(LOCALES.filter((locale) => locale !== 'uz-latn'))(
+    '%s has every key of the default locale',
+    (locale) => {
+      const missing = bundles['uz-latn']!.filter((key) => !bundles[locale]!.includes(key));
+      expect(missing).toEqual([]);
+    },
+  );
+
+  it('has no blank translations', () => {
+    for (const locale of LOCALES) {
+      for (const key of bundles[locale]!) {
+        expect(`${locale}:${key}=${i18n.getFixedT(locale)(key)}`).not.toMatch(/=\s*$/);
+      }
+    }
+  });
+});

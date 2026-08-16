@@ -29,6 +29,9 @@ import { PeriodPicker } from '../../shared/ui/stats';
 import { formatDate } from '../../shared/utils/date';
 import { currentMonthPeriod, formatBp, formatDecimal } from '../../shared/utils/format';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
+import { useConfirmAiRequest, type OcrProposal } from '../../shared/api/ai';
+import { diffForm, emptyFuelForm, formFromProposal, type FuelForm } from './receipt-form';
+import { ReceiptScan } from '../ai/ReceiptScan';
 
 type Tab = 'control' | 'stations' | 'journal';
 
@@ -225,16 +228,20 @@ function FuelFormModal({ open, onClose }: { open: boolean; onClose: () => void }
   const { t } = useTranslation();
   const { create } = useCrudMutations('fuel');
   const { data: vehicles } = useList<Vehicle>('vehicles', 1, { limit: '100' });
-  const [form, setForm] = useState({
-    vehicleId: '',
-    liters: '',
-    pricePerLiter: '',
-    stationName: '',
-    odometer: '',
-    refuelTime: new Date().toISOString().slice(0, 10),
-  });
-  const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
+  const confirmAi = useConfirmAiRequest();
+  const [form, setForm] = useState<FuelForm>(emptyFuelForm);
+  /** The reading this form was filled from, and the values it proposed. */
+  const [proposed, setProposed] = useState<{ requestId: string; form: FuelForm } | null>(null);
+  const set = (key: keyof FuelForm) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  function applyProposal(proposal: OcrProposal) {
+    setForm((current) => {
+      const filled = formFromProposal(current, proposal);
+      setProposed({ requestId: proposal.requestId, form: filled });
+      return filled;
+    });
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -246,12 +253,25 @@ function FuelFormModal({ open, onClose }: { open: boolean; onClose: () => void }
       odometer: form.odometer ? Number(form.odometer) : undefined,
       refuelTime: new Date(form.refuelTime).toISOString(),
     });
+    // The record is saved by the ordinary endpoint above; this only tells the
+    // AI log that a person accepted the reading, and what they fixed first.
+    if (proposed) {
+      await confirmAi
+        .mutateAsync({
+          requestId: proposed.requestId,
+          correctedData: diffForm(proposed.form, form),
+        })
+        .catch(() => undefined); // an accuracy log must never fail the entry
+    }
+    setForm(emptyFuelForm());
+    setProposed(null);
     onClose();
   }
 
   return (
     <Modal title={t('fuel.newEntry')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
+        <ReceiptScan context={{ vehicleId: form.vehicleId || undefined }} onApply={applyProposal} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={t('fuel.vehicle')}>
             <Select value={form.vehicleId} onChange={set('vehicleId')} required>

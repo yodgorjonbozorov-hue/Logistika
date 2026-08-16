@@ -26,6 +26,7 @@ const TONES: Record<AlertType, 'red' | 'orange' | 'blue' | 'gray'> = {
   [AlertType.VEHICLE_IDLE]: 'gray',
   [AlertType.ROUTE_DEVIATION]: 'orange',
   [AlertType.PAYMENT_OVERDUE]: 'red',
+  [AlertType.DUPLICATE_RECEIPT]: 'red',
 };
 
 /**
