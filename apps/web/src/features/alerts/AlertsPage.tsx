@@ -18,6 +18,7 @@ import {
   Table,
 } from '../../shared/ui';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
+import { InsightsCard } from '../ai/InsightsCard';
 
 const TONES: Record<AlertType, 'red' | 'orange' | 'blue' | 'gray'> = {
   [AlertType.DOCUMENT_EXPIRING]: 'orange',
@@ -137,6 +138,8 @@ export function AlertsPage() {
           <Pagination page={page} limit={20} total={total} onPage={setPage} />
         </>
       )}
+
+      <InsightsCard />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ExpiringDocumentsCard />

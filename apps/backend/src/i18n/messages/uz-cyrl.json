@@ -45,5 +45,17 @@
   "reports.column.debt": "Қарз",
   "reports.column.category": "Категория",
   "reports.column.amount": "Сумма, сўм",
-  "reports.column.share": "Улуш"
+  "reports.column.share": "Улуш",
+  "insights.FUEL_OVERRUN.title": "{plate} — ёқилғи нормадан ошди",
+  "insights.FUEL_OVERRUN.description": "Охирги 30 кунда {refuelCount} та қуйишда норма {deviationBp} базис пунктга ошган, жами {deviationLitres} л ортиқча (чегара {thresholdBp} bp).",
+  "insights.FUEL_OVERRUN.recommendation": "Шу даврдаги чекларни ва машина форсункаларини текширинг.",
+  "insights.EXPENSIVE_REPAIR.title": "{plate} — таъмир ўртачадан қиммат",
+  "insights.EXPENSIVE_REPAIR.description": "Таъмир суммаси {amount} тийин, ўртача {average} тийин ({sampleSize} та ёзув асосида) — {overBp} базис пунктга қиммат.",
+  "insights.EXPENSIVE_REPAIR.recommendation": "Ҳисоб-фактурани ва эҳтиёт қисм нархларини бошқа устахона билан солиштиринг.",
+  "insights.FREQUENT_BREAKDOWN.title": "{driver} — носозлик хабарлари кўп",
+  "insights.FREQUENT_BREAKDOWN.description": "{trips} рейсда {breakdowns} марта носозлик белгиланган ({rateBp} bp), автопарк ўртачаси {fleetRateBp} bp.",
+  "insights.FREQUENT_BREAKDOWN.recommendation": "Ҳайдовчи билан суҳбатлашинг ва машинанинг техник ҳолатини кўздан кечиринг.",
+  "insights.TRIP_TOO_LONG.title": "{tripNumber} — рейс одатдагидан узоқ давом этди",
+  "insights.TRIP_TOO_LONG.description": "«{route}» йўналишида {hours} соат кетди, бу йўналишнинг медианаси {medianHours} соат ({sampleSize} та рейс асосида).",
+  "insights.TRIP_TOO_LONG.recommendation": "Кечикиш сабабини ҳайдовчидан аниқланг: чегара навбати, таъмир ёки дам олиш режими."
 }

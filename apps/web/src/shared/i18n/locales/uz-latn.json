@@ -443,6 +443,22 @@
         "label": "Ishonch past",
         "message": "AI ishonchi {{confidenceBp}} bp — raqamlarni diqqat bilan tekshiring"
       }
+    },
+    "insights": {
+      "title": "AI topgan anomaliyalar",
+      "recommendation": "Tavsiya",
+      "estimatedLoss": "Taxminiy zarar",
+      "severity": {
+        "LOW": "Past",
+        "MEDIUM": "O'rta",
+        "HIGH": "Yuqori",
+        "CRITICAL": "Kritik"
+      },
+      "verdict": {
+        "CONFIRMED": "Tasdiqlayman",
+        "RESOLVED": "Hal qilindi",
+        "FALSE_POSITIVE": "Noto'g'ri signal"
+      }
     }
   }
 }

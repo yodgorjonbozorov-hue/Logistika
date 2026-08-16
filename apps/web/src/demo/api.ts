@@ -615,6 +615,9 @@ export function resolve(
   const [head, second, third] = parts;
 
   if (path === '/auth/me') return { data: demoUser };
+  // Nothing has run the nightly scan in a static demo, so there is nothing
+  // to show — better an empty card than invented anomalies.
+  if (path === '/ai/insights') return { data: [] };
   // The demo has no backend and no API key, so AI is off: the receipt-scan
   // button hides itself rather than pretending to read a photo.
   if (path === '/ai/status') {

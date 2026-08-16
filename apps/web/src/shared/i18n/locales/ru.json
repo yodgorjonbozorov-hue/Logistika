@@ -443,6 +443,22 @@
         "label": "Низкая уверенность",
         "message": "Уверенность AI {{confidenceBp}} bp — проверьте цифры внимательно"
       }
+    },
+    "insights": {
+      "title": "Аномалии, найденные AI",
+      "recommendation": "Рекомендация",
+      "estimatedLoss": "Предполагаемый ущерб",
+      "severity": {
+        "LOW": "Низкая",
+        "MEDIUM": "Средняя",
+        "HIGH": "Высокая",
+        "CRITICAL": "Критическая"
+      },
+      "verdict": {
+        "CONFIRMED": "Подтверждаю",
+        "RESOLVED": "Решено",
+        "FALSE_POSITIVE": "Ложный сигнал"
+      }
     }
   }
 }

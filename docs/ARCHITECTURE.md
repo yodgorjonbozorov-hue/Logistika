@@ -234,7 +234,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
   AI moduli biznes jadvallariga hech qachon yozmaydi (TZ §8.0)
 - `POST /ai/voice` — AI-1: ovoz → Whisper → strukturalangan taklif (confidence < 0.7 → qayta so'rash)
 - `POST /ai/chat` — AI-3: savol → function calling (faqat whitelist) → javob
-- `GET  /ai/insights` · `POST /ai/insights/:id/status` — AI-4 anomaliyalar (confirmed/false_positive/resolved)
+- `GET  /ai/insights?status=` · `PATCH /ai/insights/:id/status` — AI-4 anomaliyalar (confirmed/false_positive/resolved)
 - `POST /ai/pricing` — AI-5: marshrut → tannarx + tavsiya narx (4-bosqich)
 - `GET  /ai/eta/:tripId` — AI-6 (4-bosqich)
 - `POST /ai/diagnosis` — AI-7: nosozlik foto+ovoz → dastlabki tashxis (4-bosqich)
@@ -291,4 +291,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | `ANTHROPIC_API_KEY` ixtiyoriy: kalitsiz ilova ko'tariladi, AI endpointlari `AI_NOT_CONFIGURED` qaytaradi                    | TZ §8.12.5: AI — qulaylik, majburiyat emas; xizmat yo'q bo'lsa tizim to'liq qo'lda rejimda ishlaydi.                                           |
 | AI moduli faqat `ai_requests`/`ai_settings` ga yozadi; `fuel_log`/`expense` ni foydalanuvchi oddiy endpoint orqali yaratadi | TZ §8.0 ni kod darajasida ushlab turadi: AI natijasi biznes jadvaliga o'tadigan yo'l umuman yo'q.                                              |
 | Chek dublikati foto SHA-256 hashi bo'yicha, faqat tasdiqlangan yozuvlar ichida qidiriladi                                   | TZ §8.3; tasdiqlanmagan urinish hali hisobga kirmagan — uni dublikat deb belgilash noto'g'ri signal beradi.                                    |
+| AI-4 statistikasi kodda, izoh AI'da; AI yo'q bo'lsa izoh i18n katalogidan olinadi                                           | TZ §8.12.5+7: nazorat AI'ga bog'liq bo'lmasligi kerak, lekin anomaliya baribir yozilishi shart.                                                |
+| `ai_insights` matni tayyor satr sifatida saqlanadi (kalit emas), `locale` ustuni bilan                                      | AI izohi erkin matn — uni kalitga aylantirib bo'lmaydi; qaysi tilda yozilgani bilinib tursin.                                                  |
+| Anomaliya 7 kun ichida ochiq bo'lsa qayta yozilmaydi                                                                        | Tungi cron har kuni ishlaydi; aks holda bitta muammo bir hafta ichida 7 marta ko'rinadi.                                                       |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

@@ -443,6 +443,22 @@
         "label": "Ишонч паст",
         "message": "AI ишончи {{confidenceBp}} bp — рақамларни диққат билан текширинг"
       }
+    },
+    "insights": {
+      "title": "AI топган аномалиялар",
+      "recommendation": "Тавсия",
+      "estimatedLoss": "Тахминий зарар",
+      "severity": {
+        "LOW": "Паст",
+        "MEDIUM": "Ўрта",
+        "HIGH": "Юқори",
+        "CRITICAL": "Критик"
+      },
+      "verdict": {
+        "CONFIRMED": "Тасдиқлайман",
+        "RESOLVED": "Ҳал қилинди",
+        "FALSE_POSITIVE": "Нотўғри сигнал"
+      }
     }
   }
 }

@@ -116,8 +116,9 @@
       W-8 yoqilg'i formasida «chekni skanerlash» oynasi (tuzatishlar `corrected_data` ga)
 - [ ] **AI-1 ovozli kiritish**: Whisper → strukturalash, confidence < 0.7 → qayta so'rash,
       ovoz fayli 30 kun saqlanadi
-- [ ] **AI-4 anomaliya detektori**: statistika kodda, izoh/tavsiya AI'da; `ai_insights`
-      holatlari (false_positive bilan)
+- [x] **AI-4 anomaliya detektori**: statistika kodda (yoqilg'i, qimmat ta'mir, tez-tez
+      nosozlik, cho'zilgan reys), izoh/tavsiya AI'da — AI yo'q bo'lsa i18n katalogidan;
+      tungi cron, `ai_insights` holatlari (false_positive bilan), W-10 dagi kartochka
 - [ ] **AI-3 AI-boshliq**: 2 bosqichli function calling (whitelist: get_vehicle_profit,
       get_driver_stats, get_fuel_anomalies, get_route_profitability, get_receivables,
       compare_periods), web + Telegram

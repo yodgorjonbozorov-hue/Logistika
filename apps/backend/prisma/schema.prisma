@@ -165,6 +165,8 @@ model Company {
   address           String?
   phone             String?
   logo              String?
+  /// Language the company reads reports and AI explanations in (TZ §3.1).
+  locale            String    @default("uz-latn")
   tariffPlan        String?   @map("tariff_plan")
   subscriptionUntil DateTime? @map("subscription_until")
   isActive          Boolean   @default(true) @map("is_active")

@@ -45,5 +45,17 @@
   "reports.column.debt": "Qarz",
   "reports.column.category": "Kategoriya",
   "reports.column.amount": "Summa, so'm",
-  "reports.column.share": "Ulush"
+  "reports.column.share": "Ulush",
+  "insights.FUEL_OVERRUN.title": "{plate} — yoqilg'i normadan oshdi",
+  "insights.FUEL_OVERRUN.description": "Oxirgi 30 kunda {refuelCount} ta quyishda norma {deviationBp} bazis punktga oshgan, jami {deviationLitres} l ortiqcha (chegara {thresholdBp} bp).",
+  "insights.FUEL_OVERRUN.recommendation": "Shu davrdagi cheklarni va mashina forsunkalarini tekshiring.",
+  "insights.EXPENSIVE_REPAIR.title": "{plate} — ta'mir o'rtachadan qimmat",
+  "insights.EXPENSIVE_REPAIR.description": "Ta'mir summasi {amount} tiyin, o'rtacha {average} tiyin ({sampleSize} ta yozuv asosida) — {overBp} bazis punktga qimmat.",
+  "insights.EXPENSIVE_REPAIR.recommendation": "Hisob-fakturani va ehtiyot qism narxlarini boshqa ustaxona bilan solishtiring.",
+  "insights.FREQUENT_BREAKDOWN.title": "{driver} — nosozlik xabarlari ko'p",
+  "insights.FREQUENT_BREAKDOWN.description": "{trips} reysda {breakdowns} marta nosozlik belgilangan ({rateBp} bp), avtopark o'rtachasi {fleetRateBp} bp.",
+  "insights.FREQUENT_BREAKDOWN.recommendation": "Haydovchi bilan suhbatlashing va mashinaning texnik holatini ko'zdan kechiring.",
+  "insights.TRIP_TOO_LONG.title": "{tripNumber} — reys odatdagidan uzoq davom etdi",
+  "insights.TRIP_TOO_LONG.description": "«{route}» yo'nalishida {hours} soat ketdi, bu yo'nalishning medianasi {medianHours} soat ({sampleSize} ta reys asosida).",
+  "insights.TRIP_TOO_LONG.recommendation": "Kechikish sababini haydovchidan aniqlang: chegara navbati, ta'mir yoki dam olish rejimi."
 }

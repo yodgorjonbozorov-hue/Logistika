@@ -1,5 +1,6 @@
+import { AiInsightStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsLatitude, IsLongitude, IsObject, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsLatitude, IsLongitude, IsObject, IsOptional, IsUUID } from 'class-validator';
 
 export class ReadDocumentDto {
   /** Stored file to read; the tenant-scoped lookup proves it belongs here. */
@@ -34,4 +35,16 @@ export class ConfirmAiRequestDto {
   @IsOptional()
   @IsObject()
   correctedData?: Record<string, unknown>;
+}
+
+export class ListInsightsDto {
+  /** Omitted means the open ones (NEW + REVIEWED). */
+  @IsOptional()
+  @IsEnum(AiInsightStatus)
+  status?: AiInsightStatus;
+}
+
+export class SetInsightStatusDto {
+  @IsEnum(AiInsightStatus)
+  status!: AiInsightStatus;
 }

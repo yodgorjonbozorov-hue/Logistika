@@ -1,7 +1,7 @@
 // AI-2 (TZ §8.3): a photographed document becomes a *proposal*, never a record.
 // Money arrives as tiyin in decimal strings, litres as centilitres — the same
 // wire units the rest of the API uses.
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, uploadFile } from './client';
 
 export interface AiStatus {
@@ -119,5 +119,46 @@ export function useConfirmAiRequest() {
         method: 'PATCH',
         body: { correctedData },
       }).then((r) => r.data),
+  });
+}
+
+// ---------- AI-4 anomalies (TZ §8.5) ----------
+
+export type AiInsightSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type AiInsightStatus = 'NEW' | 'REVIEWED' | 'CONFIRMED' | 'FALSE_POSITIVE' | 'RESOLVED';
+
+export interface AiInsight {
+  id: string;
+  type: string;
+  severity: AiInsightSeverity;
+  locale: string;
+  /** Free text: the numbers come from code, the wording from AI (or the catalogue). */
+  title: string;
+  description: string;
+  recommendation: string | null;
+  relatedType: string | null;
+  relatedId: string | null;
+  estimatedLoss: string | null;
+  status: AiInsightStatus;
+  createdAt: string;
+}
+
+export function useInsights() {
+  return useQuery({
+    queryKey: ['ai', 'insights'],
+    queryFn: () => api<AiInsight[]>('/ai/insights').then((r) => r.data),
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+/** The boss's verdict; FALSE_POSITIVE is what measures the detector (TZ §8.10). */
+export function useSetInsightStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AiInsightStatus }) =>
+      api<AiInsight>(`/ai/insights/${id}/status`, { method: 'PATCH', body: { status } }).then(
+        (r) => r.data,
+      ),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['ai', 'insights'] }),
   });
 }

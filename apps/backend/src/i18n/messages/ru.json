@@ -45,5 +45,17 @@
   "reports.column.debt": "Долг",
   "reports.column.category": "Категория",
   "reports.column.amount": "Сумма, сум",
-  "reports.column.share": "Доля"
+  "reports.column.share": "Доля",
+  "insights.FUEL_OVERRUN.title": "{plate} — перерасход топлива",
+  "insights.FUEL_OVERRUN.description": "За последние 30 дней при {refuelCount} заправках норма превышена на {deviationBp} базисных пунктов, всего {deviationLitres} л сверх нормы (порог {thresholdBp} bp).",
+  "insights.FUEL_OVERRUN.recommendation": "Проверьте чеки за этот период и форсунки машины.",
+  "insights.EXPENSIVE_REPAIR.title": "{plate} — ремонт дороже среднего",
+  "insights.EXPENSIVE_REPAIR.description": "Сумма ремонта {amount} тийин при среднем {average} тийин (по {sampleSize} записям) — дороже на {overBp} базисных пунктов.",
+  "insights.EXPENSIVE_REPAIR.recommendation": "Сверьте счёт и цены на запчасти с другой мастерской.",
+  "insights.FREQUENT_BREAKDOWN.title": "{driver} — частые сообщения о поломках",
+  "insights.FREQUENT_BREAKDOWN.description": "За {trips} рейсов отмечено {breakdowns} поломок ({rateBp} bp) при среднем по парку {fleetRateBp} bp.",
+  "insights.FREQUENT_BREAKDOWN.recommendation": "Поговорите с водителем и осмотрите техническое состояние машины.",
+  "insights.TRIP_TOO_LONG.title": "{tripNumber} — рейс занял дольше обычного",
+  "insights.TRIP_TOO_LONG.description": "На маршруте «{route}» ушло {hours} часов при медиане {medianHours} часов (по {sampleSize} рейсам).",
+  "insights.TRIP_TOO_LONG.recommendation": "Выясните у водителя причину: очередь на границе, ремонт или режим отдыха."
 }

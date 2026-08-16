@@ -1,9 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AiService } from './ai.service';
-import { ConfirmAiRequestDto, ReadDocumentDto } from './dto/ocr.dto';
+import { AnomalyService } from './anomaly.service';
+import {
+  ConfirmAiRequestDto,
+  ListInsightsDto,
+  ReadDocumentDto,
+  SetInsightStatusDto,
+} from './dto/ai.dto';
 import { OcrService } from './ocr.service';
 
 /**
@@ -16,6 +22,7 @@ export class AiController {
   constructor(
     private readonly ai: AiService,
     private readonly ocr: OcrService,
+    private readonly anomaly: AnomalyService,
   ) {}
 
   /** Whether AI is usable at all — the UI hides the buttons when it is not. */
@@ -48,5 +55,26 @@ export class AiController {
     @Body() dto: ConfirmAiRequestDto,
   ) {
     return this.ai.confirm(user.companyId as string, id, user.userId, dto.correctedData);
+  }
+
+  /** AI-4: anomalies the nightly scan found (W-10 «AI topgan»). */
+  @Get('insights')
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT)
+  insights(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListInsightsDto) {
+    return this.anomaly.list(user.companyId as string, filter.status);
+  }
+
+  /**
+   * The boss's verdict on a finding. FALSE_POSITIVE is how the detector's own
+   * quality gets measured (TZ §8.10).
+   */
+  @Patch('insights/:id/status')
+  @Roles(UserRole.OWNER, UserRole.LOGIST)
+  setInsightStatus(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetInsightStatusDto,
+  ) {
+    return this.anomaly.setStatus(user.companyId as string, id, dto.status, user.userId);
   }
 }
