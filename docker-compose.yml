@@ -1,6 +1,6 @@
 # Dev-infra: PostgreSQL, Redis, MinIO.
 # Ishga tushirish: docker compose up -d
-# Production compose (backend, web, nginx) — 9-bosqichda alohida fayl bo'ladi.
+# Production uchun: docker-compose.prod.yml + docs/DEPLOY.md.
 
 services:
   postgres:

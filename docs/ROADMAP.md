@@ -143,8 +143,10 @@
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
 - [x] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
       (har 15 daqiqada cron, chegaralar W-11 dan, dam belgilangan bo'lsa signal bermaydi)
-- [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
-- [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
+- [x] Production Docker Compose (backend, web, nginx, certbot, backup cron), HTTPS —
+      `docker-compose.prod.yml` + `docs/DEPLOY.md` (serverda hali sinalmagan)
+- [x] Kunlik zaxira nusxa (baza dump + fayl mirror, dump har tunda o'qib ko'riladi)
+      va tiklash skripti; oylik tiklash tekshiruvi tartibi `docs/DEPLOY.md` §7 da
 - [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
 - [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
       (bazaga yoziladigan seed hali qilinmadi)

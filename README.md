@@ -22,6 +22,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
 | [`docs/PILOT.md`](docs/PILOT.md)               | Pilot firmani ishga tushirish qo'llanmasi  |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md)             | Production'ga o'rnatish, HTTPS, zaxira     |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek

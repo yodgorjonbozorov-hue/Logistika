@@ -1,0 +1,156 @@
+# Production stack: nginx (TLS) → web panel + backend, with postgres, redis,
+# minio and a nightly backup runner behind them.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Only nginx publishes ports. Everything else talks over the internal network,
+# so the database and the object store are not reachable from the internet even
+# if a firewall rule is missed. Setup and TLS: docs/DEPLOY.md.
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tc-nginx
+    depends_on: [web, backend]
+    environment:
+      PANEL_DOMAIN: ${PANEL_DOMAIN:?set PANEL_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # envsubst runs on templates in this directory at container start.
+      - ./deploy/nginx/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/letsencrypt:/etc/letsencrypt:ro
+      - ./deploy/certbot-www:/var/www/certbot
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: tc-certbot
+    volumes:
+      - ./deploy/letsencrypt:/etc/letsencrypt
+      - ./deploy/certbot-www:/var/www/certbot
+    # Certificates last 90 days; a twice-daily attempt renews well before that
+    # and does nothing when there is nothing to renew.
+    entrypoint: >
+      sh -c "trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: tc-backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
+      WEB_URL: https://${PANEL_DOMAIN}
+      DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-Asia/Tashkent}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: 'false'
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-truckcontrol}
+      # Optional: without these the app runs, only the AI features stand down.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      WHISPER_API_URL: ${WHISPER_API_URL:-}
+      WHISPER_API_KEY: ${WHISPER_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
+      SMS_PROVIDER_TOKEN: ${SMS_PROVIDER_TOKEN:-}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Same origin as the panel, so there is no CORS and no second domain.
+        VITE_API_URL: /api/v1
+    container_name: tc-web
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tc-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-truckcontrol}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: tc-redis
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: tc-minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backup:
+    build:
+      context: .
+      dockerfile: deploy/backup/Dockerfile
+    container_name: tc-backup
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-truckcontrol}
+      MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-truckcontrol}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      # Bind mount, not a named volume: a backup that lives only inside Docker
+      # dies with the host it was meant to protect.
+      - ${BACKUP_DIR:-./backups}:/backups
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

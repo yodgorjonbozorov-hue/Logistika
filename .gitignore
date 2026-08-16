@@ -35,3 +35,8 @@ mobile/**/.dart_tool/
 mobile/**/.flutter-plugins*
 mobile/**/ios/Pods/
 mobile/**/*.iml
+
+# Production runtime data (docker-compose.prod.yml)
+deploy/letsencrypt/
+deploy/certbot-www/
+backups/

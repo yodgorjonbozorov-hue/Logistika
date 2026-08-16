@@ -1,0 +1,12 @@
+# pnpm owns this file's formatting; letting Prettier reformat it makes every
+# dependency change look like a 6000-line diff and fights `pnpm install`.
+pnpm-lock.yaml
+
+# Build output
+dist
+dist-demo
+**/dist/
+**/dist-demo/
+
+# Flutter app (dart format owns it)
+mobile/
