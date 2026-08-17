@@ -25,8 +25,23 @@ jest.mock('sharp', () => {
   return { __esModule: true, default: jest.fn(() => chain), chain };
 });
 
+const CONFIG_VALUES: Record<string, string | number> = {
+  MINIO_BUCKET: 'test-bucket',
+  MINIO_ENDPOINT: 'minio',
+  MINIO_PORT: 9000,
+  MINIO_USE_SSL: 'false',
+  MINIO_ROOT_USER: 'test-user',
+  MINIO_ROOT_PASSWORD: 'test-password',
+  MINIO_PUBLIC_ENDPOINT: 'files.example.test',
+};
+
 const config = {
-  get: (key: string) => ({ MINIO_BUCKET: 'test-bucket' })[key],
+  get: (key: string) => CONFIG_VALUES[key],
+  getOrThrow: (key: string) => {
+    const value = CONFIG_VALUES[key];
+    if (value === undefined) throw new Error(`Missing configuration: ${key}`);
+    return value;
+  },
 } as unknown as ConfigService;
 
 describe('FilesService', () => {

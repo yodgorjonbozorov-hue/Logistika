@@ -118,6 +118,15 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `docs/ROADMAP.md`, `mobile/.../README.md` · `flutter test` 14/14, `flutter analyze` toza.
   **Halol qayd:** iOS real qurilmada/simulyatorda tekshirilmadi — muhitda macOS/Xcode yo'q,
   ROADMAP va README'ga shundoq yozildi.
+- **TASK-1.7 (H-12)** · Env sxemasi to'liq: MinIO (endpoint/port/bucket/user/password —
+  majburiy), `WEB_URL` majburiy (CORS `getOrThrow` bilan o'qiydi), SMS/Telegram/Anthropic/seed
+  kalitlari opsional. `?? ''` va `?? 'localhost'` fallback'lari `getOrThrow` bilan almashtirildi —
+  ya'ni sozlanmagan app **ko'tarilmaydi** (avval ko'tarilardi va har fayl yuklashda yiqilardi).
+  `MINIO_PUBLIC_ENDPOINT/PORT/USE_SSL` qo'shildi: presigned URL brauzer ochadigan manzil bilan
+  imzolanadi (Docker ichidagi `minio` hostname tashqarida ochilmaydi). Production'da qat'iyroq
+  tekshiruv: JWT sirlari ≥ 32 belgi va bir-biridan farqli, `MINIO_USE_SSL=true`,
+  `WEB_URL` `https://`. · `src/config/env.validation.ts` (+spec: 13 test),
+  `src/modules/files/files.service.ts` (+spec), `.env.example` · unit 95 → 104.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -143,4 +152,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.7 (env validatsiyasi to'liq emas: MinIO, SMS, public endpoint).
+PHASE 1 → TASK-1.8 (deployment artefaktlari: Dockerfile'lar, prod compose, nginx, health).

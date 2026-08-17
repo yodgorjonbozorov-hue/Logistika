@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
+import { publicStorageEndpoint } from '../../config/env.validation';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** Photos are downscaled before storage — 1500px is enough for OCR (TZ §8.3). */
@@ -25,6 +26,8 @@ export interface UploadedFileInput {
 export class FilesService {
   private readonly logger = new Logger(FilesService.name);
   private readonly client: Minio.Client;
+  /** Same credentials, browser-reachable host: only used to sign download URLs. */
+  private readonly publicClient: Minio.Client;
   private readonly bucket: string;
   private bucketReady = false;
 
@@ -32,14 +35,26 @@ export class FilesService {
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.bucket = config.get<string>('MINIO_BUCKET') ?? 'truckcontrol';
-    this.client = new Minio.Client({
-      endPoint: config.get<string>('MINIO_ENDPOINT') ?? 'localhost',
-      port: Number(config.get<string>('MINIO_PORT') ?? 9000),
-      useSSL: config.get<string>('MINIO_USE_SSL') === 'true',
-      accessKey: config.get<string>('MINIO_ROOT_USER') ?? 'truckcontrol',
-      secretKey: config.get<string>('MINIO_ROOT_PASSWORD') ?? '',
+    // getOrThrow, not `?? ''`: an app that boots without storage credentials
+    // only fails later, once per upload, in front of a driver.
+    const accessKey = config.getOrThrow<string>('MINIO_ROOT_USER');
+    const secretKey = config.getOrThrow<string>('MINIO_ROOT_PASSWORD');
+    const endPoint = config.getOrThrow<string>('MINIO_ENDPOINT');
+    const port = Number(config.getOrThrow<number>('MINIO_PORT'));
+    const useSSL = config.getOrThrow<string>('MINIO_USE_SSL') === 'true';
+
+    this.bucket = config.getOrThrow<string>('MINIO_BUCKET');
+    this.client = new Minio.Client({ endPoint, port, useSSL, accessKey, secretKey });
+
+    const publicEndpoint = publicStorageEndpoint({
+      MINIO_ENDPOINT: endPoint,
+      MINIO_PUBLIC_ENDPOINT: config.get<string>('MINIO_PUBLIC_ENDPOINT'),
+      MINIO_PORT: port,
+      MINIO_PUBLIC_PORT: config.get<number>('MINIO_PUBLIC_PORT'),
+      MINIO_USE_SSL: String(useSSL),
+      MINIO_PUBLIC_USE_SSL: config.get<string>('MINIO_PUBLIC_USE_SSL'),
     });
+    this.publicClient = new Minio.Client({ ...publicEndpoint, accessKey, secretKey });
   }
 
   async upload(actor: CurrentUserPayload, file: UploadedFileInput): Promise<StoredFile> {
@@ -96,7 +111,13 @@ export class FilesService {
       .forCompany(actor.companyId)
       .storedFile.findUnique({ where: { id } });
     if (!file) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
-    const url = await this.client.presignedGetObject(this.bucket, file.key, SIGNED_URL_TTL_SECONDS);
+    // Signed with the browser-facing host, otherwise the link points at a
+    // hostname that only exists inside the Docker network.
+    const url = await this.publicClient.presignedGetObject(
+      this.bucket,
+      file.key,
+      SIGNED_URL_TTL_SECONDS,
+    );
     return { url, expiresIn: SIGNED_URL_TTL_SECONDS };
   }
 
