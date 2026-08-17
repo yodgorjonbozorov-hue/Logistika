@@ -85,7 +85,30 @@ DATABASE_URL=<production url> pnpm --filter backend seed
 
 Seed alohida tenant yaratadi va uni pilot firma bilan aralashtirmaydi.
 
-## 6. Zaxira nusxa (TZ §9)
+## 6. Diskni shifrlash (TZ §9)
+
+TZ §9: «Fotolar va hujjatlar shifrlangan saqlash». Bitta serverli o'rnatishda
+eng ishonchli va eng sodda yo'l — MinIO va PostgreSQL ma'lumotlari turgan
+diskni **LUKS** bilan shifrlash. Bu kalit boshqaruvini talab qilmaydi va disk
+o'g'irlansa yoki almashtirilsa ma'lumot o'qilmaydi.
+
+Serverni tayyorlashda (ma'lumot yozilishidan **oldin**):
+
+```bash
+cryptsetup luksFormat /dev/sdb
+cryptsetup open /dev/sdb truckcontrol
+mkfs.ext4 /dev/mapper/truckcontrol
+mount /dev/mapper/truckcontrol /srv/truckcontrol
+# docker volume'larini shu yerga ko'chiring yoki compose'ni shu yo'lga qarating
+```
+
+Zaxira nusxa ham shu qoidaga bo'ysunadi: `BACKUP_DIR` shifrlangan diskda
+bo'lsin, tashqariga ko'chirilganda esa `age` yoki `gpg` bilan shifrlang.
+
+> Bulutdagi obyekt saqlash (S3/MinIO KES) bilan SSE-S3 keyingi bosqich; pilot
+> uchun disk shifrlash yetarli va ortiqcha kalit infratuzilmasi talab qilmaydi.
+
+## 7. Zaxira nusxa (TZ §9)
 
 `backup` konteyneri har kuni 03:00 UTC da ishlaydi va `BACKUP_DIR` ichiga
 `<sana>/` papkasini yozadi: `database.dump` (pg_dump custom format) va
@@ -103,7 +126,7 @@ yo'qolganda nusxa emas:
 rsync -az --delete "$BACKUP_DIR/" backup@boshqa-server:/srv/truckcontrol-backups/
 ```
 
-## 7. Tiklashni tekshirish
+## 8. Tiklashni tekshirish
 
 Zaxira ishlayotganini bilishning yagona yo'li — uni tiklab ko'rish. Buni
 **oyiga bir marta**, alohida (bo'sh) bazada bajaring:
@@ -120,7 +143,7 @@ ochiladimi. Ikkalasi ham ochilsa — zaxira haqiqatan ishlaydi.
 `restore.sh` `RESTORE_CONFIRM=yes` bo'lmasa ishlamaydi: u ko'rsatilgan
 bazaning sxemasini o'chirib qayta yozadi.
 
-## 8. Yangilash
+## 9. Yangilash
 
 ```bash
 git pull
@@ -134,7 +157,7 @@ oling:
 docker compose -f docker-compose.prod.yml exec backup /scripts/backup.sh
 ```
 
-## 9. Loglar va monitoring
+## 10. Loglar va monitoring
 
 ```bash
 docker compose -f docker-compose.prod.yml logs -f backend

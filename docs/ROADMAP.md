@@ -155,6 +155,8 @@
 - [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
 - [x] Seed/demo ma'lumotlar (`pnpm --filter backend seed`, idempotent, ma'lumotlar
       testlar bilan tekshiriladi), pilot onboarding qo'llanmasi — `docs/PILOT.md`
+- [x] CI (`.github/workflows/ci.yml`): lint, tiplar, unit testlar + real bazada
+      tenant-izolyatsiya e2e paketi va `prisma migrate deploy`
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
       tasdiqlash → reys P&L → dashboard
 

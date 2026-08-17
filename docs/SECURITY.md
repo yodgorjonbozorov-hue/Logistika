@@ -82,27 +82,39 @@ Qoidani `audit.coverage.spec.ts` kod bo'yicha qo'riqlaydi: yozadigan har bir
 servis yo audit qiladi, yoki sababi bilan istisnolar ro'yxatida turadi;
 ro'yxatda endi yozmaydigan fayl qolsa, test buni ham aytadi.
 
-### F-6 · O'rta · Fayllar shifrlanmagan saqlanadi
+### F-6 · O'rta · Fayllar shifrlanmagan saqlanadi — o'rnatish qatlamida yopildi
 
 TZ §9: «Fotolar va hujjatlar shifrlangan saqlash». `FilesService.putObject`
 hech qanday shifrlash sarlavhasini yubormaydi, MinIO esa default holatda
-shifrlamaydi. Chek va hujjat fotolari diskda ochiq yotadi.
+shifrlamaydi.
 
-**Reja:** pilot uchun eng amaliy yo'l — MinIO ma'lumot volume'ini LUKS
-bilan shifrlangan diskda saqlash (bitta serverli o'rnatishda bu yetarli va
-kalit boshqaruvini talab qilmaydi). Keyingi bosqich — SSE-S3 (MinIO KES bilan).
-Ikkalasi ham `docs/DEPLOY.md` da yozilishi kerak.
+**Qabul qilingan yechim:** shifrlash ilova qatlamida emas, **disk qatlamida** —
+LUKS. Bitta serverli o'rnatish uchun bu SSE-C dan afzal: kalit boshqaruvi
+kerak emas, o'qish yo'llari o'zgarmaydi va disk o'g'irlansa ham ma'lumot
+o'qilmaydi. Qadamlar `docs/DEPLOY.md` §6 da, zaxira nusxa uchun ham.
 
-### F-7 · O'rta · Real bazali izolyatsiya testlari yo'q
+Bu ilova kodida hech narsa o'zgarmaganini bilib turib qabul qilingan qaror:
+o'rnatuvchi bu qadamni o'tkazib yuborsa, fayllar ochiq qoladi. Shuning uchun u
+DEPLOY.md da alohida bo'lim, ixtiyoriy eslatma emas. Bulutli o'rnatishda
+keyingi qadam — SSE-S3 (MinIO KES).
 
-Har modul unit-testida tenant stsenariysi bor va extension qamrovi
-tekshiriladi, lekin «B firma foydalanuvchisi A firma resursini ko'ra
-olmaydi» stsenariysi haqiqiy PostgreSQL'da hech qachon bajarilmagan —
-`test:e2e` konfiguratsiyasi bor, testlari yo'q.
+### F-7 · O'rta · Real bazali izolyatsiya testlari yo'q edi — yozildi
 
-**Reja:** `apps/backend/test/` da e2e paket: ikkita firma seed qilinadi va
-har modulning `GET/PATCH/DELETE :id` uchun 404 kutiladi. CI'da postgres
-service bilan ishlaydi.
+Har modul unit-testida tenant stsenariysi bor edi, lekin «B firma
+foydalanuvchisi A firma resursini ko'ra olmaydi» haqiqiy PostgreSQL'da hech
+qachon bajarilmagan: `test:e2e` konfiguratsiyasi bor, testlari yo'q edi.
+
+**Yozildi:** `apps/backend/test/tenant-isolation.e2e-spec.ts` — ikkita firma
+seed qilinadi, B foydalanuvchisi A ning mashina/haydovchi/mijoz/reysini
+`GET` va `PATCH` qiladi (hammasi 404), A ning chatini ochmoqchi bo'ladi, A ning
+reysiga xarajat biriktirmoqchi bo'ladi; oxirida A ning yozuvlari
+o'zgarmaganligi bazadan tekshiriladi. CI (`.github/workflows/ci.yml`) postgres
+service ko'taradi va shu yerda `prisma migrate deploy` ni ham bajaradi — ya'ni
+migratsiya buzilgani deploy kunida emas, PR'da bilinadi.
+
+> Bu testlar shu muhitda ishga tushirilmadi (Docker demoni yo'q). Ular
+> birinchi marta CI'da bajariladi; ishlamay qolsa — baland ovozda yiqiladi,
+> jimgina o'tib ketmaydi.
 
 ### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymasdi — tuzatildi
 
@@ -139,6 +151,6 @@ qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
 
 ## Keyingi audit uchun
 
-Ochiq qolgani: **F-4 (RLS), F-6 (fayl shifrlash), F-7 (e2e izolyatsiya)**.
-Tartib: F-4 va F-7 birga — RLS ni sinaydigan yagona ishonchli usul real
-bazadagi izolyatsiya testi; keyin F-6.
+Ochiq qolgani: **F-4 (RLS)**. Endi uni sinaydigan asos bor — izolyatsiya
+e2e paketi CI'da real bazada ishlaydi, ya'ni RLS siyosatini yoqib, xuddi shu
+testlar bilan tekshirish mumkin. Keyingi audit shu ishdan boshlanadi.
