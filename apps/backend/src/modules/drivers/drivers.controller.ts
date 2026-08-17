@@ -31,6 +31,17 @@ export class DriversController {
     return this.ratingService.ratings(user);
   }
 
+  /**
+   * E-7: the driver's own rating. Declared before `:id` so the literal path
+   * wins the route match, and open to DRIVER — the rest of this controller is
+   * the office's view of the fleet.
+   */
+  @Get('me/rating')
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT, UserRole.DRIVER)
+  myRating(@CurrentUser() user: CurrentUserPayload) {
+    return this.ratingService.myRating(user);
+  }
+
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {
     const { data, total } = await this.driversService.list(user, pagination);

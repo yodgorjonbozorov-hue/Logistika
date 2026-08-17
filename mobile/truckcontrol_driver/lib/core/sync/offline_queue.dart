@@ -152,7 +152,7 @@ class OfflineQueue {
       String? photoFileId = row['photo_file_id'] as String?;
       final photoPath = row['photo_path'] as String?;
       if (photoFileId == null && photoPath != null) {
-        photoFileId = await _uploadPhoto(photoPath);
+        photoFileId = await uploadPhoto(photoPath);
         if (photoFileId != null) {
           await _db.db.update(
             'pending_events',
@@ -226,7 +226,10 @@ class OfflineQueue {
     );
   }
 
-  Future<String?> _uploadPhoto(String path) async {
+  /// Uploads a photo and returns its stored file id, or null if it did not go
+  /// through. Public because the trip chat sends photos the same way — one
+  /// upload path means one retention rule for every image the driver takes.
+  Future<String?> uploadPhoto(String path) async {
     final file = File(path);
     if (!file.existsSync()) return null;
     final request = http.MultipartRequest(

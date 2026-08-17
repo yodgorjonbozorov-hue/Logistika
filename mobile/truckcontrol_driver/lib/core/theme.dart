@@ -16,6 +16,11 @@ ThemeData buildDarkTheme() {
     colorScheme: base.colorScheme.copyWith(
       primary: BrandColors.accent,
       secondary: BrandColors.accent,
+      // Overriding a role colour without its `on-` pair leaves the baseline
+      // scheme's contrast colour behind: a filled icon button came out amber
+      // with a violet glyph. Dark navy is what reads on the brand amber.
+      onPrimary: BrandColors.navy,
+      onSecondary: BrandColors.navy,
       surface: const Color(0xFF223358),
       error: BrandColors.danger,
     ),
@@ -38,6 +43,15 @@ ThemeData buildDarkTheme() {
           fontWeight: FontWeight.w700,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      // Four labels share a 360 dp phone, and Cyrillic runs longer than Latin:
+      // at the default size «Харажатларим» wrapped onto a second line and out
+      // of the bar entirely. A slightly smaller label keeps all three languages
+      // on one line without shrinking the tap targets.
+      labelTextStyle: WidgetStateProperty.all(
+        base.textTheme.labelMedium?.copyWith(fontSize: 11),
       ),
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),

@@ -165,6 +165,10 @@
 - [x] Ikkala e2e paketi haqiqiy PostgreSQL'da bajarildi (mahalliy 16-versiya):
       izolyatsiya paketi birinchi yugurishdayoq tenant chegarasidan o'tib ketadigan
       tashqi kalitni topdi — `docs/SECURITY.md` F-10, tuzatildi
+- [x] Mobil tomoni yopildi: E-4 chat (reys AppBar'idagi tugma, o'qilmagan belgisi,
+      matn + foto), E-7 dagi haydovchi reytingi (`GET /drivers/me/rating` — faqat
+      o'z reytingi) va uchala tildagi satrlar; `screenshots/` da 21 ta ekran
+      ilovaning o'zidan render qilinadi
 - [x] Uchinchi izolyatsiya qatlami — PostgreSQL RLS (migratsiya `20260818000000_rls`,
       tranzaksiya-lokal `app.company_id`); ilova superuser bo'lmagan rol bilan ulanadi,
       `rls.e2e-spec.ts` buni extension'siz, baza darajasida isbotlaydi — F-4 yopildi.

@@ -21,23 +21,24 @@ haydovchi ilovasi doim qorong'i.
 | `06-event-refuel.png`    | «Yoqilg'i quydim» — litr + summa + foto            |
 | `07-event-expense.png`   | «Yo'l xarajati» — summa + foto                     |
 | `08-event-rest.png`      | «Dam / Obed» — faqat izoh                          |
-| `09-expenses-empty.png`  | E-5 hali yozuv yo'q                                |
-| `10-expenses-list.png`   | E-5 yuborilgan va navbatdagi yozuvlar              |
-| `11-documents.png`       | E-6 hujjatlar (keyingi bosqich)                    |
-| `12-profile-synced.png`  | E-7 profil — hammasi yuborilgan                    |
-| `13-profile-pending.png` | E-7 profil — navbatda yozuv bor                    |
-| `14-profile-language.png`| E-7 til tanlash ro'yxati ochiq                     |
-| `15-trip-uz-cyrl.png`    | Reys — ўзбекча (кирилл)                            |
-| `16-trip-ru.png`         | Reys — русский                                     |
-| `17-profile-uz-cyrl.png` | Profil — ўзбекча (кирилл)                          |
-| `18-profile-ru.png`      | Profil — русский                                   |
-| `19-login-ru.png`        | Kirish — русский                                   |
+| `09-chat.png`            | E-4 logist bilan chat                              |
+| `10-chat-empty.png`      | E-4 hali xabar yo'q                                |
+| `11-expenses-empty.png`  | E-5 hali yozuv yo'q                                |
+| `12-expenses-list.png`   | E-5 yuborilgan va navbatdagi yozuvlar              |
+| `13-documents.png`       | E-6 hujjatlar (keyingi bosqich)                    |
+| `14-profile-synced.png`  | E-7 profil — reyting va hammasi yuborilgan         |
+| `15-profile-pending.png` | E-7 profil — navbatda yozuv bor                    |
+| `16-profile-language.png`| E-7 til tanlash ro'yxati ochiq                     |
+| `17-trip-uz-cyrl.png`    | Reys — ўзбекча (кирилл)                            |
+| `18-trip-ru.png`         | Reys — русский                                     |
+| `19-profile-uz-cyrl.png` | Profil — ўзбекча (кирилл)                          |
+| `20-profile-ru.png`      | Profil — русский                                   |
+| `21-login-ru.png`        | Kirish — русский                                   |
 
 ## Ma'lum farqlar
 
 - Reys kartochkasidagi `→` o'rniga quti ko'rinadi. Bu ilova emas, test muhiti:
   `flutter test` shrift qidiruvini SDK keshi bilan cheklaydi, u yerdagi Roboto
   esa `U+2192` ni o'z ichiga olmaydi. Qurilmada tizim shrifti buni qoplaydi.
-- `17-profile-uz-cyrl.png` da pastki menyudagi «Харажатларим» ikki qatorga
-  tushib, joyiga sig'may qolgan — bu haqiqiy tor ekran muammosi, tuzatilishi
-  kerak.
+- Chat'da faqat matnli xabarlar ko'rsatilgan: widget testida `Image.network`
+  hech narsa yuklay olmaydi, foto pufagi esa o'z xato matnini chizardi.

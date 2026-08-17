@@ -53,6 +53,7 @@ void main() {
     bool loggedIn = true,
     String locale = 'uz-latn',
     List<dynamic> trips = const [],
+    List<dynamic> messages = const [],
     Future<void> Function(OfflineQueue queue, AppDatabase db)? seedQueue,
   }) async {
     tester.view.physicalSize = size;
@@ -71,7 +72,7 @@ void main() {
     final api = ApiClient(
       tokens,
       baseUrl: 'http://screenshots.test/api/v1',
-      httpClient: _fakeApi(trips),
+      httpClient: _fakeApi(trips, messages: messages),
     );
     // `start()` is deliberately not called: it subscribes to connectivity_plus,
     // and no plugin is available in a widget test.
@@ -128,61 +129,77 @@ void main() {
     });
   }
 
+  // ---------- E-4 trip chat ----------
+
+  testWidgets('09 chat with the logist', (tester) async {
+    await pumpApp(tester, trips: [_trip], messages: _messages);
+    await tester.tap(find.byIcon(Icons.forum));
+    await tester.pumpAndSettle();
+    await shoot(tester, '09-chat');
+  });
+
+  testWidgets('10 chat before anyone has written', (tester) async {
+    await pumpApp(tester, trips: [_trip]);
+    await tester.tap(find.byIcon(Icons.forum));
+    await tester.pumpAndSettle();
+    await shoot(tester, '10-chat-empty');
+  });
+
   // ---------- E-5 my entries ----------
 
-  testWidgets('09 expenses tab, nothing recorded yet', (tester) async {
+  testWidgets('11 expenses tab, nothing recorded yet', (tester) async {
     await pumpApp(tester, trips: [_trip]);
     await tester.tap(find.byIcon(Icons.receipt_long));
     await tester.pumpAndSettle();
-    await shoot(tester, '09-expenses-empty');
+    await shoot(tester, '11-expenses-empty');
   });
 
-  testWidgets('10 expenses tab, sent and still queued', (tester) async {
+  testWidgets('12 expenses tab, sent and still queued', (tester) async {
     await pumpApp(tester, trips: [_trip], seedQueue: _seedEvents);
     await tester.tap(find.byIcon(Icons.receipt_long));
     await tester.pumpAndSettle();
-    await shoot(tester, '10-expenses-list');
+    await shoot(tester, '12-expenses-list');
   });
 
   // ---------- E-6 documents ----------
 
-  testWidgets('11 documents tab', (tester) async {
+  testWidgets('13 documents tab', (tester) async {
     await pumpApp(tester, trips: [_trip]);
     await tester.tap(find.byIcon(Icons.folder));
     await tester.pumpAndSettle();
-    await shoot(tester, '11-documents');
+    await shoot(tester, '13-documents');
   });
 
   // ---------- E-7 profile ----------
 
-  testWidgets('12 profile, everything synced', (tester) async {
+  testWidgets('14 profile, everything synced', (tester) async {
     await pumpApp(tester, trips: [_trip]);
     await tester.tap(find.byIcon(Icons.person));
     await tester.pumpAndSettle();
-    await shoot(tester, '12-profile-synced');
+    await shoot(tester, '14-profile-synced');
   });
 
-  testWidgets('13 profile with queued events waiting for network', (tester) async {
+  testWidgets('15 profile with queued events waiting for network', (tester) async {
     await pumpApp(tester, trips: [_trip], seedQueue: _seedEvents);
     await tester.tap(find.byIcon(Icons.person));
     await tester.pumpAndSettle();
-    await shoot(tester, '13-profile-pending');
+    await shoot(tester, '15-profile-pending');
   });
 
-  testWidgets('14 profile, language picker open', (tester) async {
+  testWidgets('16 profile, language picker open', (tester) async {
     await pumpApp(tester, trips: [_trip]);
     await tester.tap(find.byIcon(Icons.person));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButton<String>));
     await tester.pumpAndSettle();
-    await shoot(tester, '14-profile-language');
+    await shoot(tester, '16-profile-language');
   });
 
   // ---------- All three languages ----------
 
   for (final entry in const {
-    '15-trip-uz-cyrl': 'uz-cyrl',
-    '16-trip-ru': 'ru',
+    '17-trip-uz-cyrl': 'uz-cyrl',
+    '18-trip-ru': 'ru',
   }.entries) {
     testWidgets('${entry.key} trip tab', (tester) async {
       await pumpApp(tester, locale: entry.value, trips: [_trip]);
@@ -191,8 +208,8 @@ void main() {
   }
 
   for (final entry in const {
-    '17-profile-uz-cyrl': 'uz-cyrl',
-    '18-profile-ru': 'ru',
+    '19-profile-uz-cyrl': 'uz-cyrl',
+    '20-profile-ru': 'ru',
   }.entries) {
     testWidgets('${entry.key} profile tab', (tester) async {
       await pumpApp(tester, locale: entry.value, trips: [_trip]);
@@ -202,9 +219,9 @@ void main() {
     });
   }
 
-  testWidgets('19 login in Russian', (tester) async {
+  testWidgets('21 login in Russian', (tester) async {
     await pumpApp(tester, loggedIn: false, locale: 'ru');
-    await shoot(tester, '19-login-ru');
+    await shoot(tester, '21-login-ru');
   });
 }
 
@@ -225,6 +242,51 @@ const _trip = {
   'unloadingAddress': 'Samarqand',
   'vehicle': {'plateNumber': '01 A 777 AA'},
   'driverAdvance': '50000000',
+};
+
+/// A short conversation, as a driver would find it after a delivery question.
+/// Text only: `Image.network` cannot fetch anything in a widget test, so a photo
+/// bubble here would render its own failure message rather than a photo.
+final _messages = <Map<String, dynamic>>[
+  {
+    'id': 'm1',
+    'mine': false,
+    'senderName': 'Dilshod (logist)',
+    'kind': 'TEXT',
+    'body': 'Salom! Samarqandga qachon yetib borasiz?',
+    'createdAt': '2026-08-17T09:12:00.000Z',
+  },
+  {
+    'id': 'm2',
+    'mine': true,
+    'senderName': null,
+    'kind': 'TEXT',
+    'body': "Kechqurun 18:00 larda bo'laman, hozir Jizzax yaqinidaman.",
+    'createdAt': '2026-08-17T09:15:00.000Z',
+  },
+  {
+    'id': 'm3',
+    'mine': false,
+    'senderName': 'Dilshod (logist)',
+    'kind': 'TEXT',
+    'body': "Rahmat. Yuk topshirilgach chekni suratga olib yuboring.",
+    'createdAt': '2026-08-17T09:16:00.000Z',
+  },
+];
+
+/// A rating with something to look at: a couple of late trips and a small fuel
+/// overrun, so the card shows how the score is made rather than a bare 5.00.
+const _rating = {
+  'driverId': '00000000-0000-4000-8000-0000000000f2',
+  'driverName': 'Sanjar Rahimov',
+  'ratingCentis': 437,
+  'trips': 24,
+  'lateTrips': 2,
+  'breakdowns': 1,
+  'fuelDeviationBp': 420,
+  'penalties': {'lateness': 13, 'fuel': 0, 'breakdowns': 6},
+  'lateShareBp': 833,
+  'breakdownRateBp': 417,
 };
 
 /// Two entries already sent, one still waiting for a network.
@@ -253,12 +315,20 @@ Future<void> _seedEvents(OfflineQueue queue, AppDatabase db) async {
 }
 
 /// The whole backend, as far as these screens are concerned.
-http.Client _fakeApi(List<dynamic> trips) {
+http.Client _fakeApi(List<dynamic> trips, {List<dynamic> messages = const []}) {
   return MockClient((request) async {
     final path = request.url.path;
     Object? data;
     if (path.endsWith('/trips/my')) {
       data = trips;
+    } else if (path.endsWith('/chat/messages') || path.contains('/chat/')) {
+      data = path.endsWith('/unread')
+          ? {'unread': messages.where((m) => (m as Map)['mine'] != true).length}
+          : path.endsWith('/read')
+              ? {'read': 0}
+              : messages;
+    } else if (path.endsWith('/drivers/me/rating')) {
+      data = _rating;
     } else if (path.endsWith('/auth/me')) {
       data = {
         'id': '00000000-0000-4000-8000-0000000000f1',

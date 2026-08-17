@@ -169,3 +169,45 @@ describe('RatingService.refresh', () => {
     expect(db.driver!.update).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('RatingService.myRating', () => {
+  it('gives the signed-in driver their own row', async () => {
+    const { service, db } = setup();
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+
+    const rating = await service.myRating(ACTOR, NOW);
+
+    expect(rating?.driverId).toBe('d1');
+    expect(rating?.ratingCentis).toBe(500);
+    // The penalties travel with the score: a number nobody can explain is a
+    // number nobody can act on (TZ E-7).
+    expect(rating?.penalties).toEqual({ lateness: 0, fuel: 0, breakdowns: 0 });
+  });
+
+  it('looks the driver up by the signed-in user, not by a body parameter', async () => {
+    const { service, db } = setup();
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+
+    await service.myRating(ACTOR, NOW);
+
+    expect(db.driver!.findFirst!.mock.calls[0][0].where).toMatchObject({
+      userId: ACTOR.userId,
+      isActive: true,
+    });
+  });
+
+  it('answers null for a user with no driver profile', async () => {
+    const { service, db } = setup();
+    db.driver!.findFirst!.mockResolvedValue(null);
+
+    expect(await service.myRating(ACTOR, NOW)).toBeNull();
+  });
+
+  it('answers null for a driver the rating list does not cover', async () => {
+    const { service, db } = setup();
+    // Profile exists, but this driver ran no trips in the window.
+    db.driver!.findFirst!.mockResolvedValue({ id: 'someone-else' });
+
+    expect(await service.myRating(ACTOR, NOW)).toBeNull();
+  });
+});

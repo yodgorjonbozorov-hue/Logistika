@@ -40,6 +40,23 @@ export class RatingService {
       .sort((a, b) => (b.ratingCentis ?? -1) - (a.ratingCentis ?? -1));
   }
 
+  /**
+   * E-7: the signed-in driver's own rating, and nobody else's.
+   *
+   * The list endpoint is for the office; a driver may see the numbers that
+   * judge them, which is also why the penalties travel with the score — a
+   * rating with no explanation is not something anyone can act on.
+   * Returns null when this user has no driver profile.
+   */
+  async myRating(actor: CurrentUserPayload, now: Date = new Date()): Promise<DriverRating | null> {
+    const driver = await this.prisma
+      .forCompany(actor.companyId)
+      .driver.findFirst({ where: { userId: actor.userId, isActive: true }, select: { id: true } });
+    if (!driver) return null;
+    const all = await this.ratings(actor, now);
+    return all.find((rating) => rating.driverId === driver.id) ?? null;
+  }
+
   /** Nightly refresh of the cached rating, after the fuel check has run. */
   @Cron('30 4 * * *')
   async refreshAllCompanies(now: Date = new Date()): Promise<void> {
