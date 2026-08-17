@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../config.dart';
@@ -38,15 +39,7 @@ class GpsService {
 
     _activeTripId = tripId;
     _positionSub = Geolocator.getPositionStream(
-      locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: AppConfig.gpsDistanceFilterMeters,
-        foregroundNotificationConfig: ForegroundNotificationConfig(
-          notificationTitle: notificationTitle,
-          notificationText: notificationText,
-          enableWakeLock: true,
-        ),
-      ),
+      locationSettings: _locationSettings(notificationTitle, notificationText),
     ).listen((position) {
       unawaited(_queue.enqueuePosition(
         tripId: tripId,
@@ -63,6 +56,48 @@ class GpsService {
     );
     return true;
   }
+
+  /// Background location is configured per platform: an Android foreground
+  /// service with a notification, and the iOS background-location flags. Using
+  /// AndroidSettings on iOS silently gives up background tracking, which is the
+  /// whole point of the feature on a multi-day trip.
+  @visibleForTesting
+  static LocationSettings locationSettingsFor(
+    TargetPlatform platform,
+    String notificationTitle,
+    String notificationText,
+  ) {
+    switch (platform) {
+      case TargetPlatform.android:
+        return AndroidSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: AppConfig.gpsDistanceFilterMeters,
+          foregroundNotificationConfig: ForegroundNotificationConfig(
+            notificationTitle: notificationTitle,
+            notificationText: notificationText,
+            enableWakeLock: true,
+          ),
+        );
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return AppleSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: AppConfig.gpsDistanceFilterMeters,
+          activityType: ActivityType.automotiveNavigation,
+          allowBackgroundLocationUpdates: true,
+          showBackgroundLocationIndicator: true,
+          pauseLocationUpdatesAutomatically: false,
+        );
+      default:
+        return const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: AppConfig.gpsDistanceFilterMeters,
+        );
+    }
+  }
+
+  LocationSettings _locationSettings(String notificationTitle, String notificationText) =>
+      locationSettingsFor(defaultTargetPlatform, notificationTitle, notificationText);
 
   Future<Position?> currentPosition() async {
     try {

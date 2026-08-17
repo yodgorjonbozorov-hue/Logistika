@@ -78,6 +78,12 @@
 - [x] Fon rejimida GPS: 3 daqiqalik batch, geolocator foreground-service
       (Android'da ilova yig'ilganda ham); to'liq «ilova o'ldirilgan» rejim sinovi —
       9-bosqich qurilma-testlarida
+- [x] iOS konfiguratsiyasi (TASK-1.6): `Info.plist` ruxsat matnlari (joylashuv, kamera,
+      galereya), `UIBackgroundModes: [location]`, `AppleSettings` bilan fon kuzatuvi.
+      **Diqqat:** real iOS qurilmasida yoki simulyatorda hali tekshirilmagan (muhitda
+      macOS/Xcode yo'q) — qurilma sinovi 9-bosqichda.
+- [x] Android: `cleartext` faqat debug build'da (`network_security_config.xml`),
+      release build faqat HTTPS (`AppConfig.assertSecureInRelease`)
 
 ## 6-bosqich — Xarita va kuzatuv ✅
 

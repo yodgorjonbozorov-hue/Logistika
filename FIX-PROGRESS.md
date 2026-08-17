@@ -107,6 +107,17 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `src/main.ts`, `src/config/env.validation.ts` (+spec), `driver-auth.service.ts` (+spec),
   `auth/public-link/files/tracking/events` kontrollerlari, `packages/shared/src/index.ts`,
   i18n × 3 · unit 88 → 95, e2e 22 → 26.
+- **TASK-1.6 (C-6)** · iOS ilovasi endi crash bo'lmaydi: `Info.plist`ga 4 ta ruxsat matni
+  (o'zbekcha, aniq sabab bilan) + `UIBackgroundModes: [location]`. `gps_service.dart`
+  platformaga qarab `AndroidSettings` / `AppleSettings`
+  (`allowBackgroundLocationUpdates`, `showBackgroundLocationIndicator`,
+  `pauseLocationUpdatesAutomatically: false`). Android'da cleartext faqat **debug** build'da
+  (`android/app/src/debug/`), release'da `AppConfig.assertSecureInRelease()` HTTPS talab qiladi. ·
+  `ios/Runner/Info.plist`, `lib/core/gps/gps_service.dart`, `lib/core/config.dart`,
+  `lib/main.dart`, `android/app/src/debug/*`, `test/gps_settings_test.dart` (+4),
+  `docs/ROADMAP.md`, `mobile/.../README.md` · `flutter test` 14/14, `flutter analyze` toza.
+  **Halol qayd:** iOS real qurilmada/simulyatorda tekshirilmadi — muhitda macOS/Xcode yo'q,
+  ROADMAP va README'ga shundoq yozildi.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -132,4 +143,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.6 (iOS Info.plist, GPS platforma sozlamalari).
+PHASE 1 → TASK-1.7 (env validatsiyasi to'liq emas: MinIO, SMS, public endpoint).

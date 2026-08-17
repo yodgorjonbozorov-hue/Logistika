@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_scope.dart';
 import 'core/api/api_client.dart';
+import 'core/config.dart';
 import 'core/db/app_database.dart';
 import 'core/gps/gps_service.dart';
 import 'core/i18n/app_strings.dart';
@@ -15,6 +16,7 @@ import 'features/home/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppConfig.assertSecureInRelease();
   final prefs = await SharedPreferences.getInstance();
   final tokens = TokenStore(prefs);
   final api = ApiClient(tokens);

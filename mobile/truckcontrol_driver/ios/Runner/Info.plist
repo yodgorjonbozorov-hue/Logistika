@@ -41,6 +41,20 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Reys davomida yukning joylashuvini qayd etish uchun joylashuv kerak. Ma'lumot faqat firmangiz logistiga ko'rinadi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Ilova yopiq bo'lganda ham reys marshrutini yozib borish uchun joylashuv kerak. Kuzatuv faqat faol reys davomida ishlaydi.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Ilova yopiq bo'lganda ham reys marshrutini yozib borish uchun joylashuv kerak. Kuzatuv faqat faol reys davomida ishlaydi.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Chek, yuk hujjati va yetkazib berish dalilini suratga olish uchun kamera kerak.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Oldin olingan chek yoki hujjat fotosini reysga biriktirish uchun galereya kerak.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
