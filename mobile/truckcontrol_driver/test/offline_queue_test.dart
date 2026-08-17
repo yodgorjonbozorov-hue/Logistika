@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:truckcontrol_driver/core/api/api_client.dart';
@@ -22,11 +23,14 @@ void main() {
 
   setUp(() async {
     db = await AppDatabase.open(path: inMemoryDatabasePath);
-    SharedPreferences.setMockInitialValues({
+    SharedPreferences.setMockInitialValues({});
+    // Tokens live in the platform keystore now, not SharedPreferences.
+    FlutterSecureStorage.setMockInitialValues({
       'tc.access': 'test-access',
       'tc.refresh': 'test-refresh',
     });
     tokens = TokenStore(await SharedPreferences.getInstance());
+    await tokens.load();
   });
 
   tearDown(() => db.close());

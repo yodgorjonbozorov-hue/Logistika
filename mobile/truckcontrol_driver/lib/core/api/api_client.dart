@@ -71,6 +71,9 @@ class ApiClient {
     );
     final headers = <String, String>{
       'accept-language': _tokens.locale,
+      // Browsers get the refresh token as an httpOnly cookie; a native client
+      // has no cookie jar and needs it in the response body.
+      'x-client': 'mobile',
       if (body != null) 'content-type': 'application/json',
       if (_tokens.accessToken != null)
         'authorization': 'Bearer ${_tokens.accessToken}',

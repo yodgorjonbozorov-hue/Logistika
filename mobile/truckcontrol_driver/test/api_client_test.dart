@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truckcontrol_driver/core/api/api_client.dart';
 import 'package:truckcontrol_driver/core/storage/token_store.dart';
@@ -11,11 +12,13 @@ void main() {
   late TokenStore tokens;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({
       'tc.access': 'expired-access',
       'tc.refresh': 'refresh-1',
     });
     tokens = TokenStore(await SharedPreferences.getInstance());
+    await tokens.load();
   });
 
   String body(Object data) =>

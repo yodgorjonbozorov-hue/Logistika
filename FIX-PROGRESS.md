@@ -228,6 +228,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   **Bloklandi (qisman)**: email provayder yo'q — reset havolasi telefon bo'lsa SMS bilan
   yuboriladi, email bo'lsa `[DEV EMAIL]` log'iga yoziladi (interfeys tayyor, integratsiya
   keyingi bosqichda).
+- **TASK-2.6 (H-15)** · Token saqlash va transport (**buzuvchi o'zgarish**, uch tomon birga
+  yangilandi). Backend: refresh token brauzerlar uchun `httpOnly; SameSite=Strict; Path=/api/v1/auth`
+  cookie'ga o'tkazildi va **javob tanasidan butunlay olib tashlandi**; `refresh`/`logout` avval
+  cookie'ni, keyin body'ni o'qiydi (mobil uchun). Klient turi `X-Client: mobile` header'i bilan
+  ajratiladi. `SameSite=Strict` + mavjud bitta-origin CORS → CSRF uchun alohida token shart emas.
+  Web: access token endi **faqat xotirada** (localStorage'da hech narsa qolmadi — XSS bo'lsa
+  30 kunlik refresh token o'g'irlanardi); `ProtectedRoute` token borligini emas, `/auth/me`
+  natijasini kutadi (loading holati bilan, flash yo'q). Mobil: `flutter_secure_storage`
+  (Keychain / Android KeyStore) — eski `SharedPreferences` yozuvlari bir martalik migratsiya
+  bilan ko'chiriladi va o'chiriladi, ya'ni yangilanishda haydovchi tizimdan chiqib ketmaydi. ·
+  `auth.controller.ts`, `refresh-cookie.ts`, `bootstrap.ts` (cookie-parser), `refresh.dto.ts`,
+  web `client.ts` / `AuthContext.tsx` / `ProtectedRoute.tsx` (+3 test),
+  mobil `token_store.dart` (+`test/token_store_test.dart`, 6 test), `api_client.dart`,
+  `test/token-transport.e2e-spec.ts` (+7 e2e) · web 13 → 16, mobil 16 → 22, e2e 64 → 71.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -260,4 +274,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.6 (token saqlash: httpOnly cookie, mobil secure storage) — buzuvchi o'zgarish.
+PHASE 2 → TASK-2.7 (fayl yuklash xavfsizligi: magic-byte, sharp limitlari, kvota, AV interfeysi).

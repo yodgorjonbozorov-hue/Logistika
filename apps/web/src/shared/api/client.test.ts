@@ -34,7 +34,7 @@ describe('api client', () => {
   });
 
   it('refreshes once on AUTH_TOKEN_EXPIRED and retries the request', async () => {
-    tokenStore.set('stale-access', 'valid-refresh');
+    tokenStore.set('stale-access');
     mockFetchOnce({
       success: false,
       data: null,
@@ -43,7 +43,7 @@ describe('api client', () => {
     });
     mockFetchOnce({
       success: true,
-      data: { accessToken: 'new-access', refreshToken: 'new-refresh' },
+      data: { accessToken: 'new-access' },
       error: null,
       meta: null,
     });
@@ -53,12 +53,11 @@ describe('api client', () => {
 
     expect(data.ok).toBe(true);
     expect(tokenStore.access).toBe('new-access');
-    expect(tokenStore.refresh).toBe('new-refresh');
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('sends the bearer token and passes query params', async () => {
-    tokenStore.set('my-access', 'my-refresh');
+    tokenStore.set('my-access');
     mockFetchOnce({ success: true, data: [], error: null, meta: null });
 
     await api('/trips', { query: { page: 2, status: 'DRAFT', empty: undefined } });
@@ -77,7 +76,7 @@ describe('api client', () => {
   });
 
   it('refreshes once when several parallel requests hit an expired token', async () => {
-    tokenStore.set('expired-access', 'refresh-1');
+    tokenStore.set('expired-access');
     const expired = {
       success: false,
       data: null,
@@ -86,7 +85,7 @@ describe('api client', () => {
     };
     const refreshed = {
       success: true,
-      data: { accessToken: 'new-access', refreshToken: 'new-refresh' },
+      data: { accessToken: 'new-access' },
       error: null,
       meta: null,
     };
@@ -111,7 +110,7 @@ describe('api client', () => {
   });
 
   it('starts a fresh refresh after the previous one settled', async () => {
-    tokenStore.set('expired-access', 'refresh-1');
+    tokenStore.set('expired-access');
     const expired = {
       success: false,
       data: null,
@@ -120,7 +119,7 @@ describe('api client', () => {
     };
     const refreshed = {
       success: true,
-      data: { accessToken: 'a', refreshToken: 'r' },
+      data: { accessToken: 'a' },
       error: null,
       meta: null,
     };
@@ -146,5 +145,44 @@ describe('api client', () => {
     // The in-flight promise is cleared once settled, so a later expiry can
     // still refresh — single-flight, not once-per-session.
     expect(refreshes).toBe(2);
+  });
+
+  it('never puts a token in localStorage or a cookie the page can read', async () => {
+    tokenStore.set('secret-access');
+    mockFetchOnce({ success: true, data: null, error: null, meta: null });
+    await api('/trips');
+
+    // One XSS used to be enough to walk off with a 30-day refresh token.
+    expect(JSON.stringify(localStorage)).not.toContain('secret-access');
+    expect(localStorage.length).toBe(0);
+    expect(document.cookie).not.toContain('secret-access');
+  });
+
+  it('sends credentials so the httpOnly refresh cookie travels with auth calls', async () => {
+    mockFetchOnce({ success: true, data: null, error: null, meta: null });
+    await api('/auth/me');
+
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(init.credentials).toBe('include');
+  });
+
+  it('refreshes without sending a token in the body (the cookie carries it)', async () => {
+    tokenStore.set('expired-access');
+    mockFetchOnce({
+      success: false,
+      data: null,
+      error: { code: 'AUTH_TOKEN_EXPIRED', message: 'expired' },
+      meta: null,
+    });
+    mockFetchOnce({ success: true, data: { accessToken: 'fresh' }, error: null, meta: null });
+    mockFetchOnce({ success: true, data: { ok: true }, error: null, meta: null });
+
+    await api('/trips');
+
+    const refreshCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([url]) => String(url).includes('/auth/refresh'),
+    );
+    expect(refreshCall).toBeDefined();
+    expect(String(refreshCall![1].body)).not.toContain('refreshToken');
   });
 });

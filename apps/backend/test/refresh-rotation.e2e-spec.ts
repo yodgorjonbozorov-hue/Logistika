@@ -35,8 +35,16 @@ describe('Refresh token rotation (e2e)', () => {
     await prisma.refreshToken.deleteMany({ where: { userId: tenant.owner.id } });
   });
 
+  /**
+   * Driven as a native client: the token semantics under test are the same for
+   * both transports, and the body form is the one a test can inspect. The
+   * cookie transport itself is covered by token-transport.e2e-spec.ts.
+   */
   const refresh = (token: string) =>
-    request(app.getHttpServer()).post('/api/v1/auth/refresh').send({ refreshToken: token });
+    request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('x-client', 'mobile')
+      .send({ refreshToken: token });
 
   it('rotates on use: the old token stops working, the new one works', async () => {
     const { refreshToken } = await auth.issueTokens(tenant.owner);

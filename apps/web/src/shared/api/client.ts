@@ -3,8 +3,7 @@ import i18n from '../i18n';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-const ACCESS_KEY = 'tc.access';
-const REFRESH_KEY = 'tc.refresh';
+
 
 export class ApiError extends Error {
   constructor(
@@ -18,20 +17,25 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The access token lives in memory only.
+ *
+ * localStorage is readable by any script on the page, so a single XSS used to
+ * hand an attacker both tokens — including a 30-day refresh token. The refresh
+ * token is now an httpOnly cookie the page cannot read at all, and the short
+ * access token is lost on reload, where the cookie silently re-issues it.
+ */
+let accessToken: string | null = null;
+
 export const tokenStore = {
   get access() {
-    return localStorage.getItem(ACCESS_KEY);
+    return accessToken;
   },
-  get refresh() {
-    return localStorage.getItem(REFRESH_KEY);
-  },
-  set(access: string, refresh: string) {
-    localStorage.setItem(ACCESS_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+  set(access: string) {
+    accessToken = access;
   },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
   },
 };
 
@@ -53,6 +57,8 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
   const response = await fetch(url.toString(), {
     method: options.method ?? 'GET',
     headers,
+    // Sends the httpOnly refresh cookie on the auth routes.
+    credentials: 'include',
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
   return (await response.json().catch(() => ({
@@ -75,14 +81,13 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
 let refreshInFlight: Promise<boolean> | null = null;
 
 async function performRefresh(): Promise<boolean> {
-  const refreshToken = tokenStore.refresh;
-  if (!refreshToken) return false;
-  const result = await rawRequest<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
+  // No token is sent: the browser attaches the httpOnly cookie itself.
+  const result = await rawRequest<{ accessToken: string }>('/auth/refresh', {
     method: 'POST',
-    body: { refreshToken },
+    body: {},
   });
   if (result.success && result.data) {
-    tokenStore.set(result.data.accessToken, result.data.refreshToken);
+    tokenStore.set(result.data.accessToken);
     return true;
   }
   tokenStore.clear();

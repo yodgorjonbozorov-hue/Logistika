@@ -19,6 +19,8 @@ Future<void> main() async {
   AppConfig.assertSecureInRelease();
   final prefs = await SharedPreferences.getInstance();
   final tokens = TokenStore(prefs);
+  // Tokens come from the platform keystore; nothing can run before they load.
+  await tokens.load();
   final api = ApiClient(tokens);
   final db = await AppDatabase.open();
   final queue = OfflineQueue(db, api, tokens)..start();

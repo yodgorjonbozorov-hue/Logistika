@@ -125,8 +125,10 @@ describe('Password flows (e2e)', () => {
 
     it('answers the same for a known and an unknown identifier (no enumeration)', async () => {
       const known = await post('/auth/forgot-password', { identifier: tenant.owner.email });
+      // Unique per run: a constant identifier accumulates hits against the
+      // per-identifier rate limit, whose store outlives the test process.
       const unknown = await post('/auth/forgot-password', {
-        identifier: 'nobody@example.test',
+        identifier: `nobody-${Date.now()}@example.test`,
       });
 
       expect(known.status).toBe(unknown.status);

@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 
@@ -20,6 +21,8 @@ export function configureApp(app: INestApplication): INestApplication {
   // multer and are limited separately.
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+  // The refresh token arrives as an httpOnly cookie for browser clients.
+  app.use(cookieParser());
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
