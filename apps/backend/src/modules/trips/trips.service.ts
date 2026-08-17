@@ -3,6 +3,7 @@ import { Prisma, type Trip, type TripStatus } from '@prisma/client';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertTenantRefs } from '../../common/tenant-refs';
 import { assertTripTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -206,26 +207,11 @@ export class TripsService {
     return updated;
   }
 
-  /**
-   * Referenced vehicle/trailer/driver/client must exist WITHIN this tenant —
-   * the tenant-scoped lookup makes cross-company ids indistinguishable from
-   * missing ones (isolation requirement).
-   */
+  /** Referenced vehicle/trailer/driver/client must exist within this tenant. */
   private async assertRefsExist(
     actor: CurrentUserPayload,
     refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },
   ): Promise<void> {
-    const db = this.prisma.forCompany(actor.companyId);
-    const checks: Array<[string | undefined, () => Promise<unknown | null>]> = [
-      [refs.vehicleId, () => db.vehicle.findUnique({ where: { id: refs.vehicleId! } })],
-      [refs.trailerId, () => db.vehicle.findUnique({ where: { id: refs.trailerId! } })],
-      [refs.driverId, () => db.driver.findUnique({ where: { id: refs.driverId! } })],
-      [refs.clientId, () => db.client.findUnique({ where: { id: refs.clientId! } })],
-    ];
-    for (const [id, lookup] of checks) {
-      if (id && !(await lookup())) {
-        throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND, undefined, { id });
-      }
-    }
+    await assertTenantRefs(this.prisma.forCompany(actor.companyId), refs);
   }
 }

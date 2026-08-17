@@ -48,6 +48,15 @@ export interface CurrentUserPayload {
   role: UserRole;
 }
 
+/**
+ * A caller acting inside a tenant. Same shape as CurrentUserPayload with the
+ * companyId narrowed: SUPERADMIN is the only role without one, and it never
+ * reaches tenant-scoped code paths.
+ */
+export interface TenantActor extends CurrentUserPayload {
+  companyId: string;
+}
+
 // ---------- Domain enums (TZ §5) ----------
 
 export enum VehicleType {

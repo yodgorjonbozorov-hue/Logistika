@@ -165,6 +165,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   **Diqqat (dev muhiti)**: dev'da baza egasi (superuser) sifatida ulanilgani uchun RLS amalda
   ishlamaydi — bu PostgreSQL qoidasi, `FORCE` ham superuser'ni to'xtatmaydi. Shuning uchun
   `DATABASE_URL_APP` production'da majburiy va start'da tekshiriladi.
+- **TASK-2.2 (C-1 davomi)** · Money servislarida tenant ref tekshiruvi. `assertTenantRefs()`
+  umumiy helper'i (`common/tenant-refs.ts`) — `tripId/vehicleId/trailerId/driverId/clientId`
+  parallel tekshiriladi, topilmasa `NOT_FOUND` (tenant-scoped qidiruv tufayli begona id
+  yo'q id'dan farq qilmaydi). `createExpense`, `updateExpense`, `createIncome`, `updateIncome`
+  hammasida chaqiriladi; `trips.service` ham shu helper'ga o'tkazildi.
+  `as Prisma.*UncheckedCreateInput` cast'lari olib tashlandi — `TenantActor` tipi
+  (`shared`) + `requireTenantActor()` bilan `companyId` to'g'ri tiplandi (avval cast
+  `companyId: null` holatini yashirardi). ·
+  `src/common/tenant-refs.ts` (+spec 6 test), `src/common/tenant-actor.ts`,
+  `src/modules/expenses/expenses.service.ts` (+spec 11 test),
+  `src/modules/trips/trips.service.ts`, `packages/shared/src/index.ts` ·
+  unit 107 → 124. **N-3 yopildi**: `tenant-isolation.e2e-spec.ts`dagi ikkita `it.failing`
+  oddiy `it()`ga qaytarildi va o'tmoqda — B tenant A'ning `tripId`/`clientId` bilan
+  xarajat/kirim yarata olmaydi. `expenses.service.ts` qamrovi 51% → 74% (branch 22% → 67%).
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -186,7 +200,7 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `prisma` va `test` kirgani uchun `rootDir` paket ildiziga ko'tarilgan), ya'ni
   `package.json`dagi `"start": "node dist/main.js"` **hech qachon ishlamagan**.
   `tsconfig.build.json` + `nest-cli.json` qo'shildi → `dist/main.js`.
-- **N-3 (CRITICAL, tasdiqlangan)**: yangi e2e darhol C-1 davomini isbotladi — B tenant A'ning
+- **N-3 (CRITICAL, TUZATILDI — TASK-2.2)**: yangi e2e darhol C-1 davomini isbotladi — B tenant A'ning
   `tripId`/`clientId` bilan `POST /expenses` va `POST /incomes` yuborsa **201** qaytadi va yozuv
   yaratiladi. Ikkala test `it.failing()` bilan qoldirildi (hujjatlangan, bajariladigan zaiflik) —
   TASK-2.2 tuzatganda ular avtomatik qizil bo'ladi va `it()`ga qaytariladi.
@@ -197,5 +211,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.2 (money/document servislarida tenant ref tekshiruvi — `it.failing` e2e'larni
-`it()`ga qaytarish).
+PHASE 2 → TASK-2.3 (`GET /events` filtrsiz butun kompaniya hodisalarini qaytaradi).

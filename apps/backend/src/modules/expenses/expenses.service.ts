@@ -3,6 +3,8 @@ import type { Expense, Income, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { requireTenantActor } from '../../common/tenant-actor';
+import { assertTenantRefs } from '../../common/tenant-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -12,6 +14,29 @@ import {
   UpdateExpenseDto,
   UpdateIncomeDto,
 } from './dto/expense.dto';
+
+/**
+ * Create needs the required fields typed as present; the shared converter below
+ * makes everything optional because it also serves partial updates.
+ */
+function toExpenseCreateData(dto: CreateExpenseDto) {
+  const { amount, unitPrice, expenseDate, ...rest } = dto;
+  return {
+    ...rest,
+    amount: BigInt(amount),
+    unitPrice: unitPrice === undefined ? undefined : BigInt(unitPrice),
+    expenseDate: new Date(expenseDate),
+  };
+}
+
+function toIncomeCreateData(dto: CreateIncomeDto) {
+  const { amount, paymentDate, ...rest } = dto;
+  return {
+    ...rest,
+    amount: BigInt(amount),
+    paymentDate: paymentDate === undefined ? undefined : new Date(paymentDate),
+  };
+}
 
 function toExpenseData(dto: CreateExpenseDto | UpdateExpenseDto) {
   const { amount, unitPrice, expenseDate, ...rest } = dto;
@@ -64,12 +89,16 @@ export class ExpensesService {
   }
 
   async createExpense(actor: CurrentUserPayload, dto: CreateExpenseDto): Promise<Expense> {
+    const tenant = requireTenantActor(actor);
+    const db = this.prisma.forCompany(tenant.companyId);
+    await assertTenantRefs(db, dto);
     try {
-      return await this.prisma.forCompany(actor.companyId).expense.create({
+      return await db.expense.create({
         data: {
-          ...toExpenseData(dto),
-          createdById: actor.userId,
-        } as Prisma.ExpenseUncheckedCreateInput,
+          ...toExpenseCreateData(dto),
+          companyId: tenant.companyId,
+          createdById: tenant.userId,
+        },
       });
     } catch (error) {
       rethrowPrismaError(error);
@@ -87,6 +116,7 @@ export class ExpensesService {
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     // An approved expense is part of the financial record — no silent edits.
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
+    await assertTenantRefs(this.prisma.forCompany(actor.companyId), dto);
     try {
       return await this.prisma
         .forCompany(actor.companyId)
@@ -146,9 +176,12 @@ export class ExpensesService {
   }
 
   async createIncome(actor: CurrentUserPayload, dto: CreateIncomeDto): Promise<Income> {
+    const tenant = requireTenantActor(actor);
+    const db = this.prisma.forCompany(tenant.companyId);
+    await assertTenantRefs(db, dto);
     try {
-      return await this.prisma.forCompany(actor.companyId).income.create({
-        data: toIncomeData(dto) as Prisma.IncomeUncheckedCreateInput,
+      return await db.income.create({
+        data: { ...toIncomeCreateData(dto), companyId: tenant.companyId },
       });
     } catch (error) {
       rethrowPrismaError(error);
@@ -156,6 +189,7 @@ export class ExpensesService {
   }
 
   async updateIncome(actor: CurrentUserPayload, id: string, dto: UpdateIncomeDto): Promise<Income> {
+    await assertTenantRefs(this.prisma.forCompany(actor.companyId), dto);
     try {
       return await this.prisma
         .forCompany(actor.companyId)

@@ -147,10 +147,7 @@ describe('Tenant isolation (e2e)', () => {
       expect(vehicle?.isActive).toBe(true);
     });
 
-    // KNOWN OPEN HOLE — C-1 continuation, fixed in TASK-2.2. `it.failing` keeps the
-    // vulnerability documented and executable: the moment the reference check lands,
-    // these turn red and have to be flipped back to `it`.
-    it.failing('POST /expenses referencing another company trip → denied, nothing stored', async () => {
+    it('POST /expenses referencing another company trip → denied, nothing stored', async () => {
       const res = await asBeta(
         api().post('/api/v1/expenses').send({
           tripId: alpha.trip.id,
@@ -164,7 +161,7 @@ describe('Tenant isolation (e2e)', () => {
       expect(leaked).toBeNull();
     });
 
-    it.failing('POST /incomes referencing another company client → denied, nothing stored', async () => {
+    it('POST /incomes referencing another company client → denied, nothing stored', async () => {
       const res = await asBeta(
         api().post('/api/v1/incomes').send({
           clientId: alpha.client.id,
