@@ -3,6 +3,13 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { EventsService } from './events.service';
 
+/** UZS passes through unchanged; conversion itself is tested in currency.service.spec.ts. */
+const currencyStub = {
+  toBase: jest.fn((amount: bigint) =>
+    Promise.resolve({ amountBase: amount, rateUsed: null, rateDate: null }),
+  ),
+} as unknown as import('../currency/currency.service').CurrencyService;
+
 /** The ledger is exercised for real in ledger.service.spec.ts and the e2e suite. */
 const ledgerStub = {
   record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
@@ -35,7 +42,7 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
       Promise.resolve({ id: 'e1', ...data }),
     );
     db.storedFile!.findMany!.mockResolvedValue([]);
-    const service = new EventsService(prisma, audit, ledgerStub);
+    const service = new EventsService(prisma, audit, ledgerStub, currencyStub);
     return { service, db };
   }
 
@@ -213,7 +220,7 @@ describe('EventsService.listByTrip (TASK-2.3)', () => {
     db.driver!.findFirst!.mockResolvedValue({ id: 'd1', userId: 'user-1' });
     db.tripEvent!.findMany!.mockResolvedValue([{ id: 'e1' }]);
     db.tripEvent!.count!.mockResolvedValue(1);
-    return { service: new EventsService(prisma, audit, ledgerStub), db };
+    return { service: new EventsService(prisma, audit, ledgerStub, currencyStub), db };
   }
 
   const filter = (overrides: Record<string, unknown> = {}) =>

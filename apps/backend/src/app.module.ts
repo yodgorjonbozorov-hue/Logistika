@@ -16,6 +16,7 @@ import { I18nModule } from './i18n/i18n.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
+import { CurrencyModule } from './modules/currency/currency.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
@@ -50,6 +51,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CompaniesModule,
     DriversModule,
     ClientsModule,
+    CurrencyModule,
     VehiclesModule,
     TripsModule,
     EventsModule,

@@ -2,6 +2,13 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { TripsService } from './trips.service';
 
+/** UZS passes through unchanged; conversion itself is tested in currency.service.spec.ts. */
+const currencyStub = {
+  toBase: jest.fn((amount: bigint) =>
+    Promise.resolve({ amountBase: amount, rateUsed: null, rateDate: null }),
+  ),
+} as unknown as import('../currency/currency.service').CurrencyService;
+
 /** The ledger is exercised for real in ledger.service.spec.ts and the e2e suite. */
 const ledgerStub = {
   record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
@@ -13,7 +20,7 @@ describe('TripsService', () => {
 
   function setup() {
     const { prisma, db } = createTenantDbMock(['trip', 'vehicle', 'driver', 'client']);
-    const service = new TripsService(prisma, audit, ledgerStub);
+    const service = new TripsService(prisma, audit, ledgerStub, currencyStub);
     return { service, db };
   }
 

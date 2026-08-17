@@ -6,6 +6,7 @@ import { requireTenantActor } from '../../common/tenant-actor';
 import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
 import { DriverEventDto, EventBatchDto, ListEventsDto } from './dto/event.dto';
@@ -36,6 +37,7 @@ export class EventsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly ledger: LedgerService,
+    private readonly currency: CurrencyService,
   ) {}
 
   /** The driver profile linked to the logged-in user (DRIVER role). */
@@ -124,7 +126,7 @@ export class EventsService {
             // first wins and the other finds the entry already present.
             // The invoice is the agreed price, which the transition never
             // touches — the pre-update row is the right source for it.
-            await invoiceCompletedTrip(this.ledger, tx, requireTenantActor(actor), trip);
+            await invoiceCompletedTrip(this.ledger, this.currency, tx, requireTenantActor(actor), trip);
           }
 
           await tx.auditLog.create({

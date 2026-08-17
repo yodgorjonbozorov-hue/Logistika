@@ -8,6 +8,7 @@ import { assertTenantRefs } from '../../common/tenant-refs';
 import { assertTripTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
 import {
@@ -38,6 +39,7 @@ export class TripsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly ledger: LedgerService,
+    private readonly currency: CurrencyService,
   ) {}
 
   async list(
@@ -201,7 +203,7 @@ export class TripsService {
       const result = await tx.trip.update({ where: { id: trip.id }, data: { ...data, status } });
       // Completing a trip is what turns work into a receivable.
       if (status === 'COMPLETED') {
-        await invoiceCompletedTrip(this.ledger, tx, tenant, result);
+        await invoiceCompletedTrip(this.ledger, this.currency, tx, tenant, result);
       }
       return result;
     });

@@ -417,6 +417,11 @@ model Expense {
   category      ExpenseCategory
   amount        BigInt
   currency      Currency        @default(UZS)
+  /// The same amount in UZS tiyin, frozen when the row was written. Reports
+  /// only ever sum this: adding USD cents to UZS tiyin produces nonsense.
+  amountBase    BigInt          @default(0) @map("amount_base")
+  rateUsed      Decimal?        @map("rate_used") @db.Decimal(18, 6)
+  rateDate      DateTime?       @map("rate_date")
   quantity      Decimal?        @db.Decimal(10, 2)
   unitPrice     BigInt?         @map("unit_price")
   description   String?
@@ -469,6 +474,10 @@ model Income {
   clientId      String?       @map("client_id")
   amount        BigInt
   currency      Currency      @default(UZS)
+  /// Frozen conversion, as on Expense.
+  amountBase    BigInt        @default(0) @map("amount_base")
+  rateUsed      Decimal?      @map("rate_used") @db.Decimal(18, 6)
+  rateDate      DateTime?     @map("rate_date")
   paymentDate   DateTime?     @map("payment_date")
   paymentMethod String?       @map("payment_method")
   invoiceNumber String?       @map("invoice_number")
@@ -482,6 +491,26 @@ model Income {
 
   @@index([companyId, status])
   @@map("incomes")
+}
+
+/// Daily rate to UZS, shared by every company (a rate is not tenant data).
+///
+/// `rateToUzs` is UZS per ONE unit of the currency (e.g. 12500 UZS per USD).
+/// Every currency here uses 100 minor units, so converting minor units is a
+/// plain multiply: tiyin = amount_minor * rateToUzs.
+model ExchangeRate {
+  id         String   @id @default(uuid())
+  currency   Currency
+  /// Date the rate applies to (UTC, day precision).
+  date       DateTime @db.Date
+  rateToUzs  Decimal  @map("rate_to_uzs") @db.Decimal(18, 6)
+  /// Where it came from — "manual", "cbu.uz", …
+  source     String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([currency, date])
+  @@index([currency, date])
+  @@map("exchange_rates")
 }
 
 // ---------- Ledger (TZ §6: "how much does this client owe?") ----------

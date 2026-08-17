@@ -117,3 +117,46 @@ uradi, formada esa ikki marta bosish odatiy hol.
 (`clientEventId`, TZ §3.1), va mobil navbat aynan shuni saqlaydi.
 
 Kalitlar 24 soatdan keyin kunlik job bilan tozalanadi.
+
+## 3. Valyuta (TASK-3.3)
+
+### Muammo
+
+`Currency{UZS,USD,RUB,KZT}` har money jadvalida bor edi, lekin **kurs jadvali ham,
+konvertatsiya kodi ham yo'q**. Ya'ni hisobot USD tiyinini UZS tiyiniga qo'shib,
+ma'nosiz raqam chiqarardi.
+
+### Qoidalar
+
+- **Baza valyuta — UZS tiyin.** Har money yozuvida `amountBase` (UZS tiyin) bor va
+  **barcha agregatsiya faqat shu maydon bo'yicha** bajariladi.
+- `ExchangeRate` — `(currency, date)` unique, `rateToUzs` `Decimal(18,6)`, `source`.
+  Kompaniyalar orasida **umumiy** (kurs tenant ma'lumoti emas).
+- `rateToUzs` — **bitta birlik** uchun UZS (masalan 1 USD = 12500 UZS). Enum'dagi
+  hamma valyuta 100 mayda birlikka bo'linadi, shuning uchun konvertatsiya oddiy
+  ko'paytirish: `tiyin = amount_minor × rateToUzs` (bo'lish yo'q → birlik yo'qolmaydi).
+- Yaxlitlash: `Decimal` bilan, **ROUND_HALF_UP**, butun tiyingacha. JS `number`
+  ishlatilmaydi.
+- **Qotirilgan (frozen)**: `amountBase`, `rateUsed`, `rateDate` yozuv yaratilganda
+  hisoblanadi va keyin **o'zgarmaydi**. Kurs ertaga o'zgarsa, o'tgan oy hisoboti
+  o'zgarmaydi.
+- UZS uchun `rateUsed = NULL` (kurs `1` emas): konvertatsiya **bo'lmagani**ni
+  bildiradi.
+- Kurs topilmasa — `EXCHANGE_RATE_MISSING` (422) va yozuv **yaratilmaydi**.
+  Taxminiy kurs ishlatilmaydi: taxmin bilan qurilgan hisobot qurilmagan hisobotdan
+  yomonroq, chunki keyin qaysi raqam taxmin ekanini hech kim ajrata olmaydi.
+- Dam olish kunlari: so'ralgan sanaga kurs bo'lmasa, **undan oldingi eng yaqin**
+  kurs ishlatiladi (juma kursi shanba-yakshanbaga ham amal qiladi).
+
+### Kurs kiritish
+
+`POST /admin/exchange-rates` (SUPERADMIN, kuniga bitta yozuv — takroriy POST o'sha
+kunni yangilaydi). `source` maydoni manbani saqlaydi (`manual`, keyinchalik `cbu.uz`).
+CBU.uz'dan kunlik olish uchun `CurrencyService.upsertRate()` tayyor — job qo'shilishi
+kifoya.
+
+### Mavjud ma'lumot
+
+Migratsiya `amount_base = amount` qilib to'ldirdi va `rate_used`ni `NULL` qoldirdi:
+bu paytgacha yozilgan hamma summa UZS edi (UI faqat UZS taklif qilardi, `currency`
+default'i ham UZS).

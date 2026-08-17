@@ -5,6 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { toAuditJson } from '../audit/audit.service';
+import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { assertTenantRefs } from '../../common/tenant-refs';
 import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
@@ -65,6 +66,7 @@ export class ExpensesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly ledger: LedgerService,
+    private readonly currency: CurrencyService,
   ) {}
 
   // ---------- Expenses ----------
@@ -97,10 +99,22 @@ export class ExpensesService {
     try {
       // The row and its audit entry are written together: a money record whose
       // author was lost to a failed side-write is not auditable.
+      const data = toExpenseCreateData(dto);
+      // Frozen at write time: a report run next year must show the same number
+      // it showed today, whatever the rate has done since.
+      const converted = await this.currency.toBase(
+        data.amount,
+        data.currency ?? 'UZS',
+        data.expenseDate,
+      );
+
       return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
         const expense = await tx.expense.create({
           data: {
-            ...toExpenseCreateData(dto),
+            ...data,
+            amountBase: converted.amountBase,
+            rateUsed: converted.rateUsed,
+            rateDate: converted.rateDate,
             companyId: tenant.companyId,
             createdById: tenant.userId,
           },
@@ -215,9 +229,22 @@ export class ExpensesService {
     const tenant = requireTenantActor(actor);
     await assertTenantRefs(this.prisma.forCompany(tenant.companyId), dto);
     try {
+      const data = toIncomeCreateData(dto);
+      const converted = await this.currency.toBase(
+        data.amount,
+        data.currency ?? 'UZS',
+        data.paymentDate ?? new Date(),
+      );
+
       return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
         const income = await tx.income.create({
-          data: { ...toIncomeCreateData(dto), companyId: tenant.companyId },
+          data: {
+            ...data,
+            amountBase: converted.amountBase,
+            rateUsed: converted.rateUsed,
+            rateDate: converted.rateDate,
+            companyId: tenant.companyId,
+          },
         });
 
         // Money received against a client account is what pays a trip down.
@@ -232,8 +259,7 @@ export class ExpensesService {
             reason: 'PAYMENT_RECEIVED',
             amount: income.amount,
             currency: income.currency,
-            // TASK-3.3 converts non-UZS payments.
-            amountBase: income.amount,
+            amountBase: income.amountBase,
             reference: income.invoiceNumber ?? undefined,
           });
         }
@@ -306,7 +332,7 @@ export class ExpensesService {
               reason: 'PAYMENT_RECEIVED',
               amount: income.amount,
               currency: income.currency,
-              amountBase: income.amount,
+              amountBase: income.amountBase,
               reference: income.invoiceNumber ?? undefined,
             });
           }

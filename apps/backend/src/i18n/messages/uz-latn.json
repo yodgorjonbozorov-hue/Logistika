@@ -24,5 +24,6 @@
   "SMS_PASSWORD_RESET": "TruckControl: parolni tiklash kodi {token}. Uni hech kimga bermang",
   "FILE_INFECTED": "Faylda zararli dastur aniqlandi, yuklanmadi",
   "QUOTA_EXCEEDED": "Kompaniya uchun ajratilgan saqlash hajmi tugadi. Eski fayllarni o'chiring yoki tarifni kengaytiring",
-  "IDEMPOTENCY_KEY_REUSED": "Bu so'rov kaliti boshqa ma'lumot bilan allaqachon ishlatilgan"
+  "IDEMPOTENCY_KEY_REUSED": "Bu so'rov kaliti boshqa ma'lumot bilan allaqachon ishlatilgan",
+  "EXCHANGE_RATE_MISSING": "{currency} uchun {date} sanasiga valyuta kursi yo'q. Administrator kursni kiritishi kerak"
 }

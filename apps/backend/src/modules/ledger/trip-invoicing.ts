@@ -1,6 +1,7 @@
 import type { Trip } from '@prisma/client';
 import type { TenantActor } from 'shared';
 import type { TenantScopedClient } from '../../prisma/prisma.service';
+import type { CurrencyService } from '../currency/currency.service';
 import type { LedgerService } from './ledger.service';
 
 /**
@@ -13,6 +14,7 @@ import type { LedgerService } from './ledger.service';
  */
 export async function invoiceCompletedTrip(
   ledger: LedgerService,
+  currency: CurrencyService,
   tx: TenantScopedClient,
   actor: TenantActor,
   trip: Pick<Trip, 'id' | 'clientId' | 'agreedPrice' | 'currency' | 'tripNumber'>,
@@ -25,6 +27,8 @@ export async function invoiceCompletedTrip(
   });
   if (existing) return;
 
+  const converted = await currency.toBase(trip.agreedPrice, trip.currency);
+
   await ledger.record(tx, actor, {
     clientId: trip.clientId,
     tripId: trip.id,
@@ -32,8 +36,7 @@ export async function invoiceCompletedTrip(
     reason: 'TRIP_INVOICED',
     amount: trip.agreedPrice,
     currency: trip.currency,
-    // TASK-3.3 converts non-UZS trips; today every amount is already UZS tiyin.
-    amountBase: trip.agreedPrice,
+    amountBase: converted.amountBase,
     reference: trip.tripNumber,
   });
 }

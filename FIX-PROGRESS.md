@@ -352,11 +352,27 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `expenses/trips` kontrollerlari, web `client.ts`/`crud.ts`,
   `test/idempotency.e2e-spec.ts` (+9 e2e), `docs/BUSINESS-RULES.md` ·
   unit 200 → 209, e2e 92 → 101.
+- **TASK-3.3 (H-4)** · Ko'p valyuta: `ExchangeRate` modeli (`(currency, date)` unique,
+  `rateToUzs Decimal(18,6)`, `source`; kompaniyalar orasida umumiy). Har money yozuvida
+  **qotirilgan** `amountBase` (UZS tiyin) + `rateUsed` + `rateDate` — yozuv yaratilganda
+  hisoblanadi va keyin o'zgarmaydi (kurs ertaga o'zgarsa o'tgan oy hisoboti o'zgarmaydi).
+  `CurrencyService.toBase()`: UZS o'tib ketadi (`rateUsed = NULL` — kurs 1 emas, ya'ni
+  konvertatsiya **bo'lmagan**), boshqasi uchun kurs topilmasa `EXCHANGE_RATE_MISSING`
+  (422) va yozuv yaratilmaydi — taxminiy kurs ishlatilmaydi. Dam olish kunlari uchun
+  eng yaqin oldingi kurs. Yaxlitlash `Decimal` + ROUND_HALF_UP (JS `number` yo'q).
+  Konvertatsiya `expenses`, `incomes` va reys invoyslashga ulandi; ledger allaqachon
+  `amountBase` bo'yicha ishlaydi. `POST /admin/exchange-rates` (SUPERADMIN) +
+  `GET` ro'yxati; CBU.uz job'i uchun `upsertRate()` tayyor. Migratsiya mavjud qatorlarni
+  `amount_base = amount` bilan to'ldirdi (izoh bilan asoslangan). ·
+  migratsiya `*_exchange_rates`, `modules/currency/*` (+spec 12 test),
+  `expenses.service.ts`, `trip-invoicing.ts`, `trips/events` servislari,
+  `test/currency.e2e-spec.ts` (+7 e2e), `docs/BUSINESS-RULES.md` ·
+  unit 209 → 221, e2e 101 → 108.
 
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.3 (ko'p valyuta: `ExchangeRate`, `amountBase` konvertatsiyasi).
+**Keyingi qadam:** TASK-3.4 (reys status modeli: RETURNED / PARTIALLY_DELIVERED / FAILED).
 
 PHASE 3 qolgan bog'liqliklar:
 

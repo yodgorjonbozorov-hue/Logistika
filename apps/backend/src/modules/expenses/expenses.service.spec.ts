@@ -3,6 +3,13 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { ExpensesService } from './expenses.service';
 
+/** UZS passes through unchanged; conversion itself is tested in currency.service.spec.ts. */
+const currencyStub = {
+  toBase: jest.fn((amount: bigint) =>
+    Promise.resolve({ amountBase: amount, rateUsed: null, rateDate: null }),
+  ),
+} as unknown as import('../currency/currency.service').CurrencyService;
+
 /** Ledger behaviour is covered by ledger.service.spec.ts and the e2e suite. */
 const ledgerStub = {
   record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
@@ -28,7 +35,7 @@ describe('ExpensesService', () => {
     for (const model of ['trip', 'vehicle', 'driver', 'client']) {
       db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
     }
-    const service = new ExpensesService(prisma, audit, ledgerStub);
+    const service = new ExpensesService(prisma, audit, ledgerStub, currencyStub);
     return { service, db };
   }
 
@@ -112,7 +119,7 @@ describe('ExpensesService tenant references (TASK-2.2)', () => {
     db.expense!.findUnique!.mockResolvedValue({ id: 'e1', isApproved: false });
     db.expense!.update!.mockResolvedValue({ id: 'e1' });
     db.income!.update!.mockResolvedValue({ id: 'i1' });
-    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub, currencyStub), db };
   }
 
   const expense = (overrides: Record<string, unknown> = {}) => ({
@@ -226,7 +233,7 @@ describe('ExpensesService money conversion edge cases', () => {
       Promise.resolve({ id: 'i1', ...data }),
     );
     db.income!.findUnique!.mockResolvedValue({ id: 'i1', amount: 1n });
-    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub, currencyStub), db };
   }
 
   it('leaves omitted optional money fields unset rather than zero', async () => {
@@ -300,7 +307,7 @@ describe('ExpensesService missing rows', () => {
     for (const model of ['trip', 'vehicle', 'driver', 'client']) {
       db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
     }
-    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub, currencyStub), db };
   }
 
   it('reports a missing income as not found instead of updating nothing', async () => {
@@ -372,7 +379,7 @@ describe('ExpensesService income ↔ ledger (TASK-3.1)', () => {
       reverse: jest.fn().mockResolvedValue({ id: 'mirror' }),
     };
     return {
-      service: new ExpensesService(prisma, audit, ledger as never),
+      service: new ExpensesService(prisma, audit, ledger as never, currencyStub),
       db,
       ledger,
     };
