@@ -58,6 +58,13 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 (har task tugagach shu yerga yoz: TASK-ID · qisqa izoh · o'zgargan fayllar · commit hash)
 
 - **TASK-0.1** · Baseline qayd etildi (yuqoridagi BEFORE bo'limi) · `FIX-PROGRESS.md`
+- **TASK-1.1 (C-2)** · Prisma init migratsiyasi + idempotent seed (SUPERADMIN majburiy paroldan,
+  dev'da demo tenant). `.env` monorepo ildizida qoldi: backend `envFilePath` bilan, Prisma CLI
+  `dotenv-cli` bilan o'qiydi (avval Prisma CLI `DATABASE_URL` topa olmasdi). ·
+  `apps/backend/prisma/migrations/20260817113442_init/`, `apps/backend/prisma/seed.ts`,
+  `apps/backend/package.json`, `apps/backend/src/app.module.ts`, `.env.example`, `README.md`,
+  `CLAUDE.md` · tasdiqlandi: toza bazada `migrate deploy && db seed` ishlaydi, seed 2-marta
+  ishga tushirilganda dublikat yaratmaydi, `SEED_SUPERADMIN_PASSWORD` yo'q bo'lsa xato bilan to'xtaydi.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -75,4 +82,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.1 (Prisma migratsiyalari va seed).
+PHASE 1 → TASK-1.2 (mobil offline navbat: rad etilgan hodisalar ma'lumot yo'qotadi).

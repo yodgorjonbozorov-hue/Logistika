@@ -70,12 +70,18 @@ To'liq tuzilish va modullar bog'liqligi — `docs/ARCHITECTURE.md`.
 
 ```bash
 docker compose up -d          # postgres :5432, redis :6379, minio :9000/:9001
-cp .env.example .env          # qiymatlarni to'ldir
+cp .env.example .env          # qiymatlarni to'ldir (SEED_SUPERADMIN_PASSWORD majburiy)
 pnpm install
-pnpm --filter backend prisma migrate dev   # migratsiyalar (backend paydo bo'lgach)
+pnpm --filter backend prisma migrate deploy   # mavjud migratsiyalarni qo'llash
+pnpm --filter backend db:seed                 # SUPERADMIN + (dev'da) demo tenant
 pnpm dev                      # backend + web parallel
 # Flutter: cd mobile/truckcontrol_driver && flutter run
 ```
+
+- `.env` monorepo ildizida yagona — backend uni `envFilePath` orqali o'qiydi, Prisma CLI esa
+  `dotenv -e ../../.env` bilan (`apps/backend` skriptlari).
+- Sxema o'zgarsa: `pnpm --filter backend prisma migrate dev --name <izoh>` va migratsiya
+  faylini commit qil. `db push` ishlatilmaydi.
 
 ## Qanday test qilinadi
 

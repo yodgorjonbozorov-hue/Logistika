@@ -41,10 +41,24 @@ docs/              TZ, arxitektura, roadmap
 ## Ishga tushirish (dev)
 
 ```bash
-docker compose up -d      # postgres, redis, minio
-cp .env.example .env      # qiymatlarni to'ldiring
+docker compose up -d                       # postgres, redis, minio
+cp .env.example .env                       # qiymatlarni to'ldiring
+                                           # SEED_SUPERADMIN_PASSWORD majburiy — default yo'q
 pnpm install
-pnpm dev                  # backend + web
+pnpm --filter backend prisma migrate deploy   # migratsiyalarni qo'llash
+pnpm --filter backend db:seed                 # SUPERADMIN (+ dev'da demo tenant)
+pnpm dev                                   # backend + web
 ```
+
+Seed nima yaratadi:
+
+- **Har doim**: bitta `SUPERADMIN` (`SEED_SUPERADMIN_EMAIL`, paroli
+  `SEED_SUPERADMIN_PASSWORD` — yo'q bo'lsa seed xato bilan to'xtaydi). Firma yaratish
+  faqat SUPERADMIN huquqida, shuning uchun toza o'rnatishda birinchi qadam shu.
+- **Faqat `NODE_ENV !== production`**: demo tenant — OWNER/LOGIST/ACCOUNTANT/DRIVER,
+  2 mashina + 1 tirkama, 2 haydovchi, 2 mijoz, 3 reys (COMPLETED / IN_PROGRESS /
+  ASSIGNED), hodisalar, xarajatlar va kirim. Kirish: `owner@demo.uz` / `Demo12345!`.
+
+Seed idempotent — qayta ishga tushirilsa dublikat yaratmaydi.
 
 Batafsil — [`CLAUDE.md`](CLAUDE.md).

@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -26,7 +27,14 @@ import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // The single .env lives at the monorepo root; the backend is started with its own
+    // package directory as cwd, so the root file is listed explicitly. A local
+    // apps/backend/.env still wins when present (first match takes precedence).
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      envFilePath: ['.env', join(__dirname, '..', '..', '..', '.env')],
+    }),
     ScheduleModule.forRoot(),
     PrismaModule,
     I18nModule,
