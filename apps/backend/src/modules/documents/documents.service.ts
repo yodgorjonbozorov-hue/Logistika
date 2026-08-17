@@ -6,6 +6,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AlertsService, type AlertInput } from '../alerts/alerts.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateDocumentDto, ListDocumentsDto, UpdateDocumentDto } from './dto/document.dto';
 
 /** TZ §7 / W-10: remind 15, 7 and 1 day before expiry; 0 means already expired. */
@@ -47,6 +48,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -74,9 +76,11 @@ export class DocumentsService {
   async create(actor: CurrentUserPayload, dto: CreateDocumentDto): Promise<Document> {
     await this.requireOwner(actor, dto.ownerType, dto.ownerId);
     try {
-      return await this.prisma.forCompany(actor.companyId).document.create({
+      const created = await this.prisma.forCompany(actor.companyId).document.create({
         data: toDocumentData(dto) as Prisma.DocumentUncheckedCreateInput,
       });
+      this.audit.record(actor, 'CREATE', 'Document', created);
+      return created;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -90,20 +94,23 @@ export class DocumentsService {
     try {
       // A new expiry date starts a fresh reminder cycle.
       const data = toDocumentData(dto);
-      return await db.document.update({
+      const updated = await db.document.update({
         where: { id },
         data: dto.expiryDate ? { ...data, reminderSent: false } : data,
       });
+      this.audit.record(actor, 'UPDATE', 'Document', updated, existing);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error);
     }
   }
 
   async remove(actor: CurrentUserPayload, id: string): Promise<{ deleted: boolean }> {
-    const { count } = await this.prisma
-      .forCompany(actor.companyId)
-      .document.deleteMany({ where: { id } });
-    if (count === 0) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    const db = this.prisma.forCompany(actor.companyId);
+    const existing = await db.document.findUnique({ where: { id } });
+    if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await db.document.delete({ where: { id } });
+    this.audit.record(actor, 'DELETE', 'Document', existing);
     return { deleted: true };
   }
 

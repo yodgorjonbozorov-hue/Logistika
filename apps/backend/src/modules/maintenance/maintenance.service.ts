@@ -6,6 +6,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AlertsService, type AlertInput } from '../alerts/alerts.service';
+import { AuditService } from '../audit/audit.service';
 import {
   CreateMaintenanceDto,
   ListMaintenanceDto,
@@ -33,6 +34,7 @@ export class MaintenanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -79,6 +81,7 @@ export class MaintenanceService {
       if (Object.keys(odometerUpdate).length > 0) {
         await db.vehicle.update({ where: { id: dto.vehicleId }, data: odometerUpdate });
       }
+      this.audit.record(actor, 'CREATE', 'Maintenance', created);
       return created;
     } catch (error) {
       rethrowPrismaError(error);
@@ -94,17 +97,20 @@ export class MaintenanceService {
     const existing = await db.maintenance.findUnique({ where: { id } });
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     try {
-      return await db.maintenance.update({ where: { id }, data: toMaintenanceData(dto) });
+      const updated = await db.maintenance.update({ where: { id }, data: toMaintenanceData(dto) });
+      this.audit.record(actor, 'UPDATE', 'Maintenance', updated, existing);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error);
     }
   }
 
   async remove(actor: CurrentUserPayload, id: string): Promise<{ deleted: boolean }> {
-    const { count } = await this.prisma
-      .forCompany(actor.companyId)
-      .maintenance.deleteMany({ where: { id } });
-    if (count === 0) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    const db = this.prisma.forCompany(actor.companyId);
+    const existing = await db.maintenance.findUnique({ where: { id } });
+    if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await db.maintenance.delete({ where: { id } });
+    this.audit.record(actor, 'DELETE', 'Maintenance', existing);
     return { deleted: true };
   }
 

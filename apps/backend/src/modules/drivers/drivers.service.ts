@@ -5,6 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 
 function toData<T extends UpdateDriverDto>(dto: T) {
@@ -20,7 +21,10 @@ function toData<T extends UpdateDriverDto>(dto: T) {
 
 @Injectable()
 export class DriversService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(
     actor: CurrentUserPayload,
@@ -41,9 +45,11 @@ export class DriversService {
   async create(actor: CurrentUserPayload, dto: CreateDriverDto): Promise<Driver> {
     try {
       // companyId satisfies the type; the tenant extension enforces the same value.
-      return await this.prisma
+      const created = await this.prisma
         .forCompany(actor.companyId)
         .driver.create({ data: { ...toData(dto), companyId: actor.companyId as string } });
+      this.audit.record(actor, 'CREATE', 'Driver', created);
+      return created;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -59,9 +65,12 @@ export class DriversService {
 
   async update(actor: CurrentUserPayload, id: string, dto: UpdateDriverDto): Promise<Driver> {
     try {
-      return await this.prisma
+      const before = await this.getById(actor, id);
+      const updated = await this.prisma
         .forCompany(actor.companyId)
         .driver.update({ where: { id }, data: toData(dto) });
+      this.audit.record(actor, 'UPDATE', 'Driver', updated, before);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -70,9 +79,11 @@ export class DriversService {
   /** Soft delete — drivers keep their trip history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Driver> {
     try {
-      return await this.prisma
+      const deactivated = await this.prisma
         .forCompany(actor.companyId)
         .driver.update({ where: { id }, data: { isActive: false } });
+      this.audit.record(actor, 'DELETE', 'Driver', deactivated);
+      return deactivated;
     } catch (error) {
       rethrowPrismaError(error);
     }

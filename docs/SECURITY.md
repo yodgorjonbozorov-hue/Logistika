@@ -63,18 +63,24 @@ ko'radigan baza yo'q, sinovsiz RLS esa butun ilovani qulflab qo'yishi mumkin.
 Hujjatdagi da'vo shu holatga moslab tuzatildi — bajarilmagan narsa
 bajarilgandek turmasin.
 
-### F-5 · O'rta · Audit-log hamma o'zgarishni qamramaydi
+### F-5 · O'rta · Audit-log hamma o'zgarishni qamramasdi — tuzatildi
 
-TZ §9: «Barcha o'zgarishlar audit-log ga yoziladi». Hozir yoziladi:
-`companies`, `users`, `auth`, `trips`, `expenses`, `events`.
-Yozilmaydi: `vehicles`, `drivers`, `clients`, `fuel`, `maintenance`,
-`documents`, `company/settings`, AI tasdiqlari.
+TZ §9: «Barcha o'zgarishlar audit-log ga yoziladi». Faqat `companies`,
+`users`, `auth`, `trips`, `expenses`, `events` yozar edi. Eng sezilarli
+bo'shliq — `fuel` va `company/settings`: yoqilg'i yozuvini yoki chegarani
+jimgina o'zgartirib, nazoratning o'zini ma'nosiz qilib qo'yish mumkin edi.
 
-Eng sezilarlisi — `fuel` va `company/settings`: yoqilg'i yozuvini yoki
-chegarani jimgina o'zgartirib, nazoratni ma'nosiz qilib qo'yish mumkin.
+**Tuzatildi:** `vehicles`, `drivers`, `clients`, `fuel`, `maintenance`,
+`documents`, `company/settings` va Telegram ulanishi ham yozadi.
+`AuditService.record()` yozuvni `auditSnapshot` orqali o'tkazadi: BigInt pul
+va sanalar JSON'ga mos ko'rinishga keladi (aks holda audit yozuvi aynan
+muhim qatorlarda sinardi), sirlar esa (`passwordHash`, `tokenHash`,
+`telegramChatId`, `passport`) tashlab yuboriladi. Yangilashda faqat
+o'zgargan maydonlar yoziladi.
 
-**Reja:** yozuvchi servislarga `audit.log` qo'shish (interceptor emas —
-o'zgarishning «oldin/keyin» qiymati faqat servisda ma'lum).
+Qoidani `audit.coverage.spec.ts` kod bo'yicha qo'riqlaydi: yozadigan har bir
+servis yo audit qiladi, yoki sababi bilan istisnolar ro'yxatida turadi;
+ro'yxatda endi yozmaydigan fayl qolsa, test buni ham aytadi.
 
 ### F-6 · O'rta · Fayllar shifrlanmagan saqlanadi
 
@@ -130,6 +136,6 @@ kontroller bor va ikkalasi ham ataylab: `auth` (ko'p yo'llari `@Public`) va
 
 ## Keyingi audit uchun
 
-Ustuvorlik tartibi: **F-4 (RLS) → F-7 (e2e izolyatsiya) → F-5 (audit-log) →
-F-6 (shifrlash) → F-8, F-9**. F-4 va F-7 birga bajarilgani ma'qul: RLS ni
-sinaydigan yagona ishonchli usul — real bazadagi izolyatsiya testi.
+Ustuvorlik tartibi: **F-4 (RLS) → F-7 (e2e izolyatsiya) → F-6 (shifrlash) →
+F-8, F-9**. F-4 va F-7 birga bajarilgani ma'qul: RLS ni sinaydigan yagona
+ishonchli usul — real bazadagi izolyatsiya testi.

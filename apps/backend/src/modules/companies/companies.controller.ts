@@ -36,7 +36,7 @@ export class CompaniesController {
   @Patch('settings')
   @Roles(UserRole.OWNER)
   updateSettings(@CurrentUser() user: CurrentUserPayload, @Body() dto: UpdateSettingsDto) {
-    return this.settingsService.update(user.companyId as string, dto);
+    return this.settingsService.update(user, dto);
   }
 }
 

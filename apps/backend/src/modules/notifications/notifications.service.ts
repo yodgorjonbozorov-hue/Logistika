@@ -3,6 +3,7 @@ import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { TelegramService } from './telegram.service';
 
 export interface TelegramLinkState {
@@ -20,6 +21,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly telegram: TelegramService,
+    private readonly audit: AuditService,
   ) {}
 
   async state(actor: CurrentUserPayload): Promise<TelegramLinkState> {
@@ -42,6 +44,9 @@ export class NotificationsService {
       .forCompany(actor.companyId)
       .user.update({ where: { id: actor.userId }, data: { telegramChatId: chatId } })
       .catch(rethrowPrismaError);
+    // Where the daily figures go is worth a trail; the chat id itself is a
+    // secret the snapshot drops on the way in (audit.snapshot.ts).
+    this.audit.record(actor, 'UPDATE', 'TelegramLink', { id: actor.userId, linked: true });
     return { linked: true, available: true };
   }
 
@@ -49,6 +54,7 @@ export class NotificationsService {
     await this.prisma
       .forCompany(actor.companyId)
       .user.update({ where: { id: actor.userId }, data: { telegramChatId: null } });
+    this.audit.record(actor, 'DELETE', 'TelegramLink', { id: actor.userId, linked: false });
     return { linked: false, available: this.telegram.configured };
   }
 

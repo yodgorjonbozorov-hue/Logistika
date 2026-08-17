@@ -1,6 +1,7 @@
 import { AlertType, DocumentOwnerType } from 'shared';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import type { AlertsService } from '../alerts/alerts.service';
+import type { AuditService } from '../audit/audit.service';
 import { daysUntil, DocumentsService, reminderBucket } from './documents.service';
 import { ListDocumentsDto } from './dto/document.dto';
 
@@ -9,7 +10,11 @@ const NOW = new Date('2026-08-15T00:00:00Z');
 function setup() {
   const { prisma, db, forCompany } = createTenantDbMock(['document', 'vehicle', 'driver', 'trip']);
   const alerts = { raise: jest.fn(), raiseMany: jest.fn().mockResolvedValue(0) };
-  const service = new DocumentsService(prisma, alerts as unknown as AlertsService);
+  const service = new DocumentsService(
+    prisma,
+    alerts as unknown as AlertsService,
+    { record: jest.fn(), log: jest.fn() } as unknown as AuditService,
+  );
   return { service, db, forCompany, alerts };
 }
 

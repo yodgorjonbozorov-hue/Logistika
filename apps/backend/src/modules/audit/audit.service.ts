@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import type { CurrentUserPayload } from 'shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { auditDiff, auditSnapshot } from './audit.snapshot';
 
 export interface AuditEntry {
   companyId?: string | null;
@@ -39,5 +41,31 @@ export class AuditService {
           }`,
         );
       });
+  }
+
+  /**
+   * Records one change made by a signed-in user (TZ §9: every change is logged).
+   *
+   * The row is snapshotted through `auditSnapshot`, which makes BigInt money and
+   * dates JSON-safe and drops secrets — so a service can hand over the entity it
+   * just wrote without thinking about either.
+   */
+  record(
+    actor: CurrentUserPayload,
+    action: 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE',
+    entityType: string,
+    entity: { id: string } & Record<string, unknown>,
+    before?: unknown,
+  ): void {
+    this.log({
+      companyId: actor.companyId,
+      userId: actor.userId,
+      action,
+      entityType,
+      entityId: entity.id,
+      before: before === undefined ? undefined : auditSnapshot(before),
+      // On an update, only the fields that moved; otherwise the whole row.
+      after: before === undefined ? auditSnapshot(entity) : auditDiff(before, entity),
+    });
   }
 }

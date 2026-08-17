@@ -1,14 +1,20 @@
 import { AlertType, MaintenanceType } from 'shared';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import type { AlertsService } from '../alerts/alerts.service';
+import type { AuditService } from '../audit/audit.service';
 import { ListMaintenanceDto } from './dto/maintenance.dto';
 import { MaintenanceService } from './maintenance.service';
 
 function setup() {
   const { prisma, db, forCompany } = createTenantDbMock(['maintenance', 'vehicle']);
   const alerts = { raise: jest.fn(), raiseMany: jest.fn().mockResolvedValue(0) };
-  const service = new MaintenanceService(prisma, alerts as unknown as AlertsService);
-  return { service, db, forCompany, alerts };
+  const audit = { record: jest.fn(), log: jest.fn() };
+  const service = new MaintenanceService(
+    prisma,
+    alerts as unknown as AlertsService,
+    audit as unknown as AuditService,
+  );
+  return { service, db, forCompany, alerts, audit };
 }
 
 describe('MaintenanceService.create', () => {

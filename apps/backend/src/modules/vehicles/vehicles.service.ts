@@ -5,6 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 
 function toData<T extends UpdateVehicleDto>(dto: T) {
@@ -21,7 +22,10 @@ function toData<T extends UpdateVehicleDto>(dto: T) {
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(
     actor: CurrentUserPayload,
@@ -42,9 +46,11 @@ export class VehiclesService {
   async create(actor: CurrentUserPayload, dto: CreateVehicleDto): Promise<Vehicle> {
     try {
       // companyId satisfies the type; the tenant extension enforces the same value.
-      return await this.prisma
+      const created = await this.prisma
         .forCompany(actor.companyId)
         .vehicle.create({ data: { ...toData(dto), companyId: actor.companyId as string } });
+      this.audit.record(actor, 'CREATE', 'Vehicle', created);
+      return created;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -60,9 +66,12 @@ export class VehiclesService {
 
   async update(actor: CurrentUserPayload, id: string, dto: UpdateVehicleDto): Promise<Vehicle> {
     try {
-      return await this.prisma
+      const before = await this.getById(actor, id);
+      const updated = await this.prisma
         .forCompany(actor.companyId)
         .vehicle.update({ where: { id }, data: toData(dto) });
+      this.audit.record(actor, 'UPDATE', 'Vehicle', updated, before);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -71,9 +80,11 @@ export class VehiclesService {
   /** Soft delete — vehicles keep their trip/fuel history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Vehicle> {
     try {
-      return await this.prisma
+      const deactivated = await this.prisma
         .forCompany(actor.companyId)
         .vehicle.update({ where: { id }, data: { isActive: false } });
+      this.audit.record(actor, 'DELETE', 'Vehicle', deactivated);
+      return deactivated;
     } catch (error) {
       rethrowPrismaError(error);
     }

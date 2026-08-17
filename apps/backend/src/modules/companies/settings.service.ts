@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { AiSettings, Prisma } from '@prisma/client';
+import type { CurrentUserPayload } from 'shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { UpdateSettingsDto } from './dto/settings.dto';
 
 /** TZ §8.10 defaults, used until a company saves its own settings. */
@@ -61,7 +63,10 @@ function settingsOf(row: AiSettings | null): CompanySettings {
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * The thresholds the checks run on. The row is created lazily — until a
@@ -76,7 +81,12 @@ export class SettingsService {
     return settingsOf(await this.prisma.forCompany(companyId).aiSettings.findFirst());
   }
 
-  async update(companyId: string, dto: UpdateSettingsDto): Promise<CompanySettings> {
+  /**
+   * Thresholds are the control itself: lowering the fuel limit silences the
+   * overrun alert, so the change is audited like any other (docs/SECURITY.md F-5).
+   */
+  async update(actor: CurrentUserPayload, dto: UpdateSettingsDto): Promise<CompanySettings> {
+    const companyId = actor.companyId as string;
     const db = this.prisma.forCompany(companyId);
     const { monthlyLimitUsd, ...rest } = dto;
     const data = {
@@ -87,11 +97,12 @@ export class SettingsService {
         : { monthlyLimitMicroUsd: BigInt(monthlyLimitUsd) * 1_000_000n }),
     };
 
-    const existing = await db.aiSettings.findFirst({ select: { id: true } });
+    const existing = await db.aiSettings.findFirst();
     const row = existing
       ? await db.aiSettings.update({ where: { id: existing.id }, data })
       : // companyId is stamped by the tenant extension, never taken from input.
         await db.aiSettings.create({ data: data as Prisma.AiSettingsUncheckedCreateInput });
+    this.audit.record(actor, existing ? 'UPDATE' : 'CREATE', 'CompanySettings', row, existing);
     return settingsOf(row);
   }
 }

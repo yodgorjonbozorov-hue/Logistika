@@ -7,6 +7,7 @@ import { divRound, fromScaledInt, toScaledInt } from '../../common/money';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
+import { AuditService } from '../audit/audit.service';
 import { SettingsService } from '../companies/settings.service';
 import { periodOf, PeriodDto } from '../finance/dto/finance.dto';
 import { calcFuelDeviation, LITRE_SCALE, tripDistanceKmTenths } from '../finance/finance.calc';
@@ -84,6 +85,7 @@ export class FuelService {
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly alerts: AlertsService,
+    private readonly audit: AuditService,
   ) {}
 
   // ---------- Journal ----------
@@ -118,12 +120,14 @@ export class FuelService {
 
     const data = toFuelData(dto);
     try {
-      return await db.fuelLog.create({
+      const created = await db.fuelLog.create({
         data: {
           ...data,
           ...completeFuelAmounts({ ...data, liters: dto.liters }),
         } as Prisma.FuelLogUncheckedCreateInput,
       });
+      this.audit.record(actor, 'CREATE', 'FuelLog', created);
+      return created;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -134,17 +138,22 @@ export class FuelService {
     const existing = await db.fuelLog.findUnique({ where: { id } });
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     try {
-      return await db.fuelLog.update({ where: { id }, data: toFuelData(dto) });
+      const updated = await db.fuelLog.update({ where: { id }, data: toFuelData(dto) });
+      this.audit.record(actor, 'UPDATE', 'FuelLog', updated, existing);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error);
     }
   }
 
   async remove(actor: CurrentUserPayload, id: string): Promise<{ deleted: boolean }> {
-    const { count } = await this.prisma
-      .forCompany(actor.companyId)
-      .fuelLog.deleteMany({ where: { id } });
-    if (count === 0) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    const db = this.prisma.forCompany(actor.companyId);
+    const existing = await db.fuelLog.findUnique({ where: { id } });
+    if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await db.fuelLog.delete({ where: { id } });
+    // A deleted refuel is the cheapest way to make the fuel control look clean,
+    // so the row it removed is kept in full (docs/SECURITY.md F-5).
+    this.audit.record(actor, 'DELETE', 'FuelLog', existing);
     return { deleted: true };
   }
 

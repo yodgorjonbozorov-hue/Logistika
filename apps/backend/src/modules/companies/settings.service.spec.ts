@@ -1,10 +1,13 @@
-import { createTenantDbMock } from '../../test-utils/tenant-db.mock';
+import type { AuditService } from '../audit/audit.service';
+import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { DEFAULT_SETTINGS, SettingsService } from './settings.service';
 
 function setup() {
   const { prisma, db, forCompany } = createTenantDbMock(['aiSettings']);
   db.aiSettings!.findFirst!.mockResolvedValue(null);
-  return { service: new SettingsService(prisma), db, forCompany };
+  const audit = { record: jest.fn(), log: jest.fn() };
+  const service = new SettingsService(prisma, audit as unknown as AuditService);
+  return { service, db, forCompany, audit };
 }
 
 describe('SettingsService.settings', () => {
@@ -52,7 +55,7 @@ describe('SettingsService.update', () => {
       monthlyLimitMicroUsd: 30_000_000n,
     });
 
-    await service.update('company-a', { monthlyLimitUsd: 30 });
+    await service.update(ACTOR, { monthlyLimitUsd: 30 });
 
     expect(db.aiSettings!.update!.mock.calls[0][0].data).toEqual({
       monthlyLimitMicroUsd: 30_000_000n,
@@ -64,7 +67,7 @@ describe('SettingsService.update', () => {
     db.aiSettings!.findFirst!.mockResolvedValue({ id: 's1' });
     db.aiSettings!.update!.mockResolvedValue(DEFAULT_SETTINGS);
 
-    await service.update('company-a', { idleAlertHours: 3 });
+    await service.update(ACTOR, { idleAlertHours: 3 });
 
     expect(db.aiSettings!.update!.mock.calls[0][0].data).toEqual({ idleAlertHours: 3 });
   });
@@ -73,7 +76,7 @@ describe('SettingsService.update', () => {
     const { service, db } = setup();
     db.aiSettings!.create!.mockResolvedValue({ ...DEFAULT_SETTINGS, ocrEnabled: false });
 
-    await service.update('company-a', { ocrEnabled: false });
+    await service.update(ACTOR, { ocrEnabled: false });
 
     expect(db.aiSettings!.create!.mock.calls[0][0].data).toEqual({ ocrEnabled: false });
   });

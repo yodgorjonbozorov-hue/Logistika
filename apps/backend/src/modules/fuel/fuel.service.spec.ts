@@ -1,6 +1,7 @@
 import { AlertType } from 'shared';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import type { AlertsService } from '../alerts/alerts.service';
+import type { AuditService } from '../audit/audit.service';
 import type { SettingsService } from '../companies/settings.service';
 import { periodOf } from '../finance/dto/finance.dto';
 import { completeFuelAmounts, FuelService } from './fuel.service';
@@ -19,12 +20,14 @@ function setup(thresholdBp = 700) {
       digestTime: '20:00',
     }),
   };
+  const audit = { record: jest.fn(), log: jest.fn() };
   const service = new FuelService(
     prisma,
     settings as unknown as SettingsService,
     alerts as unknown as AlertsService,
+    audit as unknown as AuditService,
   );
-  return { service, db, forCompany, alerts, settings };
+  return { service, db, forCompany, alerts, settings, audit };
 }
 
 /** TZ W-8 sample row: 1 240 km, norm 32 l/100 km, 452 l actually burnt. */

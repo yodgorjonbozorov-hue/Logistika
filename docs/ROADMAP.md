@@ -149,7 +149,8 @@
       va tiklash skripti; oylik tiklash tekshiruvi tartibi `docs/DEPLOY.md` §7 da
 - [x] Xavfsizlik auditi o'tkazildi — `docs/SECURITY.md`: 3 ta topilma tuzatildi
       (migratsiyalar, refresh-token qayta ishlatilishi, login/SMS chegarasi),
-      6 tasi rejaga yozildi (RLS, e2e izolyatsiya, audit-log qamrovi, shifrlash)
+      qolgani rejaga yozildi (RLS, e2e izolyatsiya, fayl shifrlash, helmet, default-deny);
+      audit-log qamrovi keyin to'ldirildi va test bilan qo'riqlanadi
 - [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
 - [x] Seed/demo ma'lumotlar (`pnpm --filter backend seed`, idempotent, ma'lumotlar
       testlar bilan tekshiriladi), pilot onboarding qo'llanmasi — `docs/PILOT.md`
