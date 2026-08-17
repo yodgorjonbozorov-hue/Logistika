@@ -72,17 +72,33 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   yozuvlar) qo'shildi. · `lib/core/db/app_database.dart`, `lib/core/sync/offline_queue.dart`,
   `lib/features/profile/profile_tab.dart`, `lib/core/i18n/app_strings.dart` (3 til),
   `test/offline_queue_test.dart` (+4 test) · `flutter test` 10/10, `flutter analyze` toza.
+- **TASK-1.3 (C-4)** · Test infratuzilmasi: `packages/shared` `test` skripti endi emit qiladi
+  (`dist` kafolati), `jest-e2e.json` → `passWithNoTests: false`, real bazali e2e harness
+  (`test/setup-e2e.ts` — alohida `DATABASE_URL_TEST` bazasi, avtomatik `CREATE DATABASE` +
+  `migrate deploy`, har testdan oldin TRUNCATE; `test/helpers.ts` — `createTenant()` fabrikasi),
+  majburiy `tenant-isolation.e2e-spec.ts` (17 test: trips, drivers, vehicles, clients, expenses,
+  incomes, events, tracking, files, company), coverage threshold + `test:cov`, CI workflow
+  (postgres + redis service, backend/web/mobil job'lari) · `packages/shared/package.json`,
+  `apps/backend/package.json`, `apps/backend/test/*`, `.github/workflows/ci.yml` ·
+  **e2e 0 → 17 test**, hammasi real PostgreSQL'da.
 
 ## Bloklangan / keyinga qoldirilgan
 
 (sabab bilan)
 
-- (hozircha yo'q)
+- **Coverage 60% / 90% maqsadi** — hozir global 25% statements / 34% lines, `expenses.service.ts`
+  51%. 60/90 ni bir taskda urish mumkin emas (keyingi fazalarning har bir taski test qo'shadi),
+  shuning uchun threshold **ratchet** sifatida joriy darajadan sal pastga qo'yildi: coverage
+  hech qachon pasaymaydi, har faza oxirida ko'tariladi. Maqsad PHASE 5 oxirida 60/90.
 
 ## Yangi topilgan muammolar
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-3 (CRITICAL, tasdiqlangan)**: yangi e2e darhol C-1 davomini isbotladi — B tenant A'ning
+  `tripId`/`clientId` bilan `POST /expenses` va `POST /incomes` yuborsa **201** qaytadi va yozuv
+  yaratiladi. Ikkala test `it.failing()` bilan qoldirildi (hujjatlangan, bajariladigan zaiflik) —
+  TASK-2.2 tuzatganda ular avtomatik qizil bo'ladi va `it()`ga qaytariladi.
 - **N-2 (info)**: muhitda Flutter SDK yo'q edi — 3.47.0 stable `/opt/flutter`ga o'rnatildi, shuning
   uchun mobil gate (`flutter test`, `flutter analyze`) real ishlaydi.
 - **N-1 (info)**: audit'ning baseline bashorati noto'g'ri (yuqoriga qara) — backend unit testlari
@@ -90,4 +106,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.3 (test infratuzilmasi: shared dist kafolati, real e2e, CI).
+PHASE 1 → TASK-1.4 (haydovchi hodisalari reys statusini o'zgartirmaydi).

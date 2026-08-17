@@ -12,7 +12,8 @@
     "test:e2e": "jest --config test/jest-e2e.json",
     "prisma": "dotenv -e ../../.env -- prisma",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate deploy",
-    "db:seed": "dotenv -e ../../.env -- prisma db seed"
+    "db:seed": "dotenv -e ../../.env -- prisma db seed",
+    "test:cov": "jest --coverage"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -45,9 +46,12 @@
     "@types/jest": "^29.5.14",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.2",
+    "@types/supertest": "^7.2.1",
+    "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "jest": "^29.7.0",
     "prisma": "^6.1.0",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
@@ -63,6 +67,26 @@
     "moduleNameMapper": {
       "^shared$": "<rootDir>/../../../packages/shared/src/index.ts",
       "^@/(.*)$": "<rootDir>/$1"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.module.ts",
+      "!main.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 24,
+        "lines": 33,
+        "branches": 20,
+        "functions": 25
+      },
+      "./src/modules/expenses/expenses.service.ts": {
+        "statements": 50,
+        "lines": 48,
+        "branches": 35,
+        "functions": 54
+      }
     }
   }
 }

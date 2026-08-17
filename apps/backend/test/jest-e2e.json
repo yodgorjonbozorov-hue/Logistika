@@ -5,5 +5,8 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": { "^.+\\.ts$": "ts-jest" },
   "moduleNameMapper": { "^shared$": "<rootDir>/../../../packages/shared/src/index.ts" },
-  "passWithNoTests": true
+  "setupFiles": ["<rootDir>/../src/common/serialization.ts", "<rootDir>/load-env.ts"],
+  "testTimeout": 60000,
+  "maxWorkers": 1,
+  "passWithNoTests": false
 }

@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Test-only values: CI has no access to real secrets and needs none.
+  DATABASE_URL: postgresql://truckcontrol:truckcontrol@localhost:5432/truckcontrol?schema=public
+  DATABASE_URL_TEST: postgresql://truckcontrol:truckcontrol@localhost:5432/truckcontrol_test?schema=public
+  JWT_ACCESS_SECRET: ci-access-secret-not-a-real-one
+  JWT_REFRESH_SECRET: ci-refresh-secret-not-a-real-one
+  NODE_ENV: test
+  WEB_URL: http://localhost:5173
+
+jobs:
+  backend-web:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: truckcontrol
+          POSTGRES_PASSWORD: truckcontrol
+          POSTGRES_DB: truckcontrol
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U truckcontrol"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared types
+        run: pnpm --filter shared build
+
+      - name: Prisma generate
+        run: pnpm --filter backend exec prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck (backend)
+        run: pnpm --filter backend exec tsc --noEmit
+
+      - name: Typecheck (web)
+        run: pnpm --filter web exec tsc -b
+
+      - name: Unit tests
+        run: pnpm test
+
+      # The harness creates and migrates the test database itself.
+      - name: E2E tests (real database)
+        run: pnpm --filter backend test:e2e
+
+      - name: Coverage thresholds
+        run: pnpm --filter backend test:cov
+
+      - name: Build
+        run: pnpm build
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/truckcontrol_driver
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
