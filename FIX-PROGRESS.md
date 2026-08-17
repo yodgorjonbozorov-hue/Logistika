@@ -255,6 +255,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `common/file-signature.ts` (+spec 8 test), `files/file-scanner.ts`, `files.service.ts`
   (+spec 7 test), `files.controller.ts`, `files.module.ts`, shared + i18n × 3 ·
   unit 146 → 160.
+- **TASK-2.8 (H-19 davomi)** · Zaxira, monitoring, error tracking. `scripts/backup.sh`
+  (kunlik `pg_dump`, gzip, sana bilan, MinIO'ga yuklash, 30 kunlik retention, **bo'sh dump
+  xato sifatida qaytadi**), `scripts/restore.sh` (tasdiqlash so'raydi, `--single-transaction`),
+  `scripts/backup-loop.sh` + prod compose'da `backup` sidecar. Sentry (`@sentry/node`) —
+  faqat `SENTRY_DSN` bo'lsa yoqiladi, `AppExceptionFilter`dagi **kutilmagan** xatolarni
+  yuboradi (AppException emas — u boshqariladigan natija), PII (parol, token, telefon, INN)
+  `beforeSend`da tozalanadi. Structured JSON logging (`nestjs-pino`): `requestId`
+  (javob header'ida ham), `userId`, `companyId`, `duration`; maxfiy maydonlar redact
+  qilinadi; health-check loglari o'chirilgan. `docs/DISASTER-RECOVERY.md` (RPO/RTO,
+  tiklash qadamlari, **oylik mashq protokoli**, halol «nima ishlamayapti» ro'yxati) va
+  `docs/RUNBOOK.md` (8 ta alert × nima tekshirish × nima qilish). ·
+  `common/observability/*` (+spec 4 test), `app-exception.filter.ts`, `main.ts`,
+  `env.validation.ts`, `scripts/*.sh`, `docker-compose.prod.yml`, `.env.example` ·
+  unit 160 → 164.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -287,4 +301,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.8 (backup, monitoring, error tracking).
+PHASE 2 → TASK-2.9 (audit log to'liq emas) — PHASE 2 ning oxirgi taski.

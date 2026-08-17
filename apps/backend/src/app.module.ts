@@ -7,6 +7,7 @@ import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
+import { LoggingModule } from './common/observability/logging.module';
 import { ThrottlingModule } from './common/throttling/throttling.module';
 import { validateEnv } from './config/env.validation';
 import { I18nModule } from './i18n/i18n.module';
@@ -37,6 +38,7 @@ import { PrismaModule } from './prisma/prisma.module';
       envFilePath: ['.env', join(__dirname, '..', '..', '..', '.env')],
     }),
     ScheduleModule.forRoot(),
+    LoggingModule,
     ThrottlingModule,
     PrismaModule,
     I18nModule,

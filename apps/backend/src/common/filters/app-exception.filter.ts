@@ -10,6 +10,8 @@ import type { Request, Response } from 'express';
 import type { ApiResponse, ErrorCode } from 'shared';
 import { AppException } from '../exceptions/app.exception';
 import { I18nService } from '../../i18n/i18n.service';
+import { REQUEST_ID_HEADER } from '../observability/logging.module';
+import { captureException } from '../observability/sentry';
 
 const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.BAD_REQUEST]: 'VALIDATION_FAILED',
@@ -62,6 +64,13 @@ export class AppExceptionFilter implements ExceptionFilter {
         `Unhandled exception on ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+      // Only genuinely unexpected failures are reported: an AppException is a
+      // handled outcome, and reporting those would bury the real ones.
+      captureException(exception, {
+        method: request.method,
+        path: request.url,
+        requestId: request.headers[REQUEST_ID_HEADER],
+      });
     }
 
     const body: ApiResponse<null> = {

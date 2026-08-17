@@ -121,8 +121,25 @@ services:
       web:
         condition: service_healthy
 
+  # Nightly pg_dump with retention (docs/DISASTER-RECOVERY.md). A sidecar rather
+  # than host cron: it restarts with the stack and logs where everything else does.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./scripts:/scripts:ro
+      - backup-data:/backups
+    entrypoint: ['/bin/sh', '/scripts/backup-loop.sh']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   redis-data:
   minio-data:
+  backup-data:
   certbot-www:

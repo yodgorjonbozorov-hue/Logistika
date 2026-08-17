@@ -129,6 +129,19 @@ export class EnvironmentVariables {
   @IsString()
   TELEGRAM_BOT_TOKEN?: string;
 
+  /** Error tracking; without it errors only reach the container log. */
+  @IsOptional()
+  @IsString()
+  SENTRY_DSN?: string;
+
+  @IsOptional()
+  @IsString()
+  APP_VERSION?: string;
+
+  @IsOptional()
+  @IsIn(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
+  LOG_LEVEL?: string;
+
   /** Optional today; the AI stage (roadmap 8) makes it required. */
   @IsOptional()
   @IsString()
