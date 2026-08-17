@@ -9,11 +9,11 @@
 import '../src/common/serialization';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
-import { ValidationPipe } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/bootstrap';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 /** Tables truncated between tests, children first (FKs are not deferred). */
@@ -96,9 +96,8 @@ export async function createE2EApp(): Promise<E2EContext> {
   process.env.DATABASE_URL = await prepareTestDatabase();
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication();
-  app.setGlobalPrefix('api/v1');
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // The same pipeline main.ts builds — helmet, body limits, validation.
+  const app = configureApp(moduleRef.createNestApplication());
   await app.init();
 
   return { app, prisma: app.get(PrismaService) };

@@ -14,5 +14,7 @@
   "TRIP_INVALID_STATUS": "Reys holatini bu tartibda o'zgartirib bo'lmaydi",
   "SMS_CODE_INVALID": "Tasdiqlash kodi noto'g'ri yoki muddati tugagan",
   "FILE_TYPE_NOT_ALLOWED": "Bu turdagi faylni yuklash mumkin emas",
-  "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang"
+  "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang",
+  "RATE_LIMIT_EXCEEDED": "Juda ko'p so'rov yuborildi. Biroz kutib, qayta urinib ko'ring",
+  "SMS_DAILY_LIMIT": "Bugun uchun SMS kod chegarasi tugadi. Ertaga urinib ko'ring yoki logistga murojaat qiling"
 }

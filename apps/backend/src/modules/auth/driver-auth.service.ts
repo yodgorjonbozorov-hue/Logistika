@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createHash, randomInt } from 'node:crypto';
 import type { AuthTokens } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -11,6 +10,14 @@ import { SmsService } from './sms.service';
 
 const CODE_TTL_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
+/**
+ * Per-phone codes allowed in a rolling 24h window. MAX_ATTEMPTS only guards a
+ * single SmsCode row, and requesting a new code used to delete the old one and
+ * reset the counter — so without this cap the verify limit could be reset
+ * forever. Counting rows in the database closes that loop for good.
+ */
+const MAX_CODES_PER_DAY = 10;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class DriverAuthService {
@@ -19,24 +26,35 @@ export class DriverAuthService {
     private readonly usersService: UsersService,
     private readonly authService: AuthService,
     private readonly sms: SmsService,
-    private readonly config: ConfigService,
     private readonly i18n: I18nService,
   ) {}
 
   /**
    * Always answers success (no phone-number enumeration); a code is generated
-   * and sent only when an active driver account exists for the phone.
-   * In development the code is returned in the response for manual testing.
+   * and sent only when an active driver account exists for the phone. The code
+   * itself never travels in the response — in development it is visible in the
+   * SmsService log ("[DEV SMS] …").
    */
-  async requestCode(phone: string): Promise<{ sent: boolean; devCode?: string }> {
+  async requestCode(phone: string): Promise<{ sent: boolean }> {
     const user = await this.usersService.findByIdentifier(phone);
     if (!user || !user.isActive || user.role !== 'DRIVER') {
       return { sent: true };
     }
 
+    const issuedToday = await this.prisma.smsCode.count({
+      where: { phone, createdAt: { gte: new Date(Date.now() - DAY_MS) } },
+    });
+    if (issuedToday >= MAX_CODES_PER_DAY) {
+      throw new AppException('SMS_DAILY_LIMIT', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     const code = randomInt(100_000, 1_000_000).toString();
     await this.prisma.$transaction([
-      this.prisma.smsCode.deleteMany({ where: { phone } }),
+      // Older codes stop being valid, but the rows stay for the daily count.
+      this.prisma.smsCode.updateMany({
+        where: { phone, expiresAt: { gt: new Date() } },
+        data: { expiresAt: new Date() },
+      }),
       this.prisma.smsCode.create({
         data: {
           phone,
@@ -47,8 +65,7 @@ export class DriverAuthService {
     ]);
     await this.sms.send(phone, this.i18n.translate('SMS_LOGIN_CODE', 'uz-latn', { code }));
 
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
-    return isDev ? { sent: true, devCode: code } : { sent: true };
+    return { sent: true };
   }
 
   async verify(phone: string, code: string): Promise<AuthTokens> {
@@ -68,7 +85,11 @@ export class DriverAuthService {
       throw new AppException('SMS_CODE_INVALID', HttpStatus.UNAUTHORIZED);
     }
 
-    await this.prisma.smsCode.deleteMany({ where: { phone } });
+    // Invalidated rather than deleted: the rows are what the daily cap counts.
+    await this.prisma.smsCode.updateMany({
+      where: { phone, expiresAt: { gt: new Date() } },
+      data: { expiresAt: new Date(), attempts: MAX_ATTEMPTS },
+    });
 
     const user = await this.usersService.findByIdentifier(phone);
     if (!user || !user.isActive || user.role !== 'DRIVER') {

@@ -1,8 +1,10 @@
 import { Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Throttle, seconds } from '@nestjs/throttler';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { THROTTLERS } from '../../common/throttling/throttling.module';
 import { PublicLinkService } from './public-link.service';
 
 @Controller()
@@ -16,6 +18,8 @@ export class PublicLinkController {
     return this.publicLinkService.createLink(user, id);
   }
 
+  // Anonymous endpoint behind a bare token: cap guessing and scraping.
+  @Throttle({ [THROTTLERS.ip]: { limit: 60, ttl: seconds(60) } })
   @Public()
   @Get('public/track/:token')
   publicView(@Param('token') token: string) {

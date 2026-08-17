@@ -10,9 +10,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Throttle, seconds } from '@nestjs/throttler';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { THROTTLERS } from '../../common/throttling/throttling.module';
 import { PositionBatchDto } from './dto/position.dto';
 import { TrackingService } from './tracking.service';
 
@@ -20,6 +22,7 @@ import { TrackingService } from './tracking.service';
 export class TrackingController {
   constructor(private readonly trackingService: TrackingService) {}
 
+  @Throttle({ [THROTTLERS.user]: { limit: 60, ttl: seconds(60) } })
   @Post('positions')
   @Roles(UserRole.DRIVER)
   @HttpCode(HttpStatus.OK)

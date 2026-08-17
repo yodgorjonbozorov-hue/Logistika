@@ -9,9 +9,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle, seconds } from '@nestjs/throttler';
 import type { CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AppException } from '../../common/exceptions/app.exception';
+import { THROTTLERS } from '../../common/throttling/throttling.module';
 import { FilesService } from './files.service';
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -20,6 +22,7 @@ const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
+  @Throttle({ [THROTTLERS.user]: { limit: 30, ttl: seconds(60) } })
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   upload(@CurrentUser() user: CurrentUserPayload, @UploadedFile() file?: Express.Multer.File) {

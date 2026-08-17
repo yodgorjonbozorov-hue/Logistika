@@ -14,8 +14,11 @@ import {
 const TTL_PATTERN = /^\d+(s|m|h|d)$/;
 
 export class EnvironmentVariables {
+  // No default on purpose: a missing NODE_ENV used to mean "development",
+  // which switched on development-only behaviour on a production box.
   @IsIn(['development', 'test', 'production'])
-  NODE_ENV = 'development';
+  @IsNotEmpty()
+  NODE_ENV!: string;
 
   @Type(() => Number)
   @IsInt()

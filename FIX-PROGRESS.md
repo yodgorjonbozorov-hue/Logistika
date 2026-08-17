@@ -93,6 +93,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `src/modules/trips/trips.controller.ts`, `src/test-utils/tenant-db.mock.ts`,
   `events.service.spec.ts` (+6), `test/driver-flow.e2e-spec.ts` (+5 e2e) ·
   unit 82 → 88, e2e 17 → 22. Jonli xaritada START → `MOVING` e2e bilan tasdiqlangan.
+- **TASK-1.5 (C-5, H-10)** · Rate limiting + helmet + NODE_ENV: `ThrottlingModule` (Redis
+  storage, 4 ta nomlangan tracker — IP / identifier / telefon / user), endpoint limitlari
+  (`/auth/login` 5-daq-IP + 10-soat-identifier, `driver/request-code` 3-soat-telefon +
+  10-soat-IP, `driver/verify` 10/soat, `/auth/refresh` 30/daq, `public/track` 60/daq,
+  `/files/upload` 30/daq-user, `/tracking/positions` va `/events/batch` 60/daq-user).
+  SMS attempts-reset teshigi yopildi: kunlik 10 kod chegarasi DB darajasida sanaladi va
+  ishlatilgan kodlar **o'chirilmaydi** (aks holda hisob nolga tushardi). `devCode` butunlay
+  olib tashlandi (H-10 account takeover). `helmet()` + `express.json({ limit: '1mb' })`.
+  `NODE_ENV` majburiy — default olib tashlandi. Yangi kodlar: `RATE_LIMIT_EXCEEDED` (429),
+  `SMS_DAILY_LIMIT` (429) — 3 tilda. Bootstrap `src/bootstrap.ts`ga chiqarildi, e2e endi
+  aynan production pipeline'ini sinaydi. · `src/common/throttling/*`, `src/bootstrap.ts`,
+  `src/main.ts`, `src/config/env.validation.ts` (+spec), `driver-auth.service.ts` (+spec),
+  `auth/public-link/files/tracking/events` kontrollerlari, `packages/shared/src/index.ts`,
+  i18n × 3 · unit 88 → 95, e2e 22 → 26.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -118,4 +132,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.5 (rate limiting, helmet, NODE_ENV xavfsizligi).
+PHASE 1 → TASK-1.6 (iOS Info.plist, GPS platforma sozlamalari).

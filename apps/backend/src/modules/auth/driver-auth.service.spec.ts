@@ -1,4 +1,3 @@
-import type { ConfigService } from '@nestjs/config';
 import { I18nService } from '../../i18n/i18n.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { UsersService } from '../users/users.service';
@@ -8,7 +7,14 @@ import type { SmsService } from './sms.service';
 
 describe('DriverAuthService', () => {
   let prisma: {
-    smsCode: { deleteMany: jest.Mock; create: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
+    smsCode: {
+      deleteMany: jest.Mock;
+      create: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+      count: jest.Mock;
+    };
     user: { update: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -26,6 +32,8 @@ describe('DriverAuthService', () => {
         create: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       user: { update: jest.fn() },
       $transaction: jest.fn().mockResolvedValue([]),
@@ -40,7 +48,6 @@ describe('DriverAuthService', () => {
       usersService as unknown as UsersService,
       authService as unknown as AuthService,
       sms as unknown as SmsService,
-      { get: () => 'development' } as unknown as ConfigService,
       new I18nService(),
     );
   });
@@ -58,30 +65,48 @@ describe('DriverAuthService', () => {
     expect(sms.send).not.toHaveBeenCalled();
   });
 
-  it('sends a 6-digit code for an active driver (dev echoes the code)', async () => {
+  it('sends a 6-digit code for an active driver and never returns it', async () => {
     usersService.findByIdentifier.mockResolvedValue(driver);
     const result = await service.requestCode(driver.phone);
     expect(sms.send).toHaveBeenCalledWith(driver.phone, expect.stringMatching(/\d{6}/));
-    expect(result.devCode).toMatch(/^\d{6}$/);
+    // The code only exists in the SMS and in the dev log — never in the response,
+    // whatever NODE_ENV says.
+    expect(result).toEqual({ sent: true });
+    expect(JSON.stringify(result)).not.toMatch(/\d{6}/);
   });
 
-  it('verify: correct code logs the driver in and clears codes', async () => {
+  it('refuses more than the daily number of codes for one phone', async () => {
     usersService.findByIdentifier.mockResolvedValue(driver);
-    const { devCode } = await service.requestCode(driver.phone);
-    const stored = prisma.$transaction.mock.calls[0][0];
-    // Re-create the stored record from the create() call inside the transaction array.
-    const createArg = prisma.smsCode.create.mock.calls[0][0].data;
-    prisma.smsCode.findFirst.mockResolvedValue({
-      id: 'c1',
-      ...createArg,
-      attempts: 0,
-    });
-    expect(stored).toBeDefined();
+    prisma.smsCode.count.mockResolvedValue(10);
 
-    const tokens = await service.verify(driver.phone, devCode!);
+    await expect(service.requestCode(driver.phone)).rejects.toMatchObject({
+      code: 'SMS_DAILY_LIMIT',
+    });
+    expect(sms.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps used codes on record so the daily cap cannot be reset', async () => {
+    usersService.findByIdentifier.mockResolvedValue(driver);
+    await service.requestCode(driver.phone);
+    expect(prisma.smsCode.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('verify: correct code logs the driver in and invalidates the code', async () => {
+    usersService.findByIdentifier.mockResolvedValue(driver);
+    await service.requestCode(driver.phone);
+    // The code is no longer returned anywhere, so the test recovers it the only
+    // way anyone can: from the SMS that was sent.
+    const sentText = sms.send.mock.calls[0][1] as string;
+    const code = /\d{6}/.exec(sentText)![0];
+    const createArg = prisma.smsCode.create.mock.calls[0][0].data;
+    prisma.smsCode.findFirst.mockResolvedValue({ id: 'c1', ...createArg, attempts: 0 });
+
+    const tokens = await service.verify(driver.phone, code);
 
     expect(tokens.accessToken).toBe('a');
-    expect(prisma.smsCode.deleteMany).toHaveBeenCalledWith({ where: { phone: driver.phone } });
+    expect(prisma.smsCode.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ attempts: 5 }) }),
+    );
   });
 
   it('verify: wrong code increments attempts and fails', async () => {
