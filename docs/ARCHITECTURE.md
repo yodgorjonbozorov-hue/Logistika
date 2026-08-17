@@ -107,8 +107,27 @@ qoidasining strukturaviy kafolati.
   2. **Prisma Client Extension** — tenant-jadvallarga har `find/update/delete` so'roviga
      `company_id` filtrini avtomatik qo'shadi; filtrsiz so'rov xato beradi. Bu «unutib qo'yish»
      xavfini yopadi.
-  3. **PostgreSQL Row-Level Security (RLS)** — sessiya o'zgaruvchisi orqali oxirgi qatlam
-     (Prisma qatlamida xato bo'lsa ham baza o'tkazmaydi).
+  3. **PostgreSQL Row-Level Security (RLS)** — oxirgi qatlam: Prisma qatlamida xato bo'lsa ham
+     baza o'tkazmaydi. Amalga oshirilishi (TASK-2.1):
+     - Har tenant jadvalida `ENABLE` + **`FORCE ROW LEVEL SECURITY`** va `tenant_isolation`
+       siyosati: `company_id = NULLIF(current_setting('app.company_id', true), '')`
+       (`USING` va `WITH CHECK` — o'qish ham, yozish ham).
+       `FORCE` shart: usiz jadval **egasi** o'z siyosatini jimgina chetlab o'tadi.
+     - Tenant kontekstini `PrismaService` e'lon qiladi: har so'rov
+       `SELECT set_config('app.company_id', <uuid>, true)` bilan bitta tranzaksiyada ketadi
+       (`true` = tranzaksiya-lokal, ya'ni pool'dagi keyingi so'rovga sizib o'tmaydi).
+     - **Ikki DB roli**: `DATABASE_URL` (migratsiya/seed/pre-auth qidiruv, `BYPASSRLS`) va
+       `DATABASE_URL_APP` (barcha tenant so'rovlari, `BYPASSRLS` **yo'q**). Bir xil rol
+       ishlatilsa RLS kuchga kirmaydi — shuning uchun backend start'da rolni tekshiradi va
+       production'da ruxsat bermaydi. Batafsil: `docs/DEPLOYMENT.md` §9.
+     - Kontekstsiz ulanish **hech narsa ko'rmaydi** (0 qator), noto'g'ri tenant ham 0 qator —
+       `test/rls.e2e-spec.ts` buni cheklangan rol bilan, Prisma extension'ini chetlab o'tib
+       isbotlaydi.
+     - RLS'dan tashqarida qoldirilganlar: `companies`, `refresh_tokens`, `audit_logs`,
+       `tracking_links`, `sms_codes` — ular tenant ma'lum bo'lishidan oldin yoki platforma
+       darajasida o'qiladi (`tenant.extension.ts` izohiga qara).
+     - Narxi: har tenant so'rovi ikki statement'li tranzaksiya bo'ladi. Bu — izolyatsiyani
+       ilova kodiga emas, bazaga yuklashning ataylab to'langan bahosi.
 - `SUPERADMIN` (TZ §2 — sotuvchi) alohida guard bilan: firmalarni ro'yxatga olish, obuna
   boshqaruvi; tenant ichki ma'lumotlariga kirmaydi.
 

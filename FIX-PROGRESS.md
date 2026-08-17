@@ -142,6 +142,30 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   deb qaytardi, `/auth/login` token berdi, production hardening `MINIO_USE_SSL=false` bilan
   ishga tushishdan bosh tortdi (kutilgan xatti-harakat).
 
+### PHASE 2 — SECURITY
+
+- **TASK-2.1 (C-1) — PostgreSQL RLS** · Hujjatdagi «uchinchi himoya qatlami» endi kodda ham bor.
+  Migratsiya: 15 ta tenant jadvaliga `ENABLE` + **`FORCE ROW LEVEL SECURITY`** va
+  `tenant_isolation` siyosati (`USING` + `WITH CHECK`). Tenant konteksti har so'rovda
+  `set_config('app.company_id', <id>, true)` bilan e'lon qilinadi (`rls.extension.ts`),
+  atomik ish uchun `PrismaService.forCompanyTx()` — kontekst bitta tranzaksiyada bir marta.
+  `forCompany()` API'si **o'zgarmadi** (barcha mavjud servislar tegilmadi).
+  **Ikki ulanish**: `DATABASE_URL` (migratsiya/seed/pre-auth) va `DATABASE_URL_APP`
+  (tenant trafigi, `BYPASSRLS`siz rol) — `scripts/create-db-roles.sql` bilan yaratiladi.
+  Backend start'da rolni tekshiradi: production'da tenant ulanishi RLS'ni chetlab o'ta olsa
+  **ko'tarilmaydi**, dev'da ogohlantiradi. ·
+  `prisma/migrations/20260817130000_row_level_security/`, `src/prisma/rls.extension.ts` (+spec),
+  `src/prisma/prisma.service.ts`, `src/config/env.validation.ts`, `src/modules/events/events.service.ts`,
+  `src/test-utils/tenant-db.mock.ts`, `scripts/create-db-roles.sql`, `test/rls.e2e-spec.ts` (+7 e2e),
+  `docs/ARCHITECTURE.md`, `docs/DEPLOYMENT.md`, `.env.example` · unit 104 → 107, e2e 29 → 36.
+  **Acceptance bajarildi**: cheklangan rol bilan, Prisma extension'ini butunlay chetlab o'tib
+  yozilgan xom SQL boshqa tenant qatorini **0 qator** qaytaradi; `INSERT` boshqa `company_id`
+  bilan rad etiladi; `UPDATE`/`DELETE` 0 qatorga tegadi; kontekst pool'dagi keyingi so'rovga
+  sizib o'tmaydi.
+  **Diqqat (dev muhiti)**: dev'da baza egasi (superuser) sifatida ulanilgani uchun RLS amalda
+  ishlamaydi — bu PostgreSQL qoidasi, `FORCE` ham superuser'ni to'xtatmaydi. Shuning uchun
+  `DATABASE_URL_APP` production'da majburiy va start'da tekshiriladi.
+
 ## Bloklangan / keyinga qoldirilgan
 
 (sabab bilan)
@@ -173,4 +197,5 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 tugadi. PHASE 2 → TASK-2.1 (PostgreSQL RLS) — tasdiq kutilmoqda.
+PHASE 2 → TASK-2.2 (money/document servislarida tenant ref tekshiruvi — `it.failing` e2e'larni
+`it()`ga qaytarish).

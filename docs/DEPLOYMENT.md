@@ -123,15 +123,37 @@ docker compose -f docker-compose.prod.yml exec -T postgres \
   pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip > backup-$(date +%F).sql.gz
 ```
 
-## 9. Baza rollari va RLS
+## 9. Baza rollari va RLS (MAJBURIY)
 
 PostgreSQL Row-Level Security (TASK-2.1) ikki xil rol talab qiladi:
 
-| Rol              | Kim ishlatadi         | Huquq                                                   |
-| ---------------- | --------------------- | ------------------------------------------------------- |
-| `truckcontrol_migrator` | `migrate` servisi | `BYPASSRLS` — migratsiya barcha qatorlarni ko'radi      |
-| `truckcontrol_app`      | `backend`         | `BYPASSRLS` **yo'q** — RLS siyosati unga ham tegishli   |
+| Rol                     | Kim ishlatadi                | Huquq                                                  |
+| ----------------------- | ---------------------------- | ------------------------------------------------------ |
+| `truckcontrol_migrator` | `migrate` servisi, seed      | `BYPASSRLS` — migratsiya va bootstrap tenant'lararo     |
+| `truckcontrol_app`      | `backend` (tenant so'rovlari)| `BYPASSRLS` **yo'q**, superuser emas, jadval egasi emas |
+
+```bash
+psql "$ADMIN_DATABASE_URL" \
+  -v migrator_password="'...'" -v app_password="'...'" -v db=truckcontrol \
+  -f scripts/create-db-roles.sql
+```
+
+Keyin `.env`:
+
+```
+DATABASE_URL=postgresql://truckcontrol_migrator:...@postgres:5432/truckcontrol?schema=public
+DATABASE_URL_APP=postgresql://truckcontrol_app:...@postgres:5432/truckcontrol?schema=public
+```
+
+- `DATABASE_URL` — migratsiya, seed va tenant'dan tashqari operatsiyalar (login qidiruvi,
+  SUPERADMIN, health).
+- `DATABASE_URL_APP` — `forCompany()` orqali ketadigan **barcha** tenant so'rovlari. Har so'rov
+  `set_config('app.company_id', <uuid>, true)` bilan tranzaksiya ichida bajariladi.
 
 Application roli hech qachon `BYPASSRLS` bo'lmasligi kerak: aks holda RLS himoya qatlami
-(ARCHITECTURE.md #3) shunchaki o'chib qoladi. Rollar TASK-2.1 migratsiyasi bilan birga
-hujjatlashtiriladi va bu jadval o'shanda to'ldiriladi.
+(ARCHITECTURE.md #3) shunchaki o'chib qoladi. Backend buni **start'da tekshiradi**:
+`NODE_ENV=production` bo'lganda tenant ulanishi RLS'ni chetlab o'ta olsa — app ko'tarilmaydi.
+Dev'da (baza egasi sifatida ulanish) faqat ogohlantirish yoziladi.
+
+> **Eslatma:** `superuser` roli RLS'ni **har doim** chetlab o'tadi (`FORCE` bo'lsa ham).
+> `truckcontrol_app` superuser bo'lmasligi shart.

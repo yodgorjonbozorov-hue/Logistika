@@ -31,6 +31,16 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   DATABASE_URL!: string;
 
+  /**
+   * Connection used for tenant-scoped queries. Must be a role WITHOUT
+   * BYPASSRLS so row-level security applies to it (docs/DEPLOYMENT.md).
+   * Falls back to DATABASE_URL in development, where the database usually runs
+   * as its owner and RLS is therefore inert.
+   */
+  @IsOptional()
+  @IsString()
+  DATABASE_URL_APP?: string;
+
   @IsOptional()
   @IsString()
   REDIS_URL = 'redis://localhost:6379';

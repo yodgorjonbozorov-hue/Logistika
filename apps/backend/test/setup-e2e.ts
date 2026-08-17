@@ -49,8 +49,11 @@ export function testDatabaseUrl(): string {
     throw new Error('DATABASE_URL_TEST or DATABASE_URL must be set to run e2e tests.');
   }
   // postgresql://user:pass@host:5432/truckcontrol?schema=public → …/truckcontrol_test?…
+  // Idempotent: createE2EApp writes the derived url back into process.env, and
+  // callers may ask for it again afterwards.
   const url = new URL(base);
-  url.pathname = `${url.pathname.replace(/\/$/, '')}_test`;
+  const database = url.pathname.replace(/\/$/, '');
+  url.pathname = database.endsWith('_test') ? database : `${database}_test`;
   return url.toString();
 }
 

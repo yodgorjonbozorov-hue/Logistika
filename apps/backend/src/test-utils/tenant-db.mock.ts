@@ -20,10 +20,16 @@ export function createTenantDbMock(models: string[]) {
     (arg: unknown) => (typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(db) : arg),
   );
   const forCompany = jest.fn().mockReturnValue(db);
+  // forCompanyTx hands the callback the same scoped stubs, so a test can assert
+  // on writes made inside a tenant transaction.
+  const forCompanyTx = jest.fn(
+    (_companyId: unknown, fn: (tx: unknown) => unknown) => fn(db),
+  );
   return {
-    prisma: { forCompany } as unknown as import('../prisma/prisma.service').PrismaService,
+    prisma: { forCompany, forCompanyTx } as unknown as import('../prisma/prisma.service').PrismaService,
     db,
     forCompany,
+    forCompanyTx,
   };
 }
 

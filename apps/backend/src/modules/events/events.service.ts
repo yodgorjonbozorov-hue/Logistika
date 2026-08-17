@@ -87,7 +87,7 @@ export class EventsService {
       const photoUrls = await this.resolvePhotoKeys(actor, event);
       try {
         // Event row and status change land together, or neither lands.
-        await db.$transaction(async (tx) => {
+        await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
           await tx.tripEvent.create({
             data: {
               companyId: actor.companyId as string,
