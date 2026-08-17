@@ -29,7 +29,14 @@ ThemeData buildDarkTheme() {
         foregroundColor: BrandColors.navy,
         // Big touch targets — gloves on the road (TZ §3.1).
         minimumSize: const Size.fromHeight(56),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        // Derived from the theme's own label style rather than written from
+        // scratch: a bare TextStyle replaces the button label style wholesale,
+        // and takes the typography's font family down with it, so button text
+        // would be set in a different typeface from the rest of the screen.
+        textStyle: base.textTheme.labelLarge?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
