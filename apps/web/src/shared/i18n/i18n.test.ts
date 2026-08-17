@@ -50,6 +50,20 @@ describe('locale coverage', () => {
     },
   );
 
+  it('keeps the same {{placeholders}} in every language', () => {
+    // A translator dropping {{count}} turns a sentence into a lie rather than
+    // a visible error, so it is checked rather than hoped for.
+    const placeholders = (text: string) => (text.match(/\{\{\w+\}\}/g) ?? []).sort().join(',');
+    for (const locale of LOCALES.filter((item) => item !== 'uz-latn')) {
+      for (const key of bundles['uz-latn']!) {
+        const expected = placeholders(i18n.getFixedT('uz-latn')(key));
+        expect(`${locale}.${key}:${placeholders(i18n.getFixedT(locale)(key))}`).toBe(
+          `${locale}.${key}:${expected}`,
+        );
+      }
+    }
+  });
+
   it('has no blank translations', () => {
     for (const locale of LOCALES) {
       for (const key of bundles[locale]!) {

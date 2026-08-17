@@ -141,7 +141,8 @@
       W-4 tabi; haydovchi faqat o'z reysini ochadi; mobil tomoni E-4 bilan birga
 - [x] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — W-6 kartochkasi,
       `GET /drivers/ratings`, tungi kesh; E-7 dagi ko'rsatish mobil bilan birga
-- [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
+- [x] i18n: web va backend xabarlari uch tilda to'liq — kalit qamrovi, bo'sh tarjima va
+      `{parametr}` mosligi testlar bilan qo'riqlanadi; mobil tarjimalari Flutter bilan birga
 - [x] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
       (har 15 daqiqada cron, chegaralar W-11 dan, dam belgilangan bo'lsa signal bermaydi)
 - [x] Production Docker Compose (backend, web, nginx, certbot, backup cron), HTTPS —
