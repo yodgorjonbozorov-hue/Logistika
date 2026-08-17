@@ -5,6 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 
 function toData<T extends UpdateDriverDto>(dto: T) {
@@ -20,7 +21,10 @@ function toData<T extends UpdateDriverDto>(dto: T) {
 
 @Injectable()
 export class DriversService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(
     actor: CurrentUserPayload,
@@ -40,10 +44,23 @@ export class DriversService {
 
   async create(actor: CurrentUserPayload, dto: CreateDriverDto): Promise<Driver> {
     try {
-      // companyId satisfies the type; the tenant extension enforces the same value.
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .driver.create({ data: { ...toData(dto), companyId: actor.companyId as string } });
+      // The row and its audit entry are written together: an unrecorded change
+      // to a salary is exactly the case this log exists for.
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        // companyId satisfies the type; the tenant extension enforces the same value.
+        const driver = await tx.driver.create({
+          data: { ...toData(dto), companyId: actor.companyId as string },
+        });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'CREATE',
+          entityType: 'Driver',
+          entityId: driver.id,
+          after: toAuditJson(driver),
+        });
+        return driver;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -58,10 +75,23 @@ export class DriversService {
   }
 
   async update(actor: CurrentUserPayload, id: string, dto: UpdateDriverDto): Promise<Driver> {
+    // salaryValue lives on this row: "who changed 5,000,000 to 500,000?" needs
+    // the before-state, which only exists if it is read first.
+    const before = await this.getById(actor, id);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .driver.update({ where: { id }, data: toData(dto) });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const driver = await tx.driver.update({ where: { id }, data: toData(dto) });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'UPDATE',
+          entityType: 'Driver',
+          entityId: id,
+          before: toAuditJson(before),
+          after: toAuditJson(driver),
+        });
+        return driver;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -69,10 +99,21 @@ export class DriversService {
 
   /** Soft delete — drivers keep their trip history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Driver> {
+    const before = await this.getById(actor, id);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .driver.update({ where: { id }, data: { isActive: false } });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const driver = await tx.driver.update({ where: { id }, data: { isActive: false } });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'DEACTIVATE',
+          entityType: 'Driver',
+          entityId: id,
+          before: toAuditJson(before),
+          after: toAuditJson(driver),
+        });
+        return driver;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }

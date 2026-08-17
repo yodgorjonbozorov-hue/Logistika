@@ -4,7 +4,10 @@ import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { ExpensesService } from './expenses.service';
 
 describe('ExpensesService', () => {
-  const audit = { log: jest.fn() } as unknown as AuditService;
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
 
   function setup() {
     const { prisma, db } = createTenantDbMock([
@@ -71,12 +74,20 @@ describe('ExpensesService', () => {
       where: { id: 'e1' },
       data: { isApproved: true },
     });
-    expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'APPROVE' }));
+    // The audit row is written inside the same transaction as the flag now, so
+    // an approval can never be recorded without the change (or the reverse).
+    expect(audit.logInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ action: 'APPROVE' }),
+    );
   });
 });
 
 describe('ExpensesService tenant references (TASK-2.2)', () => {
-  const audit = { log: jest.fn() } as unknown as AuditService;
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
 
   function setup() {
     const { prisma, db } = createTenantDbMock([
@@ -178,7 +189,10 @@ describe('ExpensesService tenant references (TASK-2.2)', () => {
 });
 
 describe('ExpensesService money conversion edge cases', () => {
-  const audit = { log: jest.fn() } as unknown as AuditService;
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
 
   function setup() {
     const { prisma, db } = createTenantDbMock([
@@ -205,6 +219,7 @@ describe('ExpensesService money conversion edge cases', () => {
     db.income!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: 'i1', ...data }),
     );
+    db.income!.findUnique!.mockResolvedValue({ id: 'i1', amount: 1n });
     return { service: new ExpensesService(prisma, audit), db };
   }
 
@@ -258,5 +273,51 @@ describe('ExpensesService money conversion edge cases', () => {
     const { service, db } = setup();
     await service.updateIncome(ACTOR, 'i1', { amount: '1', paymentDate: undefined } as never);
     expect(db.income!.update!.mock.calls[0][0].data.amount).toBe(1n);
+  });
+});
+
+describe('ExpensesService missing rows', () => {
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock([
+      'expense',
+      'income',
+      'trip',
+      'vehicle',
+      'driver',
+      'client',
+    ]);
+    for (const model of ['trip', 'vehicle', 'driver', 'client']) {
+      db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
+    }
+    return { service: new ExpensesService(prisma, audit), db };
+  }
+
+  it('reports a missing income as not found instead of updating nothing', async () => {
+    const { service, db } = setup();
+    // Another tenant's id looks exactly like this through the scoped client.
+    db.income!.findUnique!.mockResolvedValue(null);
+
+    await expect(
+      service.updateIncome(ACTOR, 'someone-elses-income', { amount: '1' } as never),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(db.income!.update).not.toHaveBeenCalled();
+    expect(audit.logInTx).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing expense as not found on update and delete', async () => {
+    const { service, db } = setup();
+    db.expense!.findUnique!.mockResolvedValue(null);
+
+    await expect(
+      service.updateExpense(ACTOR, 'gone', { amount: '1' } as never),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(service.removeExpense(ACTOR, 'gone')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 });

@@ -4,6 +4,7 @@ import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
+import { toAuditJson } from '../audit/audit.service';
 import { assertTenantRefs } from '../../common/tenant-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -90,15 +91,27 @@ export class ExpensesService {
 
   async createExpense(actor: CurrentUserPayload, dto: CreateExpenseDto): Promise<Expense> {
     const tenant = requireTenantActor(actor);
-    const db = this.prisma.forCompany(tenant.companyId);
-    await assertTenantRefs(db, dto);
+    await assertTenantRefs(this.prisma.forCompany(tenant.companyId), dto);
     try {
-      return await db.expense.create({
-        data: {
-          ...toExpenseCreateData(dto),
+      // The row and its audit entry are written together: a money record whose
+      // author was lost to a failed side-write is not auditable.
+      return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
+        const expense = await tx.expense.create({
+          data: {
+            ...toExpenseCreateData(dto),
+            companyId: tenant.companyId,
+            createdById: tenant.userId,
+          },
+        });
+        await this.audit.logInTx(tx, {
           companyId: tenant.companyId,
-          createdById: tenant.userId,
-        },
+          userId: tenant.userId,
+          action: 'CREATE',
+          entityType: 'Expense',
+          entityId: expense.id,
+          after: toAuditJson(expense),
+        });
+        return expense;
       });
     } catch (error) {
       rethrowPrismaError(error);
@@ -118,9 +131,19 @@ export class ExpensesService {
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
     await assertTenantRefs(this.prisma.forCompany(actor.companyId), dto);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .expense.update({ where: { id }, data: toExpenseData(dto) });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const expense = await tx.expense.update({ where: { id }, data: toExpenseData(dto) });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'UPDATE',
+          entityType: 'Expense',
+          entityId: id,
+          before: toAuditJson(existing),
+          after: toAuditJson(expense),
+        });
+        return expense;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -128,18 +151,18 @@ export class ExpensesService {
 
   async approveExpense(actor: CurrentUserPayload, id: string): Promise<Expense> {
     try {
-      const expense = await this.prisma
-        .forCompany(actor.companyId)
-        .expense.update({ where: { id }, data: { isApproved: true } });
-      this.audit.log({
-        companyId: actor.companyId,
-        userId: actor.userId,
-        action: 'APPROVE',
-        entityType: 'Expense',
-        entityId: id,
-        after: { amount: expense.amount.toString(), category: expense.category },
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const expense = await tx.expense.update({ where: { id }, data: { isApproved: true } });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'APPROVE',
+          entityType: 'Expense',
+          entityId: id,
+          after: { amount: expense.amount.toString(), category: expense.category },
+        });
+        return expense;
       });
-      return expense;
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -151,7 +174,18 @@ export class ExpensesService {
       .expense.findUnique({ where: { id } });
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
-    await this.prisma.forCompany(actor.companyId).expense.delete({ where: { id } });
+    await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+      await tx.expense.delete({ where: { id } });
+      await this.audit.logInTx(tx, {
+        companyId: actor.companyId,
+        userId: actor.userId,
+        action: 'DELETE',
+        entityType: 'Expense',
+        entityId: id,
+        // The whole row: once deleted this is the only copy of what it said.
+        before: toAuditJson(existing),
+      });
+    });
     return { deleted: true };
   }
 
@@ -177,11 +211,21 @@ export class ExpensesService {
 
   async createIncome(actor: CurrentUserPayload, dto: CreateIncomeDto): Promise<Income> {
     const tenant = requireTenantActor(actor);
-    const db = this.prisma.forCompany(tenant.companyId);
-    await assertTenantRefs(db, dto);
+    await assertTenantRefs(this.prisma.forCompany(tenant.companyId), dto);
     try {
-      return await db.income.create({
-        data: { ...toIncomeCreateData(dto), companyId: tenant.companyId },
+      return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
+        const income = await tx.income.create({
+          data: { ...toIncomeCreateData(dto), companyId: tenant.companyId },
+        });
+        await this.audit.logInTx(tx, {
+          companyId: tenant.companyId,
+          userId: tenant.userId,
+          action: 'CREATE',
+          entityType: 'Income',
+          entityId: income.id,
+          after: toAuditJson(income),
+        });
+        return income;
       });
     } catch (error) {
       rethrowPrismaError(error);
@@ -189,11 +233,25 @@ export class ExpensesService {
   }
 
   async updateIncome(actor: CurrentUserPayload, id: string, dto: UpdateIncomeDto): Promise<Income> {
-    await assertTenantRefs(this.prisma.forCompany(actor.companyId), dto);
+    const db = this.prisma.forCompany(actor.companyId);
+    await assertTenantRefs(db, dto);
+    const existing = await db.income.findUnique({ where: { id } });
+    if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .income.update({ where: { id }, data: toIncomeData(dto) });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const income = await tx.income.update({ where: { id }, data: toIncomeData(dto) });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'UPDATE',
+          entityType: 'Income',
+          entityId: id,
+          // Payment status changes used to leave no trace at all.
+          before: toAuditJson(existing),
+          after: toAuditJson(income),
+        });
+        return income;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }

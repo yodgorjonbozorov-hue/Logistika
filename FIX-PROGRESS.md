@@ -6,7 +6,7 @@ Boshlangan: 2026-08-17
 
 - [x] PHASE 0 — Baseline
 - [x] PHASE 1 — Blockers (8 ta task)
-- [ ] PHASE 2 — Security (9 ta task)
+- [x] PHASE 2 — Security (9 ta task)
 - [ ] PHASE 3 — Core business (12 ta task)
 - [ ] PHASE 4 — Performance (6 ta task)
 - [ ] PHASE 5 — UX (5 ta task)
@@ -269,6 +269,22 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `common/observability/*` (+spec 4 test), `app-exception.filter.ts`, `main.ts`,
   `env.validation.ts`, `scripts/*.sh`, `docker-compose.prod.yml`, `.env.example` ·
   unit 160 → 164.
+- **TASK-2.9 (H-18)** · Audit log to'liq: `drivers`, `clients`, `vehicles` servislarida audit
+  **umuman yo'q edi** — `Driver.salaryValue` va `Client.balance` aynan o'sha jadvallarda.
+  Endi har mutatsiya `before` + `after` bilan yoziladi. `updateIncome` va `updateExpense`/
+  `removeExpense`/`approveExpense` ham yozadi. Nozik operatsiyalar uchun
+  `AuditService.logInTx(tx, entry)` — audit yozuvi **o'zgarish bilan bitta tranzaksiyada**
+  (avval fire-and-forget edi: rollback bo'lsa audit qolardi yoki teskarisi).
+  `toAuditJson()` BigInt/Decimal'ni **string**ga aylantiradi (JSON'da BigInt yo'q, float
+  tiyinni yo'qotadi) va `passwordHash`/token'larni `passwordChanged: true` naqshiga
+  almashtiradi. `audit_logs` **immutable**: UPDATE/DELETE'ni DB trigger'i rad etadi —
+  ya'ni trail'ni yozgan huquq uni tozalay olmaydi. `GET /audit-logs` (OWNER + SUPERADMIN,
+  tenant-scoped, pagination, entityType/entityId/userId/action/sana filtri) + web sahifasi
+  (i18n 3 tilda, menyuda). ·
+  migratsiya `20260817160000_audit_log_immutable`, `audit.service.ts` (+spec 10 test),
+  `audit.controller.ts`, `dto/list-audit.dto.ts`, `drivers/clients/vehicles/expenses`
+  servislari, `apps/web/.../AuditLogPage.tsx` + i18n, `test/audit.e2e-spec.ts` (+10 e2e) ·
+  unit 164 → 175, e2e 71 → 81. `expenses.service.ts` qamrovi 74% → 79% (branch 67% → 79%).
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -301,4 +317,14 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.9 (audit log to'liq emas) — PHASE 2 ning oxirgi taski.
+**PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
+Tasdiq kutilmoqda.
+
+PHASE 3 boshlanishida diqqat qilinadigan bog'liqliklar:
+
+- TASK-3.1 (ledger) TASK-3.3 (`amountBase`, valyuta) bilan chambarchas — ikkalasini ketma-ket
+  qilish tavsiya etiladi, aks holda ledger migratsiyasi ikki marta o'zgaradi.
+- TASK-3.5 (optimistic lock) `trips.service.transition()`ga tegadi — u TASK-1.4 da
+  `events.service` bilan umumiy `trip-transitions.ts` orqali bog'langan, ikkalasini birga tekshir.
+- TASK-3.4 (yangi status'lar) `packages/shared` enum'ini va web `StatusBadge`ni ham talab qiladi
+  (API kontrakti).

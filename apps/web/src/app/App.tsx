@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuditLogPage } from '../features/audit/AuditLogPage';
 import { ChangePasswordPage } from '../features/auth/ChangePasswordPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { LoginPage } from '../features/auth/LoginPage';
@@ -32,6 +33,7 @@ export function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/finance" element={<FinancePage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/audit-logs" element={<AuditLogPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

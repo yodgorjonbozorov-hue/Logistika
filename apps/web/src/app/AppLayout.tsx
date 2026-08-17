@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/drivers', key: 'nav.drivers' },
   { to: '/clients', key: 'nav.clients' },
   { to: '/finance', key: 'nav.finance' },
+  { to: '/audit-logs', key: 'nav.audit' },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {

@@ -5,6 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 
 function toData<T extends UpdateVehicleDto>(dto: T) {
@@ -19,7 +20,10 @@ function toData<T extends UpdateVehicleDto>(dto: T) {
 
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(
     actor: CurrentUserPayload,
@@ -39,10 +43,21 @@ export class VehiclesService {
 
   async create(actor: CurrentUserPayload, dto: CreateVehicleDto): Promise<Vehicle> {
     try {
-      // companyId satisfies the type; the tenant extension enforces the same value.
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .vehicle.create({ data: { ...toData(dto), companyId: actor.companyId as string } });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        // companyId satisfies the type; the tenant extension enforces the same value.
+        const vehicle = await tx.vehicle.create({
+          data: { ...toData(dto), companyId: actor.companyId as string },
+        });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'CREATE',
+          entityType: 'Vehicle',
+          entityId: vehicle.id,
+          after: toAuditJson(vehicle),
+        });
+        return vehicle;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -57,10 +72,21 @@ export class VehiclesService {
   }
 
   async update(actor: CurrentUserPayload, id: string, dto: UpdateVehicleDto): Promise<Vehicle> {
+    const before = await this.getById(actor, id);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .vehicle.update({ where: { id }, data: toData(dto) });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const vehicle = await tx.vehicle.update({ where: { id }, data: toData(dto) });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'UPDATE',
+          entityType: 'Vehicle',
+          entityId: id,
+          before: toAuditJson(before),
+          after: toAuditJson(vehicle),
+        });
+        return vehicle;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -68,10 +94,21 @@ export class VehiclesService {
 
   /** Soft delete — vehicles keep their trip/fuel history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Vehicle> {
+    const before = await this.getById(actor, id);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .vehicle.update({ where: { id }, data: { isActive: false } });
+      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const vehicle = await tx.vehicle.update({ where: { id }, data: { isActive: false } });
+        await this.audit.logInTx(tx, {
+          companyId: actor.companyId,
+          userId: actor.userId,
+          action: 'DEACTIVATE',
+          entityType: 'Vehicle',
+          entityId: id,
+          before: toAuditJson(before),
+          after: toAuditJson(vehicle),
+        });
+        return vehicle;
+      });
     } catch (error) {
       rethrowPrismaError(error);
     }

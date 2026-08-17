@@ -88,15 +88,15 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 28,
-        "lines": 36,
-        "branches": 22,
-        "functions": 27
+        "statements": 30,
+        "lines": 37,
+        "branches": 29,
+        "functions": 30
       },
       "./src/modules/expenses/expenses.service.ts": {
-        "statements": 73,
-        "lines": 74,
-        "branches": 66,
+        "statements": 79,
+        "lines": 77,
+        "branches": 78,
         "functions": 84
       }
     }
