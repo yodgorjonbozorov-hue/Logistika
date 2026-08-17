@@ -18,5 +18,8 @@
   "RATE_LIMIT_EXCEEDED": "Juda ko'p so'rov yuborildi. Biroz kutib, qayta urinib ko'ring",
   "SMS_DAILY_LIMIT": "Bugun uchun SMS kod chegarasi tugadi. Ertaga urinib ko'ring yoki logistga murojaat qiling",
   "SERVICE_UNAVAILABLE": "Xizmat vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring",
-  "AUTH_REFRESH_REUSED": "Xavfsizlik sababli barcha sessiyalar yopildi. Qaytadan kiring"
+  "AUTH_REFRESH_REUSED": "Xavfsizlik sababli barcha sessiyalar yopildi. Qaytadan kiring",
+  "AUTH_ACCOUNT_LOCKED": "Hisob vaqtincha bloklandi (juda ko'p muvaffaqiyatsiz urinish). 15 daqiqadan so'ng qayta urinib ko'ring",
+  "AUTH_RESET_TOKEN_INVALID": "Parolni tiklash havolasi yaroqsiz yoki muddati tugagan. Yangi havola so'rang",
+  "SMS_PASSWORD_RESET": "TruckControl: parolni tiklash kodi {token}. Uni hech kimga bermang"
 }

@@ -18,6 +18,10 @@ interface RefreshTokenPayload {
 
 const TTL_UNIT_SECONDS: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
 
+/** Failed passwords in a row before the account is locked, and for how long. */
+const MAX_FAILED_LOGINS = 10;
+const LOCKOUT_MS = 15 * 60 * 1000;
+
 export function ttlToSeconds(ttl: string): number {
   const match = /^(\d+)(s|m|h|d)$/.exec(ttl);
   if (!match) throw new Error(`Invalid TTL format: ${ttl}`);
@@ -41,15 +45,30 @@ export class AuthService {
     if (!user) {
       throw new AppException('AUTH_INVALID_CREDENTIALS', HttpStatus.UNAUTHORIZED);
     }
-    const passwordValid = await argon2.verify(user.passwordHash, password);
-    if (!passwordValid) {
-      throw new AppException('AUTH_INVALID_CREDENTIALS', HttpStatus.UNAUTHORIZED);
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AppException('AUTH_ACCOUNT_LOCKED', HttpStatus.FORBIDDEN, undefined, {
+        lockedUntil: user.lockedUntil.toISOString(),
+      });
     }
+
+    // M-1: an inactive account is refused BEFORE the password is checked.
+    // Verifying first told an attacker whether the password was right for an
+    // account that has been deactivated — free credential confirmation.
     if (!user.isActive) {
       throw new AppException('AUTH_USER_INACTIVE', HttpStatus.FORBIDDEN);
     }
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
+    const passwordValid = await argon2.verify(user.passwordHash, password);
+    if (!passwordValid) {
+      await this.registerFailedLogin(user);
+      throw new AppException('AUTH_INVALID_CREDENTIALS', HttpStatus.UNAUTHORIZED);
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date(), failedLoginAttempts: 0, lockedUntil: null },
+    });
     this.audit.log({
       companyId: user.companyId,
       userId: user.id,
@@ -158,6 +177,34 @@ export class AuthService {
     }
     const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
+  }
+
+  /**
+   * Counts a wrong password and locks the account once the run gets long
+   * enough. The window is short on purpose: it stops online guessing without
+   * handing anyone a way to lock a colleague out for the day.
+   */
+  private async registerFailedLogin(user: User): Promise<void> {
+    const attempts = user.failedLoginAttempts + 1;
+    const locked = attempts >= MAX_FAILED_LOGINS;
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: locked ? 0 : attempts,
+        lockedUntil: locked ? new Date(Date.now() + LOCKOUT_MS) : user.lockedUntil,
+      },
+    });
+    if (locked) {
+      this.logger.warn(`Account ${user.id} locked after ${MAX_FAILED_LOGINS} failed logins`);
+      this.audit.log({
+        companyId: user.companyId,
+        userId: user.id,
+        action: 'ACCOUNT_LOCKED',
+        entityType: 'User',
+        entityId: user.id,
+        after: { minutes: LOCKOUT_MS / 60_000 },
+      });
+    }
   }
 
   /**

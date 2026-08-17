@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../shared/auth/AuthContext';
 import { Button, ErrorMessage, Field, Input } from '../../shared/ui';
 
@@ -60,6 +60,12 @@ export function LoginPage() {
         <Button type="submit" disabled={busy} className="w-full py-2">
           {busy ? t('auth.loggingIn') : t('auth.submit')}
         </Button>
+        <Link
+          to="/forgot-password"
+          className="block text-center text-sm text-muted hover:text-accent"
+        >
+          {t('auth.forgotPassword')}
+        </Link>
       </form>
     </div>
   );

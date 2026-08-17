@@ -7,10 +7,10 @@ import {
   IsString,
   Matches,
   MaxLength,
-  MinLength,
   ValidateIf,
 } from 'class-validator';
 import { UserRole } from 'shared';
+import { IsStrongPassword } from '../../../common/dto/password';
 
 /** Roles a tenant may assign; SUPERADMIN is platform-only. */
 export const TENANT_ROLES = [
@@ -35,8 +35,7 @@ export class CreateUserDto {
   phone?: string;
 
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
+  @IsStrongPassword()
   password!: string;
 
   @IsIn(TENANT_ROLES)
@@ -60,8 +59,7 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
+  @IsStrongPassword()
   password?: string;
 
   @IsOptional()

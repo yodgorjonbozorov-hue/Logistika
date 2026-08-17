@@ -4,13 +4,14 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DriverAuthService } from './driver-auth.service';
+import { PasswordService } from './password.service';
 import { SmsService } from './sms.service';
 
 @Module({
   // Secrets are passed per sign/verify call (access vs refresh differ).
   imports: [JwtModule.register({}), UsersModule],
   controllers: [AuthController],
-  providers: [AuthService, DriverAuthService, SmsService],
+  providers: [AuthService, DriverAuthService, PasswordService, SmsService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -5,6 +5,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { THROTTLERS } from '../../common/throttling/throttling.module';
 import { AuthService } from './auth.service';
+import { PasswordService } from './password.service';
+import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { DriverAuthService } from './driver-auth.service';
 import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
@@ -15,6 +17,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly driverAuthService: DriverAuthService,
+    private readonly passwordService: PasswordService,
   ) {}
 
   // SMS costs money and a flood locks the driver out of their own account:
@@ -64,6 +67,33 @@ export class AuthController {
   async logout(@Body() dto: RefreshDto) {
     await this.authService.logout(dto.refreshToken);
     return { loggedOut: true };
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  changePassword(@CurrentUser() user: CurrentUserPayload, @Body() dto: ChangePasswordDto) {
+    return this.passwordService.changePassword(user, dto);
+  }
+
+  // Same rate limit as code requests: a reset message costs money to send and
+  // is a nuisance to receive.
+  @Throttle({
+    [THROTTLERS.identifier]: { limit: 3, ttl: seconds(3600) },
+    [THROTTLERS.ip]: { limit: 10, ttl: seconds(3600) },
+  })
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.passwordService.forgotPassword(dto.identifier);
+  }
+
+  @Throttle({ [THROTTLERS.ip]: { limit: 10, ttl: seconds(3600) } })
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.passwordService.resetPassword(dto);
   }
 
   @Get('me')

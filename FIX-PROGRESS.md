@@ -209,6 +209,25 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `mobile/.../api_client.dart` (+`test/api_client_test.dart`, 2 test),
   `test/refresh-rotation.e2e-spec.ts` (+6 e2e), shared + i18n × 3 ·
   unit 130 → 134, web 11 → 13, mobil 14 → 16, e2e 44 → 50.
+- **TASK-2.5 (H-11, M-1)** · Parol boshqaruvi: `POST /auth/change-password` (eski parolni
+  argon2 bilan tekshiradi, muvaffaqiyatda **barcha** sessiyalarni revoke qiladi + audit),
+  `POST /auth/forgot-password` + `POST /auth/reset-password` (token `randomBytes(32)`,
+  bazada **faqat hash**, TTL 30 daqiqa, bir martalik — `usedAt` compare-and-set bilan;
+  enumeratsiyasiz: noma'lum identifikator uchun ham bir xil javob; rate limit 3/soat).
+  Parol siyosati: `IsStrongPassword()` dekoratori (≥10 belgi, harf + raqam, keng tarqalgan
+  parollar ro'yxati, ism/emailga o'xshashlik tekshiruvi) — `create-user.dto.ts`ga ham
+  qo'llandi. Account lockout: 10 muvaffaqiyatsiz urinishdan keyin 15 daqiqa
+  (`failedLoginAttempts`, `lockedUntil`; muvaffaqiyatli login nolga qaytaradi; reset lockout'ni
+  bekor qiladi). **M-1 tuzatildi**: `isActive` tekshiruvi endi `argon2.verify`dan **oldin** —
+  avval deaktivatsiya qilingan hisob uchun ham parolning to'g'riligi tasdiqlanardi.
+  Yangi kodlar `AUTH_ACCOUNT_LOCKED` (403), `AUTH_RESET_TOKEN_INVALID` (400) — 3 tilda.
+  Web: `/forgot-password`, `/reset-password`, `/change-password` sahifalari + login'da havola,
+  i18n 3 tilda. · migratsiya `20260817150000_password_management`, `password.service.ts`,
+  `common/dto/password.ts` (+spec 7 test), `auth.service.ts` (+spec 5 test), web 3 sahifa,
+  `test/password-flows.e2e-spec.ts` (+14 e2e) · unit 134 → 146, e2e 50 → 64.
+  **Bloklandi (qisman)**: email provayder yo'q — reset havolasi telefon bo'lsa SMS bilan
+  yuboriladi, email bo'lsa `[DEV EMAIL]` log'iga yoziladi (interfeys tayyor, integratsiya
+  keyingi bosqichda).
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -241,4 +260,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.5 (parol boshqarish oqimlari: change/forgot/reset, lockout, parol siyosati).
+PHASE 2 → TASK-2.6 (token saqlash: httpOnly cookie, mobil secure storage) — buzuvchi o'zgarish.

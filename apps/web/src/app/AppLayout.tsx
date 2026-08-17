@@ -77,6 +77,12 @@ export function AppLayout() {
             <input type="checkbox" checked={dark} onChange={(e) => setDark(e.target.checked)} />
             {t('common.theme')}
           </label>
+          <NavLink
+            to="/change-password"
+            className="block px-1 text-xs text-muted hover:text-accent"
+          >
+            {t('auth.changePasswordTitle')}
+          </NavLink>
           <div className="flex items-center justify-between gap-2 px-1">
             <span className="truncate text-xs text-muted">{user?.fullName}</span>
             <button className="text-xs text-danger hover:underline" onClick={() => void logout()}>

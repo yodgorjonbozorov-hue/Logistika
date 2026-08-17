@@ -56,6 +56,8 @@ describe('AuthService', () => {
       role: 'OWNER',
       isActive: true,
       lastLogin: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     } as User;
@@ -250,6 +252,77 @@ describe('AuthService', () => {
       const result = await service.me('user-1');
       expect(result).not.toHaveProperty('passwordHash');
       expect(result.email).toBe('owner@test.uz');
+    });
+  });
+
+  describe('account lockout (TASK-2.5)', () => {
+    beforeEach(() => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+    });
+
+    it('counts a wrong password without locking straight away', async () => {
+      await expect(service.login('owner@test.uz', 'wrong')).rejects.toMatchObject({
+        code: 'AUTH_INVALID_CREDENTIALS',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { failedLoginAttempts: 1, lockedUntil: null },
+      });
+    });
+
+    it('locks the account on the tenth consecutive failure', async () => {
+      usersService.findByIdentifier.mockResolvedValue({ ...user, failedLoginAttempts: 9 });
+
+      await expect(service.login('owner@test.uz', 'wrong')).rejects.toMatchObject({
+        code: 'AUTH_INVALID_CREDENTIALS',
+      });
+
+      const data = prisma.user.update.mock.calls[0][0].data;
+      expect(data.lockedUntil).toBeInstanceOf(Date);
+      // The counter restarts so the next run has to earn the lock again.
+      expect(data.failedLoginAttempts).toBe(0);
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'ACCOUNT_LOCKED' }),
+      );
+    });
+
+    it('refuses a locked account before checking the password at all', async () => {
+      usersService.findByIdentifier.mockResolvedValue({
+        ...user,
+        lockedUntil: new Date(Date.now() + 60_000),
+      });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).rejects.toMatchObject({
+        code: 'AUTH_ACCOUNT_LOCKED',
+      });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('an expired lock lets the user back in', async () => {
+      usersService.findByIdentifier.mockResolvedValue({
+        ...user,
+        lockedUntil: new Date(Date.now() - 60_000),
+        failedLoginAttempts: 7,
+      });
+
+      const tokens = await service.login('owner@test.uz', 'correct-password');
+      expect(tokens.accessToken).toBeTruthy();
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ failedLoginAttempts: 0, lockedUntil: null }),
+        }),
+      );
+    });
+
+    it('refuses a deactivated account without confirming the password (M-1)', async () => {
+      usersService.findByIdentifier.mockResolvedValue({ ...user, isActive: false });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).rejects.toMatchObject({
+        code: 'AUTH_USER_INACTIVE',
+      });
+      // No counter update: the password was never examined.
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -161,12 +161,16 @@ model User {
   role         UserRole
   isActive     Boolean   @default(true) @map("is_active")
   lastLogin    DateTime? @map("last_login")
+  // Brute-force protection: cleared on every successful login.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   company       Company?       @relation(fields: [companyId], references: [id])
   driverProfile Driver?
   refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
   createdTrips  Trip[]         @relation("TripCreatedBy")
 
   @@index([companyId])
@@ -191,6 +195,24 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+/// Single-use, short-lived password reset. Stored hashed — a leaked table must
+/// not contain working reset links. Not tenant-scoped: it is looked up before
+/// the tenant is known, like RefreshToken.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ---------- Fleet & people ----------
