@@ -179,6 +179,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   unit 107 → 124. **N-3 yopildi**: `tenant-isolation.e2e-spec.ts`dagi ikkita `it.failing`
   oddiy `it()`ga qaytarildi va o'tmoqda — B tenant A'ning `tripId`/`clientId` bilan
   xarajat/kirim yarata olmaydi. `expenses.service.ts` qamrovi 51% → 74% (branch 22% → 67%).
+- **TASK-2.3 (H-5, M-6 qismi)** · `GET /events` endi `ListEventsDto` talab qiladi:
+  `tripId` **majburiy** `@IsUUID()` (avval DTO'siz `@Query('tripId')` edi — berilmasa
+  `where: { tripId: undefined }` bo'lib butun kompaniyaning hamma hodisasi qaytardi,
+  pagination'siz, DRIVER roli uchun ham). Endi pagination + `from`/`to` filtri va
+  **ownership tekshiruvi**: DRIVER faqat o'z reysining hodisalarini ko'radi, aks holda 404.
+  `tracking.controller.ts`dagi qo'lda sana tekshiruvi `RequiredDateRangeDto`ga o'tkazildi
+  (`@IsDate()` bilan — `Invalid Date` endi Prisma'ga bormaydi va xom 500 bermaydi).
+  Umumiy `DateRangeDto`/`RequiredDateRangeDto` `common/dto/`da. Butun kod bazasi tekshirildi:
+  DTO'siz `@Query('...')` boshqa qolmadi. Web timeline `limit: 100` bilan so'raydi
+  (default 20 uzun reysni qirqib qo'yardi). ·
+  `src/common/dto/date-range.dto.ts`, `src/modules/events/dto/event.dto.ts`,
+  `events.controller.ts`, `events.service.ts` (+6 unit test),
+  `tracking.controller.ts`, `apps/web/.../TripDetailPage.tsx`,
+  `test/query-validation.e2e-spec.ts` (+8 e2e) · unit 124 → 130, e2e 36 → 44.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -211,4 +225,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.3 (`GET /events` filtrsiz butun kompaniya hodisalarini qaytaradi).
+PHASE 2 → TASK-2.4 (refresh token: rotation race, reuse detection, client single-flight).

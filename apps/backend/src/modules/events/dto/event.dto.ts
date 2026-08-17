@@ -15,7 +15,10 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IntersectionType } from '@nestjs/mapped-types';
 import { TripEventType } from 'shared';
+import { DateRangeDto } from '../../../common/dto/date-range.dto';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class DriverEventDto {
   /** Client-generated UUID — the idempotency key for offline retries. */
@@ -64,6 +67,16 @@ export class DriverEventDto {
   @IsUUID(undefined, { each: true })
   @ArrayMaxSize(10)
   photoFileIds?: string[];
+}
+
+/**
+ * Listing events REQUIRES a trip. Without it the old handler passed
+ * `where: { tripId: undefined }`, which Prisma drops — returning every event of
+ * the whole company, unpaginated, to any role including DRIVER.
+ */
+export class ListEventsDto extends IntersectionType(PaginationDto, DateRangeDto) {
+  @IsUUID()
+  tripId!: string;
 }
 
 export class EventBatchDto {

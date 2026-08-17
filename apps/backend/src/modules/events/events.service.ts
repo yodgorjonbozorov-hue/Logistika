@@ -1,11 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Driver, type Trip, type TripEvent, type TripStatus } from '@prisma/client';
-import type { CurrentUserPayload } from 'shared';
+import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { DriverEventDto, EventBatchDto } from './dto/event.dto';
+import { DriverEventDto, EventBatchDto, ListEventsDto } from './dto/event.dto';
 
 export interface BatchResult {
   accepted: string[];
@@ -188,11 +188,42 @@ export class EventsService {
     };
   }
 
-  async listByTrip(actor: CurrentUserPayload, tripId: string): Promise<TripEvent[]> {
-    return this.prisma.forCompany(actor.companyId).tripEvent.findMany({
-      where: { tripId },
-      orderBy: { eventTime: 'asc' },
-    });
+  /**
+   * Events of ONE trip, paginated. A driver may only read their own trip:
+   * event rows carry positions, comments and receipt photos, so an unrestricted
+   * list would hand every driver their colleagues' whole day.
+   */
+  async listByTrip(
+    actor: CurrentUserPayload,
+    filter: ListEventsDto,
+  ): Promise<{ data: TripEvent[]; total: number }> {
+    const db = this.prisma.forCompany(actor.companyId);
+
+    const trip = await db.trip.findUnique({ where: { id: filter.tripId } });
+    if (!trip) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    if (actor.role === UserRole.DRIVER) {
+      const driver = await db.driver.findFirst({ where: { userId: actor.userId } });
+      // Someone else's trip is indistinguishable from a missing one.
+      if (!driver || trip.driverId !== driver.id) {
+        throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+      }
+    }
+
+    const where = {
+      tripId: filter.tripId,
+      eventTime:
+        filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
+    };
+    const [data, total] = await Promise.all([
+      db.tripEvent.findMany({
+        where,
+        orderBy: { eventTime: 'asc' },
+        skip: filter.skip,
+        take: filter.limit,
+      }),
+      db.tripEvent.count({ where }),
+    ]);
+    return { data, total };
   }
 
   /** Photo file ids → stored keys; foreign/unknown ids are dropped silently-safe (tenant scope). */

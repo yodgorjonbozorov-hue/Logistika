@@ -4,7 +4,8 @@ import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { THROTTLERS } from '../../common/throttling/throttling.module';
-import { EventBatchDto } from './dto/event.dto';
+import { paginated } from '../../common/dto/pagination.dto';
+import { EventBatchDto, ListEventsDto } from './dto/event.dto';
 import { EventsService } from './events.service';
 
 @Controller('events')
@@ -21,7 +22,8 @@ export class EventsController {
 
   @Get()
   @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT, UserRole.DRIVER)
-  listByTrip(@CurrentUser() user: CurrentUserPayload, @Query('tripId') tripId: string) {
-    return this.eventsService.listByTrip(user, tripId);
+  async listByTrip(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListEventsDto) {
+    const { data, total } = await this.eventsService.listByTrip(user, filter);
+    return paginated(data, filter, total);
   }
 }

@@ -181,8 +181,10 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
   const { t } = useTranslation();
   const { data: events, isLoading } = useQuery({
     queryKey: ['events', trip.id],
+    // The endpoint paginates now (default 20); a long trip has more presses
+    // than that, and the timeline is meant to show the whole trip.
     queryFn: async () =>
-      (await api<TripEventRow[]>('/events', { query: { tripId: trip.id } })).data,
+      (await api<TripEventRow[]>('/events', { query: { tripId: trip.id, limit: '100' } })).data,
   });
 
   if (isLoading) return <Spinner />;

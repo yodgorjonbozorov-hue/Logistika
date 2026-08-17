@@ -197,3 +197,75 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
+
+describe('EventsService.listByTrip (TASK-2.3)', () => {
+  const audit = { log: jest.fn() } as unknown as AuditService;
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['driver', 'trip', 'tripEvent']);
+    db.trip!.findUnique!.mockResolvedValue({ id: 'trip-1', driverId: 'd1' });
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1', userId: 'user-1' });
+    db.tripEvent!.findMany!.mockResolvedValue([{ id: 'e1' }]);
+    db.tripEvent!.count!.mockResolvedValue(1);
+    return { service: new EventsService(prisma, audit), db };
+  }
+
+  const filter = (overrides: Record<string, unknown> = {}) =>
+    ({ tripId: 'trip-1', page: 1, limit: 20, skip: 0, ...overrides }) as never;
+
+  it('always scopes the query to one trip and paginates it', async () => {
+    const { service, db } = setup();
+    const result = await service.listByTrip(ACTOR, filter({ limit: 50, skip: 100 }));
+
+    const args = db.tripEvent!.findMany!.mock.calls[0][0];
+    expect(args.where.tripId).toBe('trip-1');
+    expect(args.take).toBe(50);
+    expect(args.skip).toBe(100);
+    expect(result.total).toBe(1);
+  });
+
+  it('narrows by the requested time window when one is given', async () => {
+    const { service, db } = setup();
+    const from = new Date('2026-08-01T00:00:00Z');
+    const to = new Date('2026-08-02T00:00:00Z');
+    await service.listByTrip(ACTOR, filter({ from, to }));
+
+    expect(db.tripEvent!.findMany!.mock.calls[0][0].where.eventTime).toEqual({
+      gte: from,
+      lte: to,
+    });
+  });
+
+  it('lets a driver read their own trip', async () => {
+    const { service } = setup();
+    const driverActor = { ...ACTOR, role: 'DRIVER' } as typeof ACTOR;
+    await expect(service.listByTrip(driverActor, filter())).resolves.toMatchObject({ total: 1 });
+  });
+
+  it("hides another driver's trip from a driver", async () => {
+    const { service, db } = setup();
+    db.driver!.findFirst!.mockResolvedValue({ id: 'other-driver', userId: 'user-1' });
+    const driverActor = { ...ACTOR, role: 'DRIVER' } as typeof ACTOR;
+
+    await expect(service.listByTrip(driverActor, filter())).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(db.tripEvent!.findMany).not.toHaveBeenCalled();
+  });
+
+  it('lets office roles read any trip in their own company', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({ id: 'trip-1', driverId: 'someone-else' });
+
+    await expect(service.listByTrip(ACTOR, filter())).resolves.toMatchObject({ total: 1 });
+    // Ownership is a driver-only restriction; the tenant scope still applies.
+    expect(db.driver!.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('reports a trip from another tenant as missing', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue(null);
+
+    await expect(service.listByTrip(ACTOR, filter())).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
