@@ -21,5 +21,7 @@
   "AUTH_REFRESH_REUSED": "Xavfsizlik sababli barcha sessiyalar yopildi. Qaytadan kiring",
   "AUTH_ACCOUNT_LOCKED": "Hisob vaqtincha bloklandi (juda ko'p muvaffaqiyatsiz urinish). 15 daqiqadan so'ng qayta urinib ko'ring",
   "AUTH_RESET_TOKEN_INVALID": "Parolni tiklash havolasi yaroqsiz yoki muddati tugagan. Yangi havola so'rang",
-  "SMS_PASSWORD_RESET": "TruckControl: parolni tiklash kodi {token}. Uni hech kimga bermang"
+  "SMS_PASSWORD_RESET": "TruckControl: parolni tiklash kodi {token}. Uni hech kimga bermang",
+  "FILE_INFECTED": "Faylda zararli dastur aniqlandi, yuklanmadi",
+  "QUOTA_EXCEEDED": "Kompaniya uchun ajratilgan saqlash hajmi tugadi. Eski fayllarni o'chiring yoki tarifni kengaytiring"
 }

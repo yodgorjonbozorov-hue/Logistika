@@ -242,6 +242,19 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   web `client.ts` / `AuthContext.tsx` / `ProtectedRoute.tsx` (+3 test),
   mobil `token_store.dart` (+`test/token_store_test.dart`, 6 test), `api_client.dart`,
   `test/token-transport.e2e-spec.ts` (+7 e2e) · web 13 → 16, mobil 16 → 22, e2e 64 → 71.
+- **TASK-2.7 (H-13, M-17)** · Fayl yuklash xavfsizligi: **magic-byte** tekshiruvi
+  (`common/file-signature.ts` — JPEG/PNG/WebP/PDF; client MIME'ga umuman ishonilmaydi,
+  `.exe`ni `image/jpeg` deb yuborish rad etiladi). PDF uchun `%PDF-` + `%%EOF` tekshiruvi.
+  `sharp(..., { limitInputPixels: 50M, failOn: 'error' })` + try/catch → buzuq rasm **415**
+  (avval xom 500). Presigned URL'da `Content-Disposition: attachment` + qat'iy `Content-Type`
+  va tozalangan fayl nomi. Tenant kvotasi (5 GB, `QUOTA_EXCEEDED` 413). AV uchun `FileScanner`
+  interfeysi + `NoopFileScanner` (dev'da bir marta ogohlantirish yozadi — «AV bor» degan
+  yolg'on taassurot qolmasligi uchun); `FILE_INFECTED` kodi tayyor. Multer chegarasi
+  15 MB → **8 MB** (memory storage RAM byudjeti). M-17: kunlik orphan-fayl tozalash job'i
+  (24 soatdan oshgan, hech qanday hodisaga bog'lanmagan fayllar MinIO'dan va bazadan). ·
+  `common/file-signature.ts` (+spec 8 test), `files/file-scanner.ts`, `files.service.ts`
+  (+spec 7 test), `files.controller.ts`, `files.module.ts`, shared + i18n × 3 ·
+  unit 146 → 160.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -274,4 +287,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.7 (fayl yuklash xavfsizligi: magic-byte, sharp limitlari, kvota, AV interfeysi).
+PHASE 2 → TASK-2.8 (backup, monitoring, error tracking).

@@ -16,7 +16,13 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { THROTTLERS } from '../../common/throttling/throttling.module';
 import { FilesService } from './files.service';
 
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+/**
+ * Multer buffers the whole upload in memory, so this cap is also a RAM budget:
+ * 15 MB × concurrent uploads was enough to push the process over on a small
+ * VPS. Phone photos land well under 8 MB, and the rate limiter bounds how many
+ * can be in flight per user.
+ */
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 @Controller('files')
 export class FilesController {
