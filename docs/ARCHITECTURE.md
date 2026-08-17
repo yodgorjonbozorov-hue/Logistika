@@ -108,13 +108,15 @@ qoidasining strukturaviy kafolati.
 
 - Nega: 5–50 texnikali yuzlab mayda firmalar — baza-boshiga-tenant operatsion jihatdan
   ortiqcha; bitta VPS + Docker Compose deploy'ga mos (TZ §7); backup bitta.
-- **Himoya qatlamlari (uchtasi ham majburiy):**
+- **Himoya qatlamlari:**
   1. **JWT ichida `companyId`** — token'dan olinadi, hech qachon so'rov parametridan emas.
+     _Amalda._
   2. **Prisma Client Extension** — tenant-jadvallarga har `find/update/delete` so'roviga
      `company_id` filtrini avtomatik qo'shadi; filtrsiz so'rov xato beradi. Bu «unutib qo'yish»
-     xavfini yopadi.
+     xavfini yopadi. _Amalda, ikki test bilan qo'riqlanadi._
   3. **PostgreSQL Row-Level Security (RLS)** — sessiya o'zgaruvchisi orqali oxirgi qatlam
      (Prisma qatlamida xato bo'lsa ham baza o'tkazmaydi).
+     **Hali yozilmagan** — `docs/SECURITY.md` F-4. Hozircha izolyatsiya 2-qatlamga tayanadi.
 - `SUPERADMIN` (TZ §2 — sotuvchi) alohida guard bilan: firmalarni ro'yxatga olish, obuna
   boshqaruvi; tenant ichki ma'lumotlariga kirmaydi.
 
@@ -262,7 +264,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 | Qaror                                                                                                                       | Sabab                                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bitta baza + `company_id` + Prisma extension + RLS                                                                          | TZ §2/§9 talabi; uch qatlamli himoya bitta unutilgan filtr xatosini ham o'tkazmaydi.                                                           |
+| Bitta baza + `company_id` + Prisma extension (+ rejadagi RLS)                                                               | TZ §2/§9 talabi; uch qatlamli himoya bitta unutilgan filtr xatosini ham o'tkazmaydi.                                                           |
 | Pul — BigInt tiyinda; valyuta kodi + kiritilgan kurs alohida saqlanadi                                                      | `float` yaxlitlash xatolari moliyada mumkin emas; TZ §5 da `currency` (UZS/USD/RUB/KZT) bor.                                                   |
 | `finance` AI'dan to'liq ajratilgan                                                                                          | TZ §8.12.7: foyda/tannarx/farqni kod hisoblaydi, AI faqat izohlaydi.                                                                           |
 | AI chat — 2 bosqichli function calling, SQL yo'q                                                                            | TZ §8.4: AI faqat «qaysi funksiya, qanday parametr»ni tanlaydi; SQL'ni tizim o'zi bajaradi.                                                    |

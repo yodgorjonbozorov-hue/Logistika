@@ -23,6 +23,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
 | [`docs/PILOT.md`](docs/PILOT.md)               | Pilot firmani ishga tushirish qo'llanmasi  |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md)             | Production'ga o'rnatish, HTTPS, zaxira     |
+| [`docs/SECURITY.md`](docs/SECURITY.md)         | Xavfsizlik auditi: topilmalar va holati    |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek

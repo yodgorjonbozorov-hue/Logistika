@@ -146,6 +146,7 @@ describe('AuthService', () => {
       const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
       prisma.refreshToken.findUnique.mockResolvedValue({
         id: 'rt-1',
+        userId: 'user-1',
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 86_400_000),
       });
@@ -153,6 +154,48 @@ describe('AuthService', () => {
       await expect(service.refresh(refreshToken)).rejects.toMatchObject({
         code: 'AUTH_REFRESH_INVALID',
       });
+    });
+
+    it('ends every session when an already-rotated token comes back', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        revokedAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_INVALID',
+      });
+
+      // Either the presented copy or the live one is stolen; there is no way
+      // to tell which, so both sides are logged out and the attempt recorded.
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'REFRESH_REUSE', userId: 'user-1' }),
+      );
+    });
+
+    it('does not end every session for a merely expired token', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() - 1000),
+      });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_INVALID',
+      });
+      expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
     });
 
     it('rejects garbage tokens', async () => {

@@ -62,7 +62,15 @@ export class AuthService {
     const stored = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: this.hashJti(payload.jti) },
     });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date()) {
+      throw new AppException('AUTH_REFRESH_INVALID', HttpStatus.UNAUTHORIZED);
+    }
+    if (stored.revokedAt) {
+      // A token that was already rotated is being presented again. Either it
+      // was stolen or a copy of it was; there is no way to tell which side is
+      // the thief, so every session of that user ends and the attempt is
+      // recorded. Losing a session is cheap; leaving a stolen one alive is not.
+      await this.revokeAllFor(stored.userId, 'REFRESH_REUSE');
       throw new AppException('AUTH_REFRESH_INVALID', HttpStatus.UNAUTHORIZED);
     }
 
@@ -77,6 +85,22 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
     return this.issueTokens(user);
+  }
+
+  /** Ends every session of one user, and says in the audit log why. */
+  private async revokeAllFor(userId: string, reason: string): Promise<void> {
+    const user = await this.usersService.findById(userId);
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    this.audit.log({
+      companyId: user?.companyId ?? null,
+      userId,
+      action: reason,
+      entityType: 'User',
+      entityId: userId,
+    });
   }
 
   async logout(refreshToken: string): Promise<void> {

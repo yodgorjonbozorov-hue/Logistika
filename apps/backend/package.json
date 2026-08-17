@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI \u2014 NestJS API",
+  "description": "TruckControl AI — NestJS API",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -22,6 +22,7 @@
     "@nestjs/mapped-types": "^2.1.1",
     "@nestjs/platform-express": "^10.4.15",
     "@nestjs/schedule": "^4.1.1",
+    "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.1.0",
     "argon2": "^0.41.1",
     "bullmq": "^5.34.0",

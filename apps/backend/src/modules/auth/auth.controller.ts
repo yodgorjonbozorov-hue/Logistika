@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -8,6 +9,17 @@ import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 
+/**
+ * Every unauthenticated route here is rate limited by IP (TZ §9).
+ *
+ * A password and a six-digit SMS code are both short enough to guess given
+ * enough tries, and the per-code attempt counter only limits guesses against
+ * one code — nothing stopped an attacker from asking for a new one.
+ */
+const CREDENTIAL_LIMIT = { default: { limit: 10, ttl: 60_000 } };
+/** Sending an SMS costs money, so asking for one is capped harder. */
+const SMS_LIMIT = { default: { limit: 3, ttl: 60_000 } };
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -16,6 +28,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle(SMS_LIMIT)
   @Post('driver/request-code')
   @HttpCode(HttpStatus.OK)
   requestCode(@Body() dto: RequestCodeDto) {
@@ -23,6 +36,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(CREDENTIAL_LIMIT)
   @Post('driver/verify')
   @HttpCode(HttpStatus.OK)
   verifyCode(@Body() dto: VerifyCodeDto) {
@@ -30,6 +44,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(CREDENTIAL_LIMIT)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {

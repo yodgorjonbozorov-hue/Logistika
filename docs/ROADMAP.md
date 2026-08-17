@@ -147,7 +147,9 @@
       `docker-compose.prod.yml` + `docs/DEPLOY.md` (serverda hali sinalmagan)
 - [x] Kunlik zaxira nusxa (baza dump + fayl mirror, dump har tunda o'qib ko'riladi)
       va tiklash skripti; oylik tiklash tekshiruvi tartibi `docs/DEPLOY.md` §7 da
-- [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
+- [x] Xavfsizlik auditi o'tkazildi — `docs/SECURITY.md`: 3 ta topilma tuzatildi
+      (migratsiyalar, refresh-token qayta ishlatilishi, login/SMS chegarasi),
+      6 tasi rejaga yozildi (RLS, e2e izolyatsiya, audit-log qamrovi, shifrlash)
 - [x] Panel demo rejimi (`pnpm --filter web build:demo`) — backendsiz, fixture ma'lumot bilan
 - [x] Seed/demo ma'lumotlar (`pnpm --filter backend seed`, idempotent, ma'lumotlar
       testlar bilan tekshiriladi), pilot onboarding qo'llanmasi — `docs/PILOT.md`
