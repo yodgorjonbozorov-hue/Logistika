@@ -87,7 +87,8 @@
     "tabs": {
       "timeline": "Xronologiya",
       "finance": "Moliya",
-      "documents": "Hujjatlar"
+      "documents": "Hujjatlar",
+      "chat": "Chat"
     },
     "timelineNote": "Haydovchi hodisalari mobil ilova ulangach shu yerda ko'rinadi (5-bosqich)",
     "documentsNote": "Hujjatlar moduli 7-bosqichda ulanadi",
@@ -554,5 +555,14 @@
       "linked": "Ulangan",
       "unlink": "Uzish"
     }
+  },
+  "chat": {
+    "placeholder": "Xabar yozing…",
+    "send": "Yuborish",
+    "sending": "Yuborilmoqda…",
+    "photo": "📷 Foto",
+    "voice": "🎤 Ovoz",
+    "read": "o'qildi",
+    "attachmentUnavailable": "Fayl ochilmadi"
   }
 }

@@ -26,6 +26,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'AiSettings',
   'AiRequest',
   'AiInsight',
+  'ChatMessage',
 ]);
 
 type AnyArgs = Record<string, unknown>;

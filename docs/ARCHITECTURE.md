@@ -243,7 +243,8 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 ### chat
 
-- `GET/POST /chat/:tripId/messages` — matn + foto + ovozli xabar
+- `GET/POST /chat/:tripId/messages` — matn + foto + ovozli xabar (`before` bilan orqaga varaqlash)
+- `GET /chat/:tripId/unread` · `POST /chat/:tripId/read` — o'qilmagan hisobi va belgilash
 
 ### notifications
 
@@ -313,4 +314,6 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | Reyting yulduzning yuzdan bir ulushida butun son sifatida hisoblanadi                                                       | Bir xil ko'rsatkichli ikki haydovchi doim bir xil saralanadi; float bunga kafolat bermaydi.                                                    |
 | Reyting bilan birga uch ko'rsatkich ham qaytariladi                                                                         | Sababi ko'rinmagan ball bo'yicha haydovchi bilan gaplashib bo'lmaydi va xato ham tuzatilmaydi.                                                 |
 | Normasi yoki masofasi yo'q reys yoqilg'i bo'yicha hisobga kirmaydi                                                          | Aks holda haydovchi to'ldirilmagan maydon uchun jazolangan bo'lardi.                                                                           |
+| Chat reysga bog'langan; haydovchiga begona reys `NOT_FOUND` qaytaradi (`FORBIDDEN` emas)                                    | Javob reys mavjudligini ham tasdiqlamasligi kerak.                                                                                             |
+| Chat ilovasi foto/ovozni oddiy `/files/upload` orqali yuboradi                                                              | Ovozli xabar chatda ham 30 kunlik saqlash qoidasiga bo'ysunadi; ikkinchi saqlash yo'li paydo bo'lmaydi.                                        |
 | Qorong'i rejim — web va mobilda boshidan                                                                                    | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                                |

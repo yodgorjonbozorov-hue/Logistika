@@ -14,6 +14,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { DocumentsModule } from './modules/documents/documents.module';
@@ -62,6 +63,7 @@ import { PrismaModule } from './prisma/prisma.module';
     FilesModule,
     PublicLinkModule,
     NotificationsModule,
+    ChatModule,
     AiModule,
   ],
   controllers: [HealthController],

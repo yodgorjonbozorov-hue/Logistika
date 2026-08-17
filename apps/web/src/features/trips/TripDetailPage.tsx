@@ -24,10 +24,11 @@ import { StatCard } from '../../shared/ui/stats';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
 import { formatBp } from '../../shared/utils/format';
 import { formatTiyin } from '../../shared/utils/money';
+import { ChatTab } from '../chat/ChatTab';
 import { StatusBadge } from './StatusBadge';
 import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
 
-type Tab = 'timeline' | 'finance' | 'documents';
+type Tab = 'timeline' | 'finance' | 'documents' | 'chat';
 
 export function TripDetailPage() {
   const { t } = useTranslation();
@@ -95,7 +96,7 @@ export function TripDetailPage() {
       </Card>
 
       <div className="mb-3 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-white/10">
-        {(['timeline', 'finance', 'documents'] as Tab[]).map((key) => (
+        {(['timeline', 'finance', 'documents', 'chat'] as Tab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -112,6 +113,7 @@ export function TripDetailPage() {
 
       {tab === 'timeline' && <TimelineTab trip={trip} />}
       {tab === 'finance' && <FinanceTab tripId={trip.id} />}
+      {tab === 'chat' && <ChatTab tripId={trip.id} />}
       {tab === 'documents' && (
         <Card>
           <p className="text-sm text-muted">{t('trips.documentsNote')}</p>

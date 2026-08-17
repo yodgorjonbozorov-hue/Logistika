@@ -14,6 +14,34 @@ const som = (value: number): string => String(BigInt(value) * 100n);
 
 export const DEMO_COMPANY = "Yo'lbars Logistika";
 
+/** One exchange on the running trip, so the W-4 chat tab is not empty. */
+export const demoChat = [
+  {
+    id: 'c1',
+    tripId: 't4',
+    senderId: 'u1',
+    senderName: 'Jasur Karimov',
+    mine: true,
+    kind: 'TEXT',
+    body: 'Chegaradan o‘tdingizmi?',
+    fileId: null,
+    readAt: iso(0, 8, 30),
+    createdAt: iso(0, 8, 15),
+  },
+  {
+    id: 'c2',
+    tripId: 't4',
+    senderId: 'drv-1',
+    senderName: 'Alisher Toshmatov',
+    mine: false,
+    kind: 'TEXT',
+    body: 'Ha, navbatda 40 daqiqa turdim. Endi yo‘ldaman.',
+    fileId: null,
+    readAt: null,
+    createdAt: iso(0, 8, 42),
+  },
+];
+
 export const demoCompany = {
   id: 'c1',
   name: DEMO_COMPANY,

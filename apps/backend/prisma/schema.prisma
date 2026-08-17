@@ -107,6 +107,15 @@ enum DocumentOwnerType {
   @@map("document_owner_type")
 }
 
+/// What a chat message carries (TZ §3.2 E-4).
+enum ChatMessageKind {
+  TEXT
+  PHOTO
+  VOICE
+
+  @@map("chat_message_kind")
+}
+
 enum MaintenanceType {
   PLANNED_TO
   REPAIR
@@ -193,6 +202,7 @@ model Company {
   aiSettings    AiSettings?
   aiRequests    AiRequest[]
   aiInsights    AiInsight[]
+  chatMessages  ChatMessage[]
 
   @@map("companies")
 }
@@ -366,6 +376,7 @@ model Trip {
   driver        Driver?        @relation(fields: [driverId], references: [id])
   createdBy     User?          @relation("TripCreatedBy", fields: [createdById], references: [id])
   events        TripEvent[]
+  chatMessages  ChatMessage[]
   expenses      Expense[]
   fuelLogs      FuelLog[]
   incomes       Income[]
@@ -716,6 +727,31 @@ model AiInsight {
 
   @@index([companyId, status, createdAt])
   @@map("ai_insights")
+}
+
+/// Logist ↔ driver conversation about one trip (TZ §3.2 E-4).
+model ChatMessage {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  tripId    String  @map("trip_id")
+  /// Who wrote it. Null only if the author was deleted; the trail stays.
+  senderId  String? @map("sender_id")
+
+  kind   ChatMessageKind @default(TEXT)
+  body   String?
+  /// Photo or voice note in MinIO; voice notes expire like every other one.
+  fileId String?         @map("file_id")
+
+  /// When the other side opened the thread — one timestamp, not per reader:
+  /// a trip thread has exactly two sides.
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  trip    Trip    @relation(fields: [tripId], references: [id])
+
+  @@index([companyId, tripId, createdAt])
+  @@map("chat_messages")
 }
 
 // ---------- Files (MinIO object metadata) ----------

@@ -27,6 +27,7 @@ const EXEMPT: Record<string, string> = {
   'ai/anomaly.service.ts': 'nightly detector writing its own insights',
   'alerts/alerts.service.ts': 'the alert centre itself; alerts are not user edits',
   'audit/audit.service.ts': 'this is the audit log',
+  'chat/chat.service.ts': 'messages are append-only and are their own record; no edit or delete',
   'auth/auth.service.ts': 'audits through log() with its own actions',
   'auth/driver-auth.service.ts': 'SMS codes and attempt counters, not business data',
   'companies/companies.service.ts': 'audits through log() with before/after',

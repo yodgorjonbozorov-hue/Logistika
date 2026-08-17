@@ -137,7 +137,8 @@
       demo CTA; uz-latn/uz-cyrl/ru, bog'lanish kanallari env orqali
 - [x] W-11 sozlamalar sahifasi: firma ma'lumoti (til, vaqt mintaqasi), ogohlantirish
       chegaralari, AI kalitlari va oylik limit, Telegram ulash
-- [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
+- [x] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar) — reysga bog'langan
+      W-4 tabi; haydovchi faqat o'z reysini ochadi; mobil tomoni E-4 bilan birga
 - [x] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — W-6 kartochkasi,
       `GET /drivers/ratings`, tungi kesh; E-7 dagi ko'rsatish mobil bilan birga
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)

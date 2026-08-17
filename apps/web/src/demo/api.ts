@@ -9,6 +9,7 @@
 import i18n from '../shared/i18n';
 import {
   demoAlerts,
+  demoChat,
   demoClients,
   demoDrivers,
   demoEvents,
@@ -37,6 +38,7 @@ const store = {
   incomes: [...demoIncomes],
   fuel: [...demoFuelLogs],
   alerts: [...demoAlerts],
+  chat: [...demoChat],
 };
 
 // ---------- money helpers (BigInt tiyin, basis points) ----------
@@ -676,6 +678,31 @@ export function resolve(
   // Nothing has run the nightly scan in a static demo, so there is nothing
   // to show — better an empty card than invented anomalies.
   if (path === '/ai/insights') return { data: [] };
+  // The demo has one canned exchange per trip so the chat tab is not blank;
+  // sending appends to it and lasts until the page is reloaded.
+  const chatMatch = /^\/chat\/([\w-]+)\/(messages|read|unread)$/.exec(path);
+  if (chatMatch) {
+    const [, tripId, action] = chatMatch as unknown as [string, string, string];
+    if (action === 'unread') return { data: { unread: 0 } };
+    if (action === 'read') return { data: { read: 0 } };
+    if (method === 'POST') {
+      const message = {
+        id: `c${store.chat.length + 1}`,
+        tripId,
+        senderId: demoUser.id,
+        senderName: demoUser.fullName,
+        mine: true,
+        kind: (body.kind as string) ?? 'TEXT',
+        body: (body.body as string) ?? null,
+        fileId: null,
+        readAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      store.chat.push(message);
+      return { data: message };
+    }
+    return { data: store.chat.filter((message) => message.tripId === tripId) };
+  }
   if (path === '/drivers/ratings') return { data: driverRatings() };
   // The demo has no backend and no API key, so AI is off: the receipt-scan
   // button hides itself rather than pretending to read a photo.
