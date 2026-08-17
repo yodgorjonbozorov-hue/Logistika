@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/commo
 import { Throttle } from '@nestjs/throttler';
 import type { CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ANY_ROLE, Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { DriverAuthService } from './driver-auth.service';
@@ -67,6 +68,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @Roles(...ANY_ROLE)
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.me(user.userId);
   }

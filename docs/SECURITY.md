@@ -104,22 +104,25 @@ olmaydi» stsenariysi haqiqiy PostgreSQL'da hech qachon bajarilmagan —
 har modulning `GET/PATCH/DELETE :id` uchun 404 kutiladi. CI'da postgres
 service bilan ishlaydi.
 
-### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymaydi
+### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymasdi — tuzatildi
 
-HSTS, `X-Content-Type-Options`, `X-Frame-Options` — hammasi nginx'da.
-`docker-compose.prod.yml` bilan bu to'g'ri, lekin backend to'g'ridan-to'g'ri
-ochilsa (masalan boshqa proksi ortida) sarlavhalar yo'qoladi.
+HSTS, `X-Content-Type-Options`, `X-Frame-Options` faqat nginx'da edi.
+`docker-compose.prod.yml` bilan bu to'g'ri, lekin backend boshqa proksi ortida
+ochilsa sarlavhalar yo'qolardi.
 
-**Reja:** `helmet` ni ilovaga qo'shish — nginx bilan ikkilanishi zarar qilmaydi.
+**Tuzatildi:** `helmet` ilovaning o'zida. CSP o'chirilgan — API JSON qaytaradi,
+CSP esa panel (nginx) tomonida ma'noga ega.
 
-### F-9 · Past · `@Roles` bo'lmasa — hamma autentifikatsiyadan o'tganga ruxsat
+### F-9 · Past · `@Roles` bo'lmasa hammaga ruxsat edi — tuzatildi
 
-`RolesGuard` metadata bo'lmasa `true` qaytaradi. Ya'ni yangi kontroller
-`@Roles` yozishni unutsa, u haydovchiga ham ochiq bo'ladi. Hozir bunday ikki
-kontroller bor va ikkalasi ham ataylab: `auth` (ko'p yo'llari `@Public`) va
-`files` (haydovchi foto yuklashi kerak; o'qish tenant bo'yicha chegaralangan).
+`RolesGuard` metadata bo'lmasa `true` qaytarardi: yangi kontroller `@Roles`
+yozishni unutsa, u haydovchiga ham ochiq bo'lardi.
 
-**Reja:** guard'ni default-deny qilish va istisnolarni aniq belgilash.
+**Tuzatildi:** guard endi default-deny. Rol e'lon qilmagan yo'l rad etiladi,
+`@Public` esa avvalgidek o'tadi. Ataylab hammaga ochiq ikki joy endi buni
+aniq yozadi: `files` (haydovchi chek fotosini yuklaydi) va `GET /auth/me` —
+`@Roles(...ANY_ROLE)`. Kontroller darajasidagi qamrov test bilan
+qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
 
 ## Tekshirilgan va joyida
 
@@ -136,6 +139,6 @@ kontroller bor va ikkalasi ham ataylab: `auth` (ko'p yo'llari `@Public`) va
 
 ## Keyingi audit uchun
 
-Ustuvorlik tartibi: **F-4 (RLS) → F-7 (e2e izolyatsiya) → F-6 (shifrlash) →
-F-8, F-9**. F-4 va F-7 birga bajarilgani ma'qul: RLS ni sinaydigan yagona
-ishonchli usul — real bazadagi izolyatsiya testi.
+Ochiq qolgani: **F-4 (RLS), F-6 (fayl shifrlash), F-7 (e2e izolyatsiya)**.
+Tartib: F-4 va F-7 birga — RLS ni sinaydigan yagona ishonchli usul real
+bazadagi izolyatsiya testi; keyin F-6.
