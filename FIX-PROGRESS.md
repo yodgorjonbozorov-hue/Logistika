@@ -65,21 +65,29 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `apps/backend/package.json`, `apps/backend/src/app.module.ts`, `.env.example`, `README.md`,
   `CLAUDE.md` · tasdiqlandi: toza bazada `migrate deploy && db seed` ishlaydi, seed 2-marta
   ishga tushirilganda dublikat yaratmaydi, `SEED_SUPERADMIN_PASSWORD` yo'q bo'lsa xato bilan to'xtaydi.
+- **TASK-1.2 (C-3, M-10, M-11)** · Mobil offline navbat ma'lumot yo'qotmaydi: `rejected` endi
+  `synced = 1` qilinmaydi, balki `retry_count++` + `last_error` + exponential backoff (30s → 2h),
+  5 urinishdan keyin `needs_attention` va profil ekranida qo'lda «Qayta yuborish». SQLite v2
+  migratsiyasi (`onUpgrade`, avval umuman yo'q edi) va `purgeSynced()` (7 kundan eski synced
+  yozuvlar) qo'shildi. · `lib/core/db/app_database.dart`, `lib/core/sync/offline_queue.dart`,
+  `lib/features/profile/profile_tab.dart`, `lib/core/i18n/app_strings.dart` (3 til),
+  `test/offline_queue_test.dart` (+4 test) · `flutter test` 10/10, `flutter analyze` toza.
 
 ## Bloklangan / keyinga qoldirilgan
 
 (sabab bilan)
 
-- Flutter gate (`flutter analyze`, `flutter test`): **tekshirilmadi** — muhitda Flutter SDK yo'q.
-  Mobil tasklar (TASK-1.2, TASK-1.6, TASK-5.4) kodda bajariladi, lekin SDK bilan tasdiqlanmaydi.
+- (hozircha yo'q)
 
 ## Yangi topilgan muammolar
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-2 (info)**: muhitda Flutter SDK yo'q edi — 3.47.0 stable `/opt/flutter`ga o'rnatildi, shuning
+  uchun mobil gate (`flutter test`, `flutter analyze`) real ishlaydi.
 - **N-1 (info)**: audit'ning baseline bashorati noto'g'ri (yuqoriga qara) — backend unit testlari
   jest `moduleNameMapper` tufayli yashil. Bu TASK-1.3 doirasini kamaytiradi, bekor qilmaydi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.2 (mobil offline navbat: rad etilgan hodisalar ma'lumot yo'qotadi).
+PHASE 1 → TASK-1.3 (test infratuzilmasi: shared dist kafolati, real e2e, CI).

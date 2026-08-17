@@ -43,6 +43,23 @@ class OfflineQueue {
   OfflineQueue(this._db, this._api, this._tokens, {Connectivity? connectivity})
       : _connectivity = connectivity ?? Connectivity();
 
+  /// After this many failed attempts the event stops retrying by itself and
+  /// waits for the driver (needs_attention) — it is never silently dropped.
+  static const maxAutoRetries = 5;
+
+  /// Backoff per retry_count; the last value repeats for anything beyond.
+  static const retryBackoff = <Duration>[
+    Duration(seconds: 30),
+    Duration(minutes: 2),
+    Duration(minutes: 10),
+    Duration(minutes: 30),
+    Duration(hours: 2),
+  ];
+
+  /// Synced rows are kept this long for the "recent events" list, then purged
+  /// so the local database does not grow without bound.
+  static const syncedRetention = Duration(days: 7);
+
   final AppDatabase _db;
   final ApiClient _api;
   final TokenStore _tokens;
@@ -98,12 +115,44 @@ class OfflineQueue {
     return Sqflite.firstIntValue(rows) ?? 0;
   }
 
+  /// Events the server refused often enough that automatic retries stopped.
+  /// The driver has to see these — they hold receipts and delivery proof.
+  Future<int> needsAttentionCount() async {
+    final rows = await _db.db.rawQuery(
+      'SELECT COUNT(*) AS c FROM pending_events WHERE synced = 0 AND retry_count >= ?',
+      [maxAutoRetries],
+    );
+    return Sqflite.firstIntValue(rows) ?? 0;
+  }
+
+  Future<List<Map<String, Object?>>> needsAttentionEvents({int limit = 50}) {
+    return _db.db.query(
+      'pending_events',
+      where: 'synced = 0 AND retry_count >= ?',
+      whereArgs: [maxAutoRetries],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+  }
+
   Future<List<Map<String, Object?>>> recentEvents({int limit = 50}) {
     return _db.db.query(
       'pending_events',
       orderBy: 'created_at DESC',
       limit: limit,
     );
+  }
+
+  /// Manual "send again" from the UI: clears the backoff for the stalled rows
+  /// and syncs right away.
+  Future<void> retryFailedEvents() async {
+    await _db.db.update(
+      'pending_events',
+      {'retry_count': 0, 'last_attempt_at': null},
+      where: 'synced = 0 AND retry_count >= ?',
+      whereArgs: [maxAutoRetries],
+    );
+    await syncAll();
   }
 
   // ---------- GPS ----------
@@ -139,12 +188,48 @@ class OfflineQueue {
       // the next enqueue retries. Never crash the driver flow.
     } finally {
       _syncing = false;
+      // Runs even after a failed sync: it only touches already-synced rows.
+      try {
+        await purgeSynced();
+      } on Exception {
+        // Housekeeping must never break the driver flow.
+      }
     }
   }
 
+  /// Drops rows that reached the server and are older than [syncedRetention],
+  /// so a phone that has been in service for months keeps a bounded database.
+  Future<int> purgeSynced({Duration? olderThan}) async {
+    final cutoff = DateTime.now().toUtc().subtract(olderThan ?? syncedRetention);
+    final removed = await _db.db.delete(
+      'pending_events',
+      where: 'synced = 1 AND created_at < ?',
+      whereArgs: [cutoff.toIso8601String()],
+    );
+    await _db.db.delete(
+      'pending_positions',
+      where: 'synced = 1 AND recorded_at < ?',
+      whereArgs: [cutoff.toIso8601String()],
+    );
+    return removed;
+  }
+
+  /// True when an event that already failed is allowed to go out again.
+  bool _isDue(Map<String, Object?> row, DateTime now) {
+    final retryCount = (row['retry_count'] as int?) ?? 0;
+    if (retryCount == 0) return true;
+    if (retryCount >= maxAutoRetries) return false; // waits for the driver
+    final lastAttempt = row['last_attempt_at'] as String?;
+    if (lastAttempt == null) return true;
+    final backoff = retryBackoff[retryCount.clamp(0, retryBackoff.length - 1)];
+    return DateTime.parse(lastAttempt).add(backoff).isBefore(now);
+  }
+
   Future<void> _syncEvents() async {
-    final rows = await _db.db
+    final now = DateTime.now().toUtc();
+    final candidates = await _db.db
         .query('pending_events', where: 'synced = 0', orderBy: 'created_at', limit: 100);
+    final rows = candidates.where((row) => _isDue(row, now)).toList();
     if (rows.isEmpty) return;
 
     final events = <Map<String, Object?>>[];
@@ -180,11 +265,13 @@ class OfflineQueue {
       method: 'POST',
       body: {'events': events},
     );
-    // Both accepted and duplicate ids are safe to mark as synced.
+    // Only accepted and duplicate ids reached the server. Rejected events stay
+    // in the queue: the server refuses them for reasons that pass (the trip was
+    // reassigned while the driver was offline), and marking them synced would
+    // throw away receipts, expenses and delivery proof for good.
     final done = [
       ...(result['accepted'] as List? ?? []),
       ...(result['duplicates'] as List? ?? []),
-      ...((result['rejected'] as List? ?? []).map((r) => r['clientEventId'])),
     ];
     for (final id in done) {
       await _db.db.update(
@@ -192,6 +279,16 @@ class OfflineQueue {
         {'synced': 1},
         where: 'client_event_id = ?',
         whereArgs: [id],
+      );
+    }
+
+    final attemptedAt = DateTime.now().toUtc().toIso8601String();
+    for (final rejected in (result['rejected'] as List? ?? [])) {
+      final entry = rejected as Map<String, dynamic>;
+      await _db.db.rawUpdate(
+        'UPDATE pending_events SET retry_count = retry_count + 1, '
+        'last_error = ?, last_attempt_at = ? WHERE client_event_id = ?',
+        [entry['code'], attemptedAt, entry['clientEventId']],
       );
     }
   }

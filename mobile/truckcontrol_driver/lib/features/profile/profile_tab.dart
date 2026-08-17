@@ -16,6 +16,7 @@ class ProfileTab extends StatefulWidget {
 class _ProfileTabState extends State<ProfileTab> {
   Map<String, dynamic>? _me;
   int _pending = 0;
+  List<Map<String, Object?>> _stalled = const [];
 
   @override
   void didChangeDependencies() {
@@ -27,17 +28,17 @@ class _ProfileTabState extends State<ProfileTab> {
     final scope = AppScope.of(context);
     try {
       final me = await scope.api.request<Map<String, dynamic>>('/auth/me');
-      final pending = await scope.queue.pendingEventCount();
-      if (mounted) {
-        setState(() {
-          _me = me;
-          _pending = pending;
-        });
-      }
+      if (mounted) setState(() => _me = me);
     } on Exception {
-      // Profile screen tolerates being offline; queue counter still updates.
-      final pending = await scope.queue.pendingEventCount();
-      if (mounted) setState(() => _pending = pending);
+      // Profile screen tolerates being offline; queue counters still update.
+    }
+    final pending = await scope.queue.pendingEventCount();
+    final stalled = await scope.queue.needsAttentionEvents();
+    if (mounted) {
+      setState(() {
+        _pending = pending;
+        _stalled = stalled;
+      });
     }
   }
 
@@ -89,6 +90,41 @@ class _ProfileTabState extends State<ProfileTab> {
                 : null,
           ),
         ),
+        // Events the server keeps refusing: shown explicitly, never dropped.
+        if (_stalled.isNotEmpty)
+          Card(
+            color: BrandColors.danger.withValues(alpha: 0.08),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.warning_amber, color: BrandColors.danger),
+                  title: Text('${t.t('sync.failed')} (${_stalled.length})'),
+                  subtitle: Text(t.t('sync.failedHint')),
+                ),
+                for (final row in _stalled)
+                  ListTile(
+                    dense: true,
+                    title: Text(t.t('event.${row['event_type']}')),
+                    subtitle: Text(
+                      '${row['event_time']}'
+                      '${row['last_error'] != null ? ' · ${row['last_error']}' : ''}',
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await scope.queue.retryFailedEvents();
+                      await _load();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: Text(t.t('sync.retry')),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Card(
           child: ListTile(
             leading: const Icon(Icons.language, color: BrandColors.accent),
