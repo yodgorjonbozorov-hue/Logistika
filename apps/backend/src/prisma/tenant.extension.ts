@@ -81,16 +81,38 @@ export function applyTenantScope(
   return safeArgs;
 }
 
+/**
+ * Scopes the arguments AND hands the tenant to PostgreSQL, so the row-level
+ * security policies of migration `20260818000000_rls` apply to the same query.
+ *
+ * The setting is transaction-local, which is why the operation is run as a
+ * two-statement batch: a pooled connection cannot carry one request's tenant
+ * into the next request's query. The bare client (auth, cron jobs, seed) sets
+ * nothing and stays unrestricted — that escape hatch is documented with the
+ * policies themselves.
+ *
+ * The setting is sent for every model, not only the scoped ones: a model
+ * missing from TENANT_MODELS is precisely the mistake this second layer is
+ * here to catch.
+ */
 export function tenantExtension(companyId: string) {
-  return Prisma.defineExtension({
-    name: 'tenant-scope',
-    query: {
-      $allModels: {
-        $allOperations({ model, operation, args, query }) {
-          if (!TENANT_MODELS.has(model)) return query(args);
-          return query(applyTenantScope(operation, args as AnyArgs, companyId) as typeof args);
+  return Prisma.defineExtension((client) =>
+    client.$extends({
+      name: 'tenant-scope',
+      query: {
+        $allModels: {
+          async $allOperations({ model, operation, args, query }) {
+            const scoped = TENANT_MODELS.has(model)
+              ? query(applyTenantScope(operation, args as AnyArgs, companyId) as typeof args)
+              : query(args);
+            const [, result] = await client.$transaction([
+              client.$executeRaw`SELECT set_config('app.company_id', ${companyId}, true)`,
+              scoped,
+            ]);
+            return result;
+          },
         },
       },
-    },
-  });
+    }),
+  );
 }

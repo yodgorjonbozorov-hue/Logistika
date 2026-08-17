@@ -20,7 +20,8 @@ Production uchun majburiy:
 | O'zgaruvchi                                | Izoh                                               |
 | ------------------------------------------ | -------------------------------------------------- |
 | `PANEL_DOMAIN`                             | `panel.firma.uz` — sertifikat shu nomga olinadi    |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD`      | Kuchli parol, `.env` dan tashqarida saqlanmasin    |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD`      | Baza superuseri — faqat administratsiya va zaxira  |
+| `APP_DB_USER` / `APP_DB_PASSWORD`          | Ilova ulanadigan rol; superuser bo'lmasligi shart  |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Har biri kamida 32 tasodifiy belgi                 |
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`  | Fayl saqlash kirish ma'lumotlari                   |
 | `BACKUP_DIR`                               | Zaxira papkasi — **boshqa diskda yoki tashqarida** |
@@ -156,6 +157,39 @@ oling:
 ```bash
 docker compose -f docker-compose.prod.yml exec backup /scripts/backup.sh
 ```
+
+### Ilova rolini qo'shish (mavjud o'rnatmalar uchun bir martalik)
+
+`deploy/postgres/10-app-role.sh` faqat **yangi** postgres tomida ishlaydi.
+Baza allaqachon ko'tarilgan bo'lsa, `APP_DB_USER` ni qo'lda yarating —
+aks holda ilova superuser bilan ulanib qoladi va RLS siyosati kuchga kirmaydi:
+
+```bash
+docker compose -f docker-compose.prod.yml exec postgres \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+    -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" -v db_name="$POSTGRES_DB" <<'SQL'
+CREATE ROLE :"app_user" LOGIN PASSWORD :'app_password'
+  NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB;
+ALTER DATABASE :"db_name" OWNER TO :"app_user";
+ALTER SCHEMA public OWNER TO :"app_user";
+GRANT ALL ON SCHEMA public TO :"app_user";
+REASSIGN OWNED BY CURRENT_USER TO :"app_user";
+SQL
+docker compose -f docker-compose.prod.yml up -d backend
+```
+
+To'g'ri bajarilganini backend logi aytadi: rol RLS'dan ozod bo'lsa, ko'tarilishda
+«Database role bypasses row-level security» ogohlantirishi chiqadi. Chiqmasa —
+qatlam ishlayapti. Qo'lda tekshirish:
+
+```bash
+docker compose -f docker-compose.prod.yml exec postgres \
+  psql -U "$APP_DB_USER" -d "$POSTGRES_DB" -tAc \
+  "BEGIN; SELECT set_config('app.company_id','yo-q-firma',true); SELECT count(*) FROM vehicles; COMMIT;"
+```
+
+Javob `0` bo'lishi kerak — mashinalar bor bo'lsa ham. Boshqa raqam chiqsa, ilova
+hali ham superuser bilan ulangan.
 
 ## 10. Loglar va monitoring
 

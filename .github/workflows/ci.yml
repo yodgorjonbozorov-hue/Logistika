@@ -71,4 +71,31 @@ jobs:
       # The same command the production image runs, so a broken migration is
       # found here rather than on a first deploy.
       - run: pnpm --filter backend exec prisma migrate deploy
+
+      # The service container hands out a superuser, and a superuser is exempt
+      # from row-level security — the suites would pass while the third
+      # isolation layer sat inert. So the tests run as the same kind of role
+      # production uses: owner of the schema, but NOSUPERUSER NOBYPASSRLS.
+      - name: Hand the schema to a non-superuser app role
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE truckcontrol_app LOGIN PASSWORD 'ci-app-password' NOSUPERUSER NOBYPASSRLS NOCREATEDB;
+          ALTER SCHEMA public OWNER TO truckcontrol_app;
+          GRANT ALL ON SCHEMA public TO truckcontrol_app;
+          DO $$
+          DECLARE r record;
+          BEGIN
+            FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+              EXECUTE format('ALTER TABLE public.%I OWNER TO truckcontrol_app', r.tablename);
+            END LOOP;
+            FOR r IN SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+                     WHERE n.nspname = 'public' AND t.typtype = 'e' LOOP
+              EXECUTE format('ALTER TYPE public.%I OWNER TO truckcontrol_app', r.typname);
+            END LOOP;
+            EXECUTE 'ALTER FUNCTION public.app_current_company() OWNER TO truckcontrol_app';
+          END $$;
+          SQL
+
       - run: pnpm --filter backend test:e2e
+        env:
+          DATABASE_URL: postgresql://truckcontrol_app:ci-app-password@localhost:5432/truckcontrol_test?schema=public

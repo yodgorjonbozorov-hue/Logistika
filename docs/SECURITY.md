@@ -44,24 +44,56 @@ hech narsa hujumchiga yangi kod so'rashni taqiqlamasdi.
 daqiqasiga 10, `driver/request-code` uchun daqiqasiga 3 (SMS pul turadi).
 Umumiy default daqiqasiga 300, ya'ni oddiy ishlashda sezilmaydi.
 
-## Ochiq qolgani
+## Qolgan topilmalar
 
-### F-4 · Yuqori · RLS hujjatda bor, kodda yo'q
+### F-4 · Yuqori · RLS hujjatda bor, kodda yo'q edi — tuzatildi
 
 `docs/ARCHITECTURE.md` uch qatlamli himoyani va'da qilgan: `company_id`
 filtri, Prisma extension va PostgreSQL Row-Level Security. Uchinchi qatlam
-yozilmagan — na migratsiya, na siyosat (policy).
+yozilmagan edi — na migratsiya, na siyosat (policy). Oldingi auditda u ochiq
+qoldirilgan edi: sinab ko'radigan baza yo'q edi, sinovsiz RLS esa butun
+ilovani o'z ma'lumotidan qulflab qo'yishi mumkin.
 
-Amaldagi holat: izolyatsiya **Prisma extension** ga tayanadi
-(`tenant.extension.ts`), uni ikki test qo'riqlaydi — modellar qamrovi va har
-operatsiya uchun filtr qo'shilishi. Bu yaxshi qatlam, lekin bitta.
+**Tuzatildi.** Endi baza bor (mahalliy PostgreSQL 16) va qatlam yozilib,
+tekshirildi:
 
-**Reja:** har tenant jadvaliga `ENABLE ROW LEVEL SECURITY` + `FORCE` va
-`company_id = current_setting('app.company_id')::uuid` siyosati; `PrismaService`
-har tranzaksiyada shu sozlamani o'rnatadi. Bu yerda bajarilmadi: sinab
-ko'radigan baza yo'q, sinovsiz RLS esa butun ilovani qulflab qo'yishi mumkin.
-Hujjatdagi da'vo shu holatga moslab tuzatildi — bajarilmagan narsa
-bajarilgandek turmasin.
+- Migratsiya `20260818000000_rls` — `company_id` bor 21 jadvalga
+  `ENABLE` + `FORCE ROW LEVEL SECURITY` va `tenant_isolation` siyosati.
+  `FORCE` shart, chunki ilova jadvallarning egasi bo'lib ulanadi, ega esa
+  majburlanmasa o'z siyosatidan ozod.
+- Tenant tranzaksiya-lokal `app.company_id` sozlamasi orqali beriladi.
+  `tenant.extension.ts` har operatsiyani ikki bosqichli batch tranzaksiyaga
+  o'raydi: avval `set_config`, keyin so'rovning o'zi. Lokal bo'lgani uchun u
+  pool'dagi ulanish orqali keyingi so'rovga o'tib ketmaydi — bu ham test bilan
+  qo'riqlanadi.
+- Sozlama **har model uchun** qo'yiladi, faqat `TENANT_MODELS` dagilar uchun
+  emas. Sabab: `TENANT_MODELS` ga qo'shilmay qolgan model — aynan shu qatlam
+  tutishi kerak bo'lgan xato.
+
+**Ataylab qoldirilgan yo'l:** sozlama yo'q bo'lsa siyosat hech narsani
+cheklamaydi. Kirish (telefon/email bo'yicha qidirish), tungi cron'lar (hamma
+firmani aylanadi), ommaviy tracking-havola va seed — bularning hammasi tenant
+ma'lum bo'lishidan oldin ishlaydi va yalang'och klientdan foydalanadi. Bu
+qatlamning kuchini kamaytiradi, shuning uchun yashirilmayapti: RLS bu yerda
+«ilova xato qildi» holatini tutadi, «ilova buzildi» holatini emas.
+
+**Superuser haqida.** PostgreSQL superuser'ni (va `BYPASSRLS` rolini) siyosatdan
+ozod qiladi — policy'lar `pg_policy` da turadi, o'rnatilgandek ko'rinadi va hech
+nima qilmaydi. Shuning uchun:
+
+- `docker-compose.prod.yml` endi ikki rol saqlaydi: `POSTGRES_USER` (superuser,
+  administratsiya va zaxira uchun) va `APP_DB_USER` — ilova ulanadigan,
+  `NOSUPERUSER NOBYPASSRLS` rol, u bazaning egasi (`deploy/postgres/10-app-role.sh`).
+- Backend ko'tarilishda o'z rolini tekshiradi va ozod bo'lsa baland ovozda
+  ogohlantiradi (`prisma.service.ts`) — bu nosozlik ilova ichidan ko'rinmaydi.
+- Mavjud o'rnatmalar uchun bir martalik qadam `docs/DEPLOY.md` §9 da.
+
+**Tekshiruv:** `apps/backend/test/rls.e2e-spec.ts` — ataylab **extension'siz**
+yalang'och klient bilan, maxsus yaratilgan `NOSUPERUSER` rol ostida ishlaydi va
+filtrsiz so'rov yuboradi: baza o'zi begona qatorni bermasligi, begona
+`company_id` bilan yozishga ruxsat bermasligi (`WITH CHECK`), begona qatorni
+`update`/`delete` qilmasligi, tenantsiz yo'l ochiq qolishi va sozlama keyingi
+so'rovga o'tib ketmasligi tekshiriladi.
 
 ### F-5 · O'rta · Audit-log hamma o'zgarishni qamramasdi — tuzatildi
 
@@ -117,6 +149,26 @@ Endi ular haqiqatan bajarildi: muhitga PostgreSQL 16 mahalliy ko'tarilib,
 yugurishdayoq ular haqiqiy teshik topdi — pastdagi **F-10**. Ya'ni bu testlar
 bezak emas.
 
+### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymasdi — tuzatildi
+
+HSTS, `X-Content-Type-Options`, `X-Frame-Options` faqat nginx'da edi.
+`docker-compose.prod.yml` bilan bu to'g'ri, lekin backend boshqa proksi ortida
+ochilsa sarlavhalar yo'qolardi.
+
+**Tuzatildi:** `helmet` ilovaning o'zida. CSP o'chirilgan — API JSON qaytaradi,
+CSP esa panel (nginx) tomonida ma'noga ega.
+
+### F-9 · Past · `@Roles` bo'lmasa hammaga ruxsat edi — tuzatildi
+
+`RolesGuard` metadata bo'lmasa `true` qaytarardi: yangi kontroller `@Roles`
+yozishni unutsa, u haydovchiga ham ochiq bo'lardi.
+
+**Tuzatildi:** guard endi default-deny. Rol e'lon qilmagan yo'l rad etiladi,
+`@Public` esa avvalgidek o'tadi. Ataylab hammaga ochiq ikki joy endi buni
+aniq yozadi: `files` (haydovchi chek fotosini yuklaydi) va `GET /auth/me` —
+`@Roles(...ANY_ROLE)`. Kontroller darajasidagi qamrov test bilan
+qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
+
 ### F-10 · Yuqori · Tashqi kalit tenant chegarasidan o'tib ketardi — tuzatildi
 
 Izolyatsiya paketi birinchi marta real bazada ishlaganda `POST /expenses`
@@ -139,26 +191,6 @@ tenant-klient orqali qidiriladi; begona id yo'q id bilan bir xil 404 oladi
 ko'chirildi, ya'ni qoida bitta joyda yashaydi. Qamrov: `tenant-refs.spec.ts`
 va izolyatsiya e2e'sida to'rt yangi stsenariy (xarajat, kirim, yoqilg'i, reys).
 
-### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymasdi — tuzatildi
-
-HSTS, `X-Content-Type-Options`, `X-Frame-Options` faqat nginx'da edi.
-`docker-compose.prod.yml` bilan bu to'g'ri, lekin backend boshqa proksi ortida
-ochilsa sarlavhalar yo'qolardi.
-
-**Tuzatildi:** `helmet` ilovaning o'zida. CSP o'chirilgan — API JSON qaytaradi,
-CSP esa panel (nginx) tomonida ma'noga ega.
-
-### F-9 · Past · `@Roles` bo'lmasa hammaga ruxsat edi — tuzatildi
-
-`RolesGuard` metadata bo'lmasa `true` qaytarardi: yangi kontroller `@Roles`
-yozishni unutsa, u haydovchiga ham ochiq bo'lardi.
-
-**Tuzatildi:** guard endi default-deny. Rol e'lon qilmagan yo'l rad etiladi,
-`@Public` esa avvalgidek o'tadi. Ataylab hammaga ochiq ikki joy endi buni
-aniq yozadi: `files` (haydovchi chek fotosini yuklaydi) va `GET /auth/me` —
-`@Roles(...ANY_ROLE)`. Kontroller darajasidagi qamrov test bilan
-qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
-
 ## Tekshirilgan va joyida
 
 | Nima                               | Dalil                                                                              |
@@ -172,15 +204,24 @@ qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
 | Sirlar start'da tekshiriladi       | `config/env.validation.ts` — JWT sirlarisiz ilova ko'tarilmaydi                    |
 | Tarmoq yuzasi                      | production compose'da faqat nginx port ochadi                                      |
 | Body'dagi begona id                | `tenant-refs.spec.ts` + izolyatsiya e2e'si (F-10)                                  |
+| Baza qatlamidagi izolyatsiya       | `rls.e2e-spec.ts` — extension'siz, `NOSUPERUSER` rol ostida (F-4)                  |
 
 ## Keyingi audit uchun
 
-Ochiq qolgani: **F-4 (RLS)**. Endi uni sinaydigan asos bor — izolyatsiya
-e2e paketi real bazada ishlaydi (CI'da ham, mahalliy postgres'da ham), ya'ni
-RLS siyosatini yoqib, xuddi shu testlar bilan tekshirish mumkin. Keyingi audit
-shu ishdan boshlanadi.
+Ochiq topilma qolmadi. Uchala izolyatsiya qatlami ham amalda va uchala e2e
+paketi real bazada ishlaydi.
 
-F-10 shuni ko'rsatdi: tenant extension yozuvning **egasini** kafolatlaydi,
-uning **havolalarini** emas. RLS ham xuddi shunday — u ham `expenses.trip_id`
-begona reysga qarashini o'zi to'xtatmaydi. Shuning uchun `assertRefsInCompany`
-RLS kelgandan keyin ham kerak bo'ladi, undan keyin ham olib tashlanmaydi.
+Keyingi audit nimalarga qarasin:
+
+1. **RLS'ning ataylab qoldirilgan yo'li.** Sozlama yo'q bo'lsa siyosat
+   cheklamaydi (F-4). Ya'ni yalang'och klientdan foydalanadigan kod — kirish,
+   cron, seed — hamon ishonchga tayanadi. Buni toraytirishning yo'li:
+   so'rov ishlovchi kod yalang'och klientni ishlatmasligini test bilan
+   qo'riqlash (`audit.coverage.spec.ts` uslubida).
+2. **F-10 ning saboqi.** Tenant qatlami yozuvning **egasini** kafolatlaydi,
+   uning **havolalarini** emas — RLS ham `expenses.trip_id` begona reysga
+   qarashini o'zi to'xtatmaydi. Shuning uchun `assertRefsInCompany` RLS
+   kelgandan keyin ham kerak; u olib tashlanmaydi.
+3. **Ishlash.** Har so'rov endi ikki bosqichli tranzaksiya. 5–40 texnikali
+   firma uchun bu sezilmaydi, lekin pilotda `pg_stat_statements` bilan
+   o'lchash kerak.
