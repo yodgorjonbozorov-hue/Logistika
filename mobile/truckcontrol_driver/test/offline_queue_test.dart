@@ -126,6 +126,43 @@ void main() {
     expect(await queue.pendingEventCount(), 1);
   });
 
+  test('a mistyped odometer waits for the driver at once, not in two hours', () async {
+    final offlineQueue = queueWith(MockClient((_) async => throw Exception('offline')));
+    final id = await offlineQueue.enqueueEvent(tripId: 'trip-1', eventType: 'FINISH');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final queue = queueWith(MockClient((request) async {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      final ids = (body['events'] as List).map((e) => e['clientEventId']).toList();
+      return http.Response(
+        jsonEncode({
+          'success': true,
+          'data': {
+            'accepted': [],
+            'duplicates': [],
+            'rejected': [
+              for (final rejectedId in ids)
+                {'clientEventId': rejectedId, 'code': 'ODOMETER_INVALID'},
+            ],
+          },
+          'error': null,
+          'meta': null,
+        }),
+        200,
+      );
+    }));
+    await queue.syncAll();
+
+    final row = (await db.db
+            .query('pending_events', where: 'client_event_id = ?', whereArgs: [id]))
+        .single;
+    // Re-sending the same wrong number would be refused five more times over
+    // two hours before the driver was ever told about it.
+    expect(row['retry_count'], OfflineQueue.maxAutoRetries);
+    expect(row['synced'], 0, reason: 'the finish must not be dropped');
+    expect(await queue.needsAttentionCount(), 1);
+  });
+
   test('an event stops retrying after maxAutoRetries and the driver can resend it', () async {
     final offlineQueue = queueWith(MockClient((_) async => throw Exception('offline')));
     final id = await offlineQueue.enqueueEvent(tripId: 'trip-1', eventType: 'DELIVERED');

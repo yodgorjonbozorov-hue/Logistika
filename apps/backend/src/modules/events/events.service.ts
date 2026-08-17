@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Driver, type Trip, type TripEvent, type TripStatus } from '@prisma/client';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
+import { isOdometerOrderValid, odometerDistanceKm } from '../../common/odometer';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -89,6 +90,20 @@ export class EventsService {
         });
         continue;
       }
+      // A finish whose reading is below the start one is a mistyped digit. It
+      // used to be stored with the distance quietly left unset, so the trip
+      // looked complete and dropped out of every per-km report. Rejecting it
+      // puts the event in the driver's "needs attention" list instead.
+      if (
+        target === 'COMPLETED' &&
+        !isOdometerOrderValid(trip.startOdometer, event.odometer ?? trip.endOdometer)
+      ) {
+        result.rejected.push({
+          clientEventId: event.clientEventId,
+          code: 'ODOMETER_INVALID',
+        });
+        continue;
+      }
 
       const photoUrls = await this.resolvePhotoKeys(actor, event);
       try {
@@ -117,7 +132,13 @@ export class EventsService {
           // syncing the same trip cannot both apply the transition.
           const { count } = await tx.trip.updateMany({
             where: { id: trip.id, status: trip.status },
-            data: { status: target, ...this.transitionData(target!, trip, event) },
+            data: {
+              status: target,
+              ...this.transitionData(target!, trip, event),
+              // Same lock the logist path bumps: a page holding this trip has
+              // to find out the driver moved it (TASK-3.5).
+              version: { increment: 1 },
+            },
           });
           if (count === 0) throw new TransitionConflict();
 
@@ -126,7 +147,13 @@ export class EventsService {
             // first wins and the other finds the entry already present.
             // The invoice is the agreed price, which the transition never
             // touches — the pre-update row is the right source for it.
-            await invoiceCompletedTrip(this.ledger, this.currency, tx, requireTenantActor(actor), trip);
+            await invoiceCompletedTrip(
+              this.ledger,
+              this.currency,
+              tx,
+              requireTenantActor(actor),
+              trip,
+            );
           }
 
           await tx.auditLog.create({
@@ -189,16 +216,10 @@ export class EventsService {
     }
 
     const endOdometer = event.odometer ?? trip.endOdometer;
-    // A negative distance would poison fuel norms and cost-per-km; it is left
-    // unset here and rejected outright in TASK-3.6.
-    const distanceIsSane =
-      endOdometer != null && trip.startOdometer != null && endOdometer >= trip.startOdometer;
     return {
       finishedAt: eventTime,
       endOdometer,
-      actualDistanceKm: distanceIsSane
-        ? new Prisma.Decimal(endOdometer - trip.startOdometer!)
-        : undefined,
+      actualDistanceKm: odometerDistanceKm(trip.startOdometer, endOdometer),
     };
   }
 
@@ -225,8 +246,7 @@ export class EventsService {
 
     const where = {
       tripId: filter.tripId,
-      eventTime:
-        filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
+      eventTime: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
     const [data, total] = await Promise.all([
       db.tripEvent.findMany({

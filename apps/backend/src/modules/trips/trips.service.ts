@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Trip, type TripStatus } from '@prisma/client';
 import { UserRole, type CurrentUserPayload, type TenantActor } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
+import { assertOdometerOrder, odometerDistanceKm } from '../../common/odometer';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { assertTenantRefs } from '../../common/tenant-refs';
@@ -190,14 +191,13 @@ export class TripsService {
   async complete(actor: CurrentUserPayload, id: string, dto: CompleteTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
     assertTripTransition(trip.status, 'COMPLETED');
-    const actualDistanceKm =
-      dto.endOdometer != null && trip.startOdometer != null
-        ? new Prisma.Decimal(dto.endOdometer - trip.startOdometer)
-        : undefined;
+    // A reading below the start one is a typo, and the subtraction it used to
+    // produce made the fuel norm and the cost per km wrong without saying so.
+    assertOdometerOrder(trip.startOdometer, dto.endOdometer);
     return this.transition(actor, trip, 'COMPLETED', {
       finishedAt: new Date(),
       endOdometer: dto.endOdometer,
-      actualDistanceKm,
+      actualDistanceKm: odometerDistanceKm(trip.startOdometer, dto.endOdometer),
     });
   }
 
@@ -217,10 +217,15 @@ export class TripsService {
   async finish(actor: CurrentUserPayload, id: string, dto: FinishTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
     assertTripTransition(trip.status, dto.status);
+    const endOdometer = dto.endOdometer ?? trip.endOdometer;
+    assertOdometerOrder(trip.startOdometer, endOdometer);
 
     const data: Prisma.TripUncheckedUpdateInput = {
       finishedAt: new Date(),
-      endOdometer: dto.endOdometer ?? trip.endOdometer,
+      endOdometer,
+      // A trip that ended badly still covered kilometres, and those are what
+      // the fuel it burned has to be measured against.
+      actualDistanceKm: odometerDistanceKm(trip.startOdometer, endOdometer),
     };
     if (dto.status === 'PARTIALLY_DELIVERED') {
       const delivered = BigInt(dto.deliveredAmount!);

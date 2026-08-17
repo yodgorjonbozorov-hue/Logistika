@@ -274,3 +274,59 @@ Bunday xatoni faqat haqiqiy parallel test ushlaydi — ketma-ket test buzuq kodd
 ham yashil bo'ladi. `test/optimistic-locking.e2e-spec.ts` `Promise.all` bilan
 ikkitadan so'rov yuboradi va `[200, 409]` hamda **bitta** ledger yozuvini talab
 qiladi.
+
+## 6. Qiymat cheklovlari — spidometr va manfiy son (TASK-3.6)
+
+### Spidometr faqat oldinga yuradi
+
+`end_odometer < start_odometer` — bu yozuv xatosi (411 518 o'rniga 411 158).
+Ayirma **manfiy masofa** beradi va uning ustiga qurilgan hamma narsani jimgina
+buzadi: yoqilg'i normasi (100 km ga litr), km tannarxi, reys foydasi. Hech kim
+sezmaydi, chunki hisobot o'zini tug'dirgan ko'rsatkichni ko'rsatmaydi.
+
+Qoida `common/odometer.ts`da — **bitta joyda**, chunki logist yo'li
+(`trips.service`) va haydovchi yo'li (`events.service`) bir xil qatorni
+o'zgartiradi va nima to'g'ri ekanida kelisha olishi shart:
+
+| Holat          | Natija                                                  |
+| -------------- | ------------------------------------------------------- |
+| `end >= start` | masofa = `end − start` (0 km ham haqiqiy qiymat)        |
+| `end < start`  | 400 `ODOMETER_INVALID`, ikkala ko'rsatkich xabar ichida |
+| biri `NULL`    | qabul qilinadi, masofa yozilmaydi                       |
+
+**Yo'q ma'lumot — noto'g'ri ma'lumot emas.** Reys ko'rsatkich yozilmasdan
+ham yakunlanishi mumkin; buni bloklash yig'ilmagan ma'lumot uchun ishni
+to'xtatish bo'lardi.
+
+Haydovchi paketida (`/events/batch`) bunday `FINISH` **rad etiladi** va hodisa
+umuman saqlanmaydi. Avval u qabul qilinardi, masofa esa jimgina bo'sh qolardi:
+reys «tugagan» ko'rinardi va har qanday km-hisobotidan tushib qolardi.
+Mobil ilova bunday rad etishni darhol «e'tibor talab qiladi» ro'yxatiga
+qo'yadi (`permanentRejections`) — o'sha noto'g'ri raqamni qayta yuborish
+hech qachon o'tmaydi, 2 soat kutish esa faqat haydovchining xabar topishini
+kechiktiradi.
+
+### DB darajasidagi CHECK cheklovlari
+
+Ilova validatsiyasi — foydalanuvchi tushunarli xabar oladigan joy, lekin
+**kafolat u yerda yashamaydi**: seed skripti, avariya paytidagi qo'lda
+`UPDATE`, import job'i yoki kelajakdagi tekshiruvni unutgan endpoint jadvalga
+to'g'ridan-to'g'ri boradi. Manfiy bo'lib qolgan pul oylar keyin, hech kim
+solishtira olmaydigan hisobotda topiladi.
+
+| Jadval           | Cheklov                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `trips`          | `end_odometer >= start_odometer`; odometr/masofa ≥ 0; `agreed_price`, `driver_advance`, `delivered_amount` ≥ 0; `delivered_amount <= agreed_price` |
+| `expenses`       | `amount`, `amount_base`, `unit_price`, `quantity` ≥ 0                                                                                              |
+| `incomes`        | `amount`, `amount_base` ≥ 0                                                                                                                        |
+| `fuel_logs`      | `liters > 0`; narx/summa/odometr ≥ 0                                                                                                               |
+| `ledger_entries` | `amount`, `amount_base` ≥ 0 — **ishorani `direction` tashiydi**                                                                                    |
+| `exchange_rates` | `rate_to_uzs > 0`                                                                                                                                  |
+
+Har bir cheklov `NULL`ni o'tkazadi: bu ustunlarning ko'pi qonuniy ravishda
+ixtiyoriy. Migratsiya `20260817190000_value_check_constraints`; yozishdan oldin
+mavjud qatorlar tekshirildi — hech biri buzmaydi.
+
+Test ikkala qatlamni ham tekshiradi: API rad etishini va **Prisma orqali
+to'g'ridan-to'g'ri yozishni** (`test/value-constraints.e2e-spec.ts`) — ya'ni
+ilova chetlab o'tilganda ham baza rad etadi.

@@ -166,6 +166,50 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     expect(call.data.finishedAt).toEqual(new Date('2026-08-06T10:00:00Z'));
     expect(call.data.endOdometer).toBe(411818);
     expect(String(call.data.actualDistanceKm)).toBe('318');
+    // The logist's page may be holding this trip; the driver moving it has to
+    // invalidate their copy too (TASK-3.5).
+    expect(call.data.version).toEqual({ increment: 1 });
+  });
+
+  it('rejects a FINISH whose odometer went backwards (TASK-3.6)', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({
+      id: 'trip-1',
+      driverId: 'd1',
+      status: 'IN_PROGRESS',
+      startOdometer: 411500,
+    });
+
+    // It used to be accepted with the distance quietly left unset: the trip
+    // looked complete and vanished from every per-km report.
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [tripEvent(TripEventType.FINISH, { odometer: 411158 })],
+    });
+
+    expect(result.rejected).toEqual([{ clientEventId: 'c-1', code: 'ODOMETER_INVALID' }]);
+    expect(result.accepted).toEqual([]);
+    expect(db.trip!.updateMany).not.toHaveBeenCalled();
+    // Nothing at all is stored: the driver's app puts it in "needs attention"
+    // so the reading gets corrected rather than lost.
+    expect(db.tripEvent!.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts a FINISH with no odometer at all', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({
+      id: 'trip-1',
+      driverId: 'd1',
+      status: 'IN_PROGRESS',
+      startOdometer: 411500,
+    });
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [tripEvent(TripEventType.FINISH)],
+    });
+
+    // Missing data must not block the finish — only wrong data does.
+    expect(result.accepted).toEqual(['c-1']);
+    expect(db.trip!.updateMany!.mock.calls[0][0].data.actualDistanceKm).toBeUndefined();
   });
 
   it('START on a DRAFT trip is rejected without touching the trip', async () => {

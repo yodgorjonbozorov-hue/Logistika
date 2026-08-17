@@ -290,8 +290,13 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (sabab bilan)
 
-- **Coverage 60% / 90% maqsadi** — TASK-3.5 dan keyin global 36.8% statements / 44.2% lines,
-  `expenses.service.ts` 90%, `ledger.service.ts` 91%, `trips.service.ts` 68%.
+- **Coverage 60% / 90% maqsadi** — TASK-3.6 dan keyin **haqiqiy** qamrov 37.5% statements /
+  44.9% lines; `odometer.ts` 100%, `events.service.ts` 96%, `ledger.service.ts` 91%,
+  `expenses.service.ts` 90%, `trips.service.ts` 76%.
+  Diqqat: `package.json`dagi **`global` threshold raqami pasaydi** (30 → 28) — bu regressiya
+  emas. Jest o'z threshold'i bor faylni global hisobdan **chiqarib tashlaydi**, shuning uchun
+  yaxshi qoplangan fayllar per-file ratchet'ga o'tgach global guruhda faqat qolganlari qoladi.
+  Per-file ratchet global'dan qat'iyroq himoya.
   60/90 ni bir taskda urish mumkin emas (keyingi fazalarning har bir taski test qo'shadi),
   shuning uchun threshold **ratchet** sifatida joriy darajadan sal pastga qo'yildi: coverage
   hech qachon pasaymaydi, har faza oxirida ko'tariladi. Maqsad PHASE 5 oxirida 60/90.
@@ -300,6 +305,10 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-9 (info)**: `flutter analyze` har ishga tushganda `analysis_options.yaml`ga
+  `analyzer.exclude` blokini o'zi qo'shadi (build/android/ios/... papkalari). Bu Flutter
+  tool'ining o'zgarishi, qo'lda yozilgani emas — qayta-qayta paydo bo'lmasligi uchun
+  commit qilindi.
 - **N-8 (MEDIUM, ochiq)**: `pnpm format:check` **baseline'dan beri qizil** — 35 faylda
   Prettier farqi bor (`docs/*`, `pnpm-lock.yaml`, eski manba fayllar). Butun repo'ni
   formatlash bu fazadagi diff'ni o'qib bo'lmas holga keltiradi, shuning uchun har taskda
@@ -422,16 +431,43 @@ data: { …, version: { increment: 1 } } })` — kutilgan status **WHERE ichida*
   `trips.service` uchun yangi threshold qo'yildi (ratchet).
   Guard olib tashlanib tekshirildi: guardsiz `optimistic-locking` e2e **qizil** bo'ladi
   (ikkita `TRIP_INVOICED` yozuvi) — ya'ni test haqiqatan ham bu xatoni ushlaydi.
+- **TASK-3.6 (DB-4, M-14)** · Spidometr va qiymat cheklovlari, ikki qatlamda.
+  **Kod**: `common/odometer.ts` — bitta manba (`isOdometerOrderValid`,
+  `odometerDistanceKm`, `assertOdometerOrder`), logist yo'li ham, haydovchi yo'li ham
+  shu yerdan o'tadi. `end < start` → 400 `ODOMETER_INVALID` (yangi kod, i18n × 3,
+  xabarda **ikkala ko'rsatkich** bor — haydovchi qaysi ikki raqam mos kelmayotganini
+  bilishi kerak). `NULL` o'tadi: yozilmagan ko'rsatkich noto'g'ri emas, yo'q.
+  `trips.finish()` endi masofani ham yozadi (avval faqat `complete` yozardi — yomon
+  tugagan reys ham km bosib o'tgan va yoqilg'isi shunga o'lchanadi).
+  `/events/batch` bunday `FINISH`ni **rad etadi** va hodisani umuman saqlamaydi;
+  avval qabul qilinib masofa jimgina bo'sh qolardi — reys «tugagan» ko'rinib,
+  har qanday km-hisobotidan tushib qolardi.
+  **Baza**: `20260817190000_value_check_constraints` — 12 ta `CHECK`
+  (`trips` odometr tartibi + odometr/masofa/pul ≥ 0 + `delivered_amount <= agreed_price`,
+  `expenses`, `incomes`, `fuel_logs` (`liters > 0`), `ledger_entries` (ishorani
+  `direction` tashiydi), `exchange_rates` (`rate_to_uzs > 0`)). Yozishdan oldin
+  mavjud qatorlar tekshirildi — hech biri buzmaydi.
+  **Mobil**: `permanentRejections` — `ODOMETER_INVALID` darhol «e'tibor talab qiladi»ga
+  tushadi (o'sha noto'g'ri raqamni qayta yuborish hech qachon o'tmaydi; 5 urinish ×
+  2 soat faqat haydovchining xabar topishini kechiktirardi). `NOT_FOUND` va
+  `TRIP_INVALID_STATUS` ataylab bunga kirmadi — ular server holatiga bog'liq va
+  holat qaytishi mumkin. Profil ekranida xom kod o'rniga tarjima qilingan matn
+  (i18n × 3). ·
+  `common/odometer.ts` (+spec 11 test), `trips.service.ts`, `events.service.ts`,
+  `packages/shared`, i18n × 3, `offline_queue.dart`, `profile_tab.dart`,
+  `app_strings.dart`, `test/value-constraints.e2e-spec.ts` (+13 e2e) ·
+  unit 230 → 250, e2e 123 → 136, `flutter test` 23/23, `flutter analyze` toza.
+  `trips.service` qamrovi 68% → 76%, `events.service` 96%, `odometer.ts` 100%.
 
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.6 (odometr / manfiy masofa + DB CHECK cheklovlari).
-`start`/`complete` odometr qiymatlarini tekshirmaydi: `endOdometer < startOdometer`
-manfiy `actualDistanceKm` beradi va yoqilg'i normasi hisobini buzadi. DB darajasida
-`CHECK` qo'shiladi (`agreed_price >= 0`, `amount >= 0`, `end_odometer >= start_odometer`),
-kod darajasida esa `AppException('VALIDATION_FAILED')`. Test: manfiy masofa, teng
-odometr, `null` odometr; e2e'da normadan chetlanish hisoboti.
+**Keyingi qadam:** TASK-3.7 (reys raqamlash — `TripCounter`).
+Hozir `trips.create()` reys raqamini `count() + 1` bilan beradi: ikki parallel yaratish
+bir xil raqamni oladi, o'chirilgan reysdan keyin esa raqam takrorlanadi. Kompaniya
+bo'yicha alohida hisoblagich jadvali (`(company_id, year)` unique) va atomik
+`increment` kerak; format `TR-<yil>-<ketma-ket>`. Test (majburiy): `Promise.all` bilan
+10 parallel yaratish → 10 xil raqam.
 
 PHASE 3 qolgan bog'liqliklar:
 

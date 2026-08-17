@@ -47,6 +47,15 @@ class OfflineQueue {
   /// waits for the driver (needs_attention) — it is never silently dropped.
   static const maxAutoRetries = 5;
 
+  /// Refusals a retry cannot fix, because the payload itself is what the server
+  /// objected to. These skip the backoff and wait for the driver immediately.
+  ///
+  /// Deliberately narrow: NOT_FOUND and TRIP_INVALID_STATUS describe server
+  /// state that can change back (the logist reassigns the trip, or moves it
+  /// out of a status it should not have been in), so those keep retrying.
+  /// A mistyped odometer never becomes right on its own.
+  static const permanentRejections = <String>{'ODOMETER_INVALID'};
+
   /// Backoff per retry_count; the last value repeats for anything beyond.
   static const retryBackoff = <Duration>[
     Duration(seconds: 30),
@@ -285,10 +294,18 @@ class OfflineQueue {
     final attemptedAt = DateTime.now().toUtc().toIso8601String();
     for (final rejected in (result['rejected'] as List? ?? [])) {
       final entry = rejected as Map<String, dynamic>;
+      final code = entry['code'] as String?;
+      // Re-sending an unchanged payload the server refused on its merits will
+      // be refused again, every time. Counting to five over two hours only
+      // delays the moment the driver finds out the odometer was mistyped, so
+      // these go straight to the "needs attention" list.
+      final retry = permanentRejections.contains(code)
+          ? 'retry_count = MAX(retry_count + 1, $maxAutoRetries)'
+          : 'retry_count = retry_count + 1';
       await _db.db.rawUpdate(
-        'UPDATE pending_events SET retry_count = retry_count + 1, '
+        'UPDATE pending_events SET $retry, '
         'last_error = ?, last_attempt_at = ? WHERE client_event_id = ?',
-        [entry['code'], attemptedAt, entry['clientEventId']],
+        [code, attemptedAt, entry['clientEventId']],
       );
     }
   }

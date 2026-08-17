@@ -88,10 +88,10 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 30,
-        "lines": 37,
-        "branches": 30,
-        "functions": 30
+        "statements": 28,
+        "lines": 34,
+        "branches": 26,
+        "functions": 28
       },
       "./src/modules/expenses/expenses.service.ts": {
         "statements": 90,
@@ -100,10 +100,22 @@
         "functions": 91
       },
       "./src/modules/trips/trips.service.ts": {
-        "statements": 67,
-        "lines": 68,
-        "branches": 42,
-        "functions": 75
+        "statements": 75,
+        "lines": 76,
+        "branches": 50,
+        "functions": 81
+      },
+      "./src/common/odometer.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 100,
+        "functions": 100
+      },
+      "./src/modules/events/events.service.ts": {
+        "statements": 95,
+        "lines": 96,
+        "branches": 100,
+        "functions": 90
       },
       "./src/modules/ledger/ledger.service.ts": {
         "statements": 91,

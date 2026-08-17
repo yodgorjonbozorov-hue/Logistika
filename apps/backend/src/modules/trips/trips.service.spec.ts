@@ -124,6 +124,130 @@ describe('TripsService', () => {
     });
   });
 
+  describe('odometer (TASK-3.6)', () => {
+    it('refuses a completion whose reading went backwards', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: 411_500,
+      });
+
+      // 411 518 typed as 411 158 used to be stored as a −342 km trip.
+      await expect(service.complete(ACTOR, 't1', { endOdometer: 411_158 })).rejects.toMatchObject({
+        code: 'ODOMETER_INVALID',
+        httpStatus: 400,
+      });
+      expect(db.trip!.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('accepts a completion that covered no kilometres', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: 411_500,
+      });
+
+      await service.complete(ACTOR, 't1', { endOdometer: 411_500 });
+
+      // 0 km is a fact about a trip that stayed in the yard, not an error.
+      expect(String(db.trip!.updateMany!.mock.calls[0][0].data.actualDistanceKm)).toBe('0');
+    });
+
+    it('completes without a distance when nobody wrote the reading down', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: null,
+      });
+
+      await service.complete(ACTOR, 't1', { endOdometer: 411_818 });
+
+      expect(db.trip!.updateMany!.mock.calls[0][0].data.actualDistanceKm).toBeUndefined();
+      expect(db.trip!.updateMany!.mock.calls[0][0].data.status).toBe('COMPLETED');
+    });
+
+    it('refuses a bad reading on finish too, not only on complete', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: 411_500,
+        agreedPrice: 1_000_000n,
+      });
+
+      await expect(
+        service.finish(ACTOR, 't1', {
+          status: 'FAILED',
+          reason: "Yo'lda avariya bo'ldi, yuk shikastlandi",
+          endOdometer: 400_000,
+        }),
+      ).rejects.toMatchObject({ code: 'ODOMETER_INVALID' });
+    });
+
+    it('falls back to the reading already on the trip when finish omits one', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: 411_500,
+        endOdometer: 411_700,
+        agreedPrice: 1_000_000n,
+      });
+
+      await service.finish(ACTOR, 't1', {
+        status: 'RETURNED',
+        reason: 'Mijoz yukni qabul qilmadi, ombor yopiq edi',
+      });
+
+      // A driver event may already have recorded it; the office finishing the
+      // trip afterwards must not blank it out.
+      const data = db.trip!.updateMany!.mock.calls[0][0].data;
+      expect(data.endOdometer).toBe(411_700);
+      expect(String(data.actualDistanceKm)).toBe('200');
+    });
+
+    it('refuses a partial delivery worth more than the agreed price', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        agreedPrice: 1_000_000n,
+      });
+
+      await expect(
+        service.finish(ACTOR, 't1', {
+          status: 'PARTIALLY_DELIVERED',
+          reason: "Kelishuvdan ko'p yuk yetkazildi",
+          deliveredAmount: '1000001',
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect(db.trip!.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('records the distance a failed trip still covered', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        startOdometer: 411_500,
+        agreedPrice: 1_000_000n,
+      });
+
+      await service.finish(ACTOR, 't1', {
+        status: 'RETURNED',
+        reason: 'Mijoz yukni qabul qilmadi, ombor yopiq edi',
+        endOdometer: 411_800,
+      });
+
+      // The fuel it burned has to be measured against something; a trip that
+      // ended badly still covered kilometres.
+      expect(String(db.trip!.updateMany!.mock.calls[0][0].data.actualDistanceKm)).toBe('300');
+    });
+  });
+
   describe('optimistic locking (TASK-3.5)', () => {
     it('rejects a transition whose row moved between the read and the write', async () => {
       const { service, db } = setup();

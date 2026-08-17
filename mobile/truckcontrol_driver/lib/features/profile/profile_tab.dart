@@ -106,9 +106,12 @@ class _ProfileTabState extends State<ProfileTab> {
                   ListTile(
                     dense: true,
                     title: Text(t.t('event.${row['event_type']}')),
+                    // The raw code used to be printed here. "ODOMETER_INVALID"
+                    // tells a driver nothing about what to fix; t() falls back
+                    // to the key, so an unmapped code still shows something.
                     subtitle: Text(
                       '${row['event_time']}'
-                      '${row['last_error'] != null ? ' · ${row['last_error']}' : ''}',
+                      '${row['last_error'] != null ? ' · ${t.t('error.${row['last_error']}')}' : ''}',
                     ),
                   ),
                 Padding(
