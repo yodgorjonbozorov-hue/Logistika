@@ -336,11 +336,27 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `trip-invoicing.ts`, `trips/events/expenses` servislari, `clients.controller.ts`,
   `tenant.extension.ts`, web `FinancePage.tsx`, `docs/BUSINESS-RULES.md` (yangi) ·
   unit 175 → 200, e2e 81 → 92. `expenses.service` qamrovi 83%, `ledger.service` 92%.
+- **TASK-3.2 (H-2)** · Pul endpointlarida idempotency. `IdempotencyKey` modeli
+  (`(companyId, key)` unique, `endpoint`, `requestHash`, `statusCode`, `responseBody`, TTL 24s).
+  `IdempotencyInterceptor` kalitni **avval band qiladi**, keyin ishni bajaradi —
+  tekshirib-keyin-yozish ikki bir vaqtdagi so'rovga teshik qoldirardi (aynan double-click).
+  Takroriy so'rov saqlangan javobni oladi (bir xil `id`); boshqa payload bilan o'sha kalit →
+  409 `IDEMPOTENCY_KEY_REUSED` (eski javobni qaytarish yangi to'lovni jimgina yo'qotardi);
+  so'rov xato bersa kalit bo'shatiladi. `requestHash` kalit tartibiga bog'liq emas.
+  Majburiy: `/expenses`, `/incomes`, `/trips`, `/trips/:id/complete`, `/expenses/:id/approve`
+  (`/events/batch`da `clientEventId` allaqachon shu rolni bajaradi). Web `crud.ts` har
+  mutatsiyada kalit yuboradi va **retry'da o'zgartirmaydi** (kalit `variables` obyektiga
+  `WeakMap` orqali bog'langan — `mutationFn` ichida UUID yaratish retry'da yangi kalit
+  berardi va butun mexanizmni bekor qilardi). Kunlik tozalash job'i. ·
+  migratsiya `*_idempotency_keys`, `common/idempotency/*` (+spec 9 test),
+  `expenses/trips` kontrollerlari, web `client.ts`/`crud.ts`,
+  `test/idempotency.e2e-spec.ts` (+9 e2e), `docs/BUSINESS-RULES.md` ·
+  unit 200 → 209, e2e 92 → 101.
 
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.2 (pul endpointlarida idempotency).
+**Keyingi qadam:** TASK-3.3 (ko'p valyuta: `ExchangeRate`, `amountBase` konvertatsiyasi).
 
 PHASE 3 qolgan bog'liqliklar:
 

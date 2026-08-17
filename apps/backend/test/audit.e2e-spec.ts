@@ -6,6 +6,7 @@
  * "who changed 5,000,000 to 500,000?" had no answer anywhere in the system.
  */
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { createTenant, type TenantFixture } from './helpers';
 import { createE2EApp, truncateAll } from './setup-e2e';
@@ -83,6 +84,7 @@ describe('Audit trail (e2e)', () => {
   it('records every money mutation, including income updates', async () => {
     const expense = await api()
       .post('/api/v1/expenses')
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({
         category: 'FUEL',
@@ -94,6 +96,7 @@ describe('Audit trail (e2e)', () => {
 
     const income = await api()
       .post('/api/v1/incomes')
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({ amount: '950000000', clientId: tenant.client.id })
       .expect(201);
@@ -113,6 +116,7 @@ describe('Audit trail (e2e)', () => {
   it('ignores a client-supplied payment status: it comes from the ledger', async () => {
     const income = await api()
       .post('/api/v1/incomes')
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({ amount: '1000', clientId: tenant.client.id, status: 'PAID' })
       .expect(201);
@@ -128,6 +132,7 @@ describe('Audit trail (e2e)', () => {
     // audit row must not survive it.
     await api()
       .post('/api/v1/expenses')
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({
         category: 'FUEL',

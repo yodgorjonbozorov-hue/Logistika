@@ -78,3 +78,42 @@ bildirmasdi. Endi:
 
 `amount` doim musbat. Teskari harakat — qarama-qarshi `direction` yoki `REVERSAL`.
 Sabab: manfiy summa har bir `SUM()` ni ikki xil o'qishga imkon beradi (L-8).
+
+## 2. Idempotency — pul so'rovlari (TASK-3.2)
+
+### Muammo
+
+`Idempotency-Key` ham, unique constraint ham yo'q edi. 1 000 000 so'm ikki marta
+yuborilsa — ikkita yozuv. Bu nazariy emas: mobil ilova javob kelmagan so'rovni qayta
+uradi, formada esa ikki marta bosish odatiy hol.
+
+### Qanday ishlaydi
+
+1. Klient `Idempotency-Key` header yuboradi (web'da har mutatsiya uchun bitta UUID,
+   **retry'da o'zgarmaydi** — TanStack Query bir xil `variables` obyektini uzatadi,
+   kalit shu obyektga bog'langan).
+2. Server kalitni **avval band qiladi** (`statusCode = 0` bilan qator yaratadi),
+   keyin ishni bajaradi. Tekshirib-keyin-yozish ikki bir vaqtdagi so'rov uchun
+   teshik qoldirardi — aynan double-click holati.
+3. Ish tugagach javob saqlanadi; o'sha kalit bilan kelgan takroriy so'rov **saqlangan
+   javobni** oladi (bir xil `id`).
+4. Ish xato bersa kalit **bo'shatiladi** — klient payload'ni tuzatib o'sha kalit bilan
+   qayta yuboradi.
+
+| Holat                                   | Natija                               |
+| --------------------------------------- | ------------------------------------ |
+| Kalit yo'q                              | 400 `VALIDATION_FAILED`              |
+| O'sha kalit, o'sha payload              | Saqlangan javob (yangi yozuv yo'q)   |
+| O'sha kalit, **boshqa** payload         | 409 `IDEMPOTENCY_KEY_REUSED`         |
+| O'sha kalit, birinchisi hali ishlayapti | 5 s kutadi, keyin javobni qaytaradi  |
+| Boshqa kompaniya, o'sha kalit           | Mustaqil (kalit `(companyId, key)`)  |
+
+### Qayerda majburiy
+
+`POST /expenses`, `POST /incomes`, `POST /trips`, `POST /trips/:id/complete`,
+`POST /expenses/:id/approve`.
+
+`POST /events/batch` bu ro'yxatda **yo'q** — unda o'z idempotency mexanizmi bor
+(`clientEventId`, TZ §3.1), va mobil navbat aynan shuni saqlaydi.
+
+Kalitlar 24 soatdan keyin kunlik job bilan tozalanadi.

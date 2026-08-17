@@ -6,6 +6,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { IdempotencyCleanup } from './common/idempotency/idempotency.cleanup';
+import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { LoggingModule } from './common/observability/logging.module';
 import { ThrottlingModule } from './common/throttling/throttling.module';
@@ -60,8 +62,12 @@ import { PrismaModule } from './prisma/prisma.module';
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Runs before the response envelope is built, so what gets stored and
+    // replayed is the handler's own payload.
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ApiResponseInterceptor },
     { provide: APP_FILTER, useClass: AppExceptionFilter },
+    IdempotencyCleanup,
   ],
 })
 export class AppModule {}

@@ -43,6 +43,12 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  /**
+   * Replay key for money endpoints. It must stay the same across retries of
+   * the same user action — a fresh key on retry defeats the whole mechanism —
+   * so it is generated once per mutation and reused.
+   */
+  idempotencyKey?: string;
 }
 
 async function rawRequest<T>(path: string, options: RequestOptions): Promise<ApiResponse<T>> {
@@ -52,6 +58,7 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
   }
   const headers: Record<string, string> = { 'accept-language': i18n.language };
   if (options.body !== undefined) headers['content-type'] = 'application/json';
+  if (options.idempotencyKey) headers['idempotency-key'] = options.idempotencyKey;
   if (tokenStore.access) headers.authorization = `Bearer ${tokenStore.access}`;
 
   const response = await fetch(url.toString(), {

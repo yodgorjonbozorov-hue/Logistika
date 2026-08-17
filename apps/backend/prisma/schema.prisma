@@ -681,6 +681,30 @@ model SmsCode {
   @@map("sms_codes")
 }
 
+/// Replay protection for money endpoints (TASK-3.2).
+///
+/// A phone that retries a request it never saw the answer to, or a double
+/// click on a form, used to create two 1,000,000 so'm expenses. The client
+/// sends a key; the first request does the work and its response is stored,
+/// and any repeat of the same key gets that stored answer back instead of
+/// doing the work again.
+model IdempotencyKey {
+  id        String @id @default(uuid())
+  companyId String @map("company_id")
+  key       String
+  endpoint  String
+  /// Hash of the request body: the same key with a different payload is a
+  /// client bug, not a retry, and must not silently return the old answer.
+  requestHash  String   @map("request_hash")
+  statusCode   Int      @map("status_code")
+  responseBody Json     @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([companyId, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
 // ---------- Audit (TZ §9) ----------
 
 model AuditLog {

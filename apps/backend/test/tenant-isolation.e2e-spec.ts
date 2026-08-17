@@ -5,6 +5,7 @@
  * row in the table below on the day it is added.
  */
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { createTenant, type TenantFixture } from './helpers';
 import { createE2EApp, truncateAll } from './setup-e2e';
@@ -149,7 +150,8 @@ describe('Tenant isolation (e2e)', () => {
 
     it('POST /expenses referencing another company trip → denied, nothing stored', async () => {
       const res = await asBeta(
-        api().post('/api/v1/expenses').send({
+        api().post('/api/v1/expenses')
+      .set('idempotency-key', randomUUID()).send({
           tripId: alpha.trip.id,
           category: 'FUEL',
           amount: '1000000',
@@ -163,7 +165,8 @@ describe('Tenant isolation (e2e)', () => {
 
     it('POST /incomes referencing another company client → denied, nothing stored', async () => {
       const res = await asBeta(
-        api().post('/api/v1/incomes').send({
+        api().post('/api/v1/incomes')
+      .set('idempotency-key', randomUUID()).send({
           clientId: alpha.client.id,
           amount: '1000000',
         }),

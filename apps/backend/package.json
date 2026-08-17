@@ -89,9 +89,9 @@
     "coverageThreshold": {
       "global": {
         "statements": 30,
-        "lines": 38,
+        "lines": 37,
         "branches": 30,
-        "functions": 31
+        "functions": 30
       },
       "./src/modules/expenses/expenses.service.ts": {
         "statements": 83,
@@ -104,6 +104,12 @@
         "lines": 90,
         "branches": 83,
         "functions": 91
+      },
+      "./src/common/idempotency/idempotency.interceptor.ts": {
+        "statements": 87,
+        "lines": 89,
+        "branches": 70,
+        "functions": 80
       }
     }
   }

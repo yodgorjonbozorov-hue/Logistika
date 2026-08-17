@@ -67,7 +67,20 @@ describe('applyTenantScope', () => {
 
 describe('TENANT_MODELS completeness', () => {
   it('covers every schema model that has a companyId column (except intentional exclusions)', () => {
-    const intentionallyUnscoped = new Set(['Company', 'RefreshToken', 'AuditLog', 'TrackingLink']);
+    /**
+     * Models that carry companyId but are deliberately outside the extension:
+     * they are read before a tenant context exists (RefreshToken), are
+     * platform-wide by design (Company, AuditLog), are looked up by a bare
+     * public token (TrackingLink), or are infrastructure the interceptor keys
+     * explicitly by company (IdempotencyKey).
+     */
+    const intentionallyUnscoped = new Set([
+      'Company',
+      'RefreshToken',
+      'AuditLog',
+      'TrackingLink',
+      'IdempotencyKey',
+    ]);
     const modelsWithCompanyId = Prisma.dmmf.datamodel.models
       .filter((model) => model.fields.some((field) => field.name === 'companyId'))
       .map((model) => model.name)

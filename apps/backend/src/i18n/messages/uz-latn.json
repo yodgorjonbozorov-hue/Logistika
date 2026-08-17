@@ -23,5 +23,6 @@
   "AUTH_RESET_TOKEN_INVALID": "Parolni tiklash havolasi yaroqsiz yoki muddati tugagan. Yangi havola so'rang",
   "SMS_PASSWORD_RESET": "TruckControl: parolni tiklash kodi {token}. Uni hech kimga bermang",
   "FILE_INFECTED": "Faylda zararli dastur aniqlandi, yuklanmadi",
-  "QUOTA_EXCEEDED": "Kompaniya uchun ajratilgan saqlash hajmi tugadi. Eski fayllarni o'chiring yoki tarifni kengaytiring"
+  "QUOTA_EXCEEDED": "Kompaniya uchun ajratilgan saqlash hajmi tugadi. Eski fayllarni o'chiring yoki tarifni kengaytiring",
+  "IDEMPOTENCY_KEY_REUSED": "Bu so'rov kaliti boshqa ma'lumot bilan allaqachon ishlatilgan"
 }

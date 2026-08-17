@@ -13,6 +13,7 @@ import {
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { paginated } from '../../common/dto/pagination.dto';
 import {
   AssignTripDto,
@@ -37,6 +38,7 @@ export class TripsController {
 
   @Post()
   @Roles(UserRole.OWNER, UserRole.LOGIST)
+  @Idempotent()
   create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateTripDto) {
     return this.tripsService.create(user, dto);
   }
@@ -87,6 +89,7 @@ export class TripsController {
 
   @Post(':id/complete')
   @Roles(UserRole.OWNER, UserRole.LOGIST)
+  @Idempotent()
   @HttpCode(HttpStatus.OK)
   complete(
     @CurrentUser() user: CurrentUserPayload,

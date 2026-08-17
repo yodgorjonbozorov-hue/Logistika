@@ -6,6 +6,7 @@
  * this client owe us?" — could not be answered at all.
  */
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { createTenant, type TenantFixture } from './helpers';
 import { createE2EApp, truncateAll } from './setup-e2e';
@@ -39,12 +40,14 @@ describe('Client ledger (e2e)', () => {
   const completeTrip = () =>
     api()
       .post(`/api/v1/trips/${tenant.trip.id}/complete`)
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({});
 
   const pay = (amount: bigint) =>
     api()
       .post('/api/v1/incomes')
+      .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
       .send({ amount: amount.toString(), clientId: tenant.client.id, tripId: tenant.trip.id });
 

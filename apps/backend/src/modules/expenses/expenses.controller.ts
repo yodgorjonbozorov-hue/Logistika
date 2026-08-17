@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { paginated } from '../../common/dto/pagination.dto';
 import {
@@ -36,6 +37,7 @@ export class ExpensesController {
   }
 
   @Post()
+  @Idempotent()
   create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateExpenseDto) {
     return this.expensesService.createExpense(user, dto);
   }
@@ -50,6 +52,7 @@ export class ExpensesController {
   }
 
   @Post(':id/approve')
+  @Idempotent()
   @Roles(UserRole.OWNER, UserRole.ACCOUNTANT)
   @HttpCode(HttpStatus.OK)
   approve(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
@@ -74,6 +77,7 @@ export class IncomesController {
   }
 
   @Post()
+  @Idempotent()
   create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateIncomeDto) {
     return this.expensesService.createIncome(user, dto);
   }
