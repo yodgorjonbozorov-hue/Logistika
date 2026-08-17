@@ -1,8 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Trip, type TripStatus } from '@prisma/client';
-import type { CurrentUserPayload } from 'shared';
+import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertTripTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -13,15 +14,6 @@ import {
   StartTripDto,
   UpdateTripDto,
 } from './dto/trip.dto';
-
-/** Allowed lifecycle transitions (TZ §5 trips.status). */
-const TRANSITIONS: Record<TripStatus, TripStatus[]> = {
-  DRAFT: ['ASSIGNED', 'CANCELLED'],
-  ASSIGNED: ['IN_PROGRESS', 'DRAFT', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED'],
-  COMPLETED: [],
-  CANCELLED: [],
-};
 
 const EDITABLE_STATUSES: TripStatus[] = ['DRAFT', 'ASSIGNED'];
 
@@ -120,11 +112,21 @@ export class TripsService {
   }
 
   async getById(actor: CurrentUserPayload, id: string): Promise<Trip> {
-    const trip = await this.prisma.forCompany(actor.companyId).trip.findUnique({
+    const db = this.prisma.forCompany(actor.companyId);
+    const trip = await db.trip.findUnique({
       where: { id },
       include: { client: true, vehicle: true, trailer: true, driver: true },
     });
     if (!trip) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+
+    // A driver may open their own trip (the mobile app needs it), never anyone
+    // else's — an unrelated trip is indistinguishable from a missing one.
+    if (actor.role === UserRole.DRIVER) {
+      const driver = await db.driver.findFirst({ where: { userId: actor.userId } });
+      if (!driver || trip.driverId !== driver.id) {
+        throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+      }
+    }
     return trip;
   }
 
@@ -145,7 +147,7 @@ export class TripsService {
 
   async assign(actor: CurrentUserPayload, id: string, dto: AssignTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
-    this.assertTransition(trip.status, 'ASSIGNED', trip.status === 'ASSIGNED');
+    assertTripTransition(trip.status, 'ASSIGNED', trip.status === 'ASSIGNED');
     await this.assertRefsExist(actor, dto);
     return this.transition(actor, trip, 'ASSIGNED', {
       vehicleId: dto.vehicleId,
@@ -156,7 +158,7 @@ export class TripsService {
 
   async start(actor: CurrentUserPayload, id: string, dto: StartTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
-    this.assertTransition(trip.status, 'IN_PROGRESS');
+    assertTripTransition(trip.status, 'IN_PROGRESS');
     return this.transition(actor, trip, 'IN_PROGRESS', {
       startedAt: new Date(),
       startOdometer: dto.startOdometer,
@@ -165,7 +167,7 @@ export class TripsService {
 
   async complete(actor: CurrentUserPayload, id: string, dto: CompleteTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
-    this.assertTransition(trip.status, 'COMPLETED');
+    assertTripTransition(trip.status, 'COMPLETED');
     const actualDistanceKm =
       dto.endOdometer != null && trip.startOdometer != null
         ? new Prisma.Decimal(dto.endOdometer - trip.startOdometer)
@@ -179,18 +181,8 @@ export class TripsService {
 
   async cancel(actor: CurrentUserPayload, id: string): Promise<Trip> {
     const trip = await this.getById(actor, id);
-    this.assertTransition(trip.status, 'CANCELLED');
+    assertTripTransition(trip.status, 'CANCELLED');
     return this.transition(actor, trip, 'CANCELLED', {});
-  }
-
-  private assertTransition(from: TripStatus, to: TripStatus, allowNoop = false): void {
-    if (allowNoop && from === to) return;
-    if (!TRANSITIONS[from].includes(to)) {
-      throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT, undefined, {
-        from,
-        to,
-      });
-    }
   }
 
   private async transition(

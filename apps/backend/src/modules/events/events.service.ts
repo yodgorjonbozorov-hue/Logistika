@@ -1,7 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Driver, TripEvent } from '@prisma/client';
+import { Prisma, type Driver, type Trip, type TripEvent, type TripStatus } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
+import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { DriverEventDto, EventBatchDto } from './dto/event.dto';
@@ -11,6 +12,20 @@ export interface BatchResult {
   duplicates: string[];
   rejected: Array<{ clientEventId: string; code: string }>;
 }
+
+/**
+ * Driver buttons that move the trip itself (TZ §3.2): pressing "I'm on my way"
+ * has to start the trip, otherwise the live map stays grey and the trip never
+ * records finishedAt/endOdometer. Every other event is informational.
+ */
+const STATUS_BY_EVENT: Partial<Record<DriverEventDto['eventType'], TripStatus>> = {
+  START: 'IN_PROGRESS',
+  LOADED: 'IN_PROGRESS',
+  FINISH: 'COMPLETED',
+};
+
+/** Thrown inside the per-event transaction so the event and the status move together. */
+class TransitionConflict extends Error {}
 
 @Injectable()
 export class EventsService {
@@ -57,23 +72,72 @@ export class EventsService {
         result.rejected.push({ clientEventId: event.clientEventId, code: 'NOT_FOUND' });
         continue;
       }
-      const photoUrls = await this.resolvePhotoKeys(actor, event);
-      await db.tripEvent.create({
-        data: {
-          companyId: actor.companyId as string,
-          tripId: event.tripId,
-          driverId: driver.id,
-          eventType: event.eventType,
-          eventTime: new Date(event.eventTime),
-          lat: event.lat,
-          lng: event.lng,
-          address: event.address,
-          odometer: event.odometer,
-          comment: event.comment,
-          photoUrls,
+      const target = STATUS_BY_EVENT[event.eventType];
+      // A repeated START on an already running trip is a no-op, not an error:
+      // the driver may press it twice, or LOADED may follow START.
+      const movesTrip = target !== undefined && target !== trip.status;
+      if (target !== undefined && movesTrip && !canTransition(trip.status, target)) {
+        result.rejected.push({
           clientEventId: event.clientEventId,
-        },
-      });
+          code: 'TRIP_INVALID_STATUS',
+        });
+        continue;
+      }
+
+      const photoUrls = await this.resolvePhotoKeys(actor, event);
+      try {
+        // Event row and status change land together, or neither lands.
+        await db.$transaction(async (tx) => {
+          await tx.tripEvent.create({
+            data: {
+              companyId: actor.companyId as string,
+              tripId: event.tripId,
+              driverId: driver.id,
+              eventType: event.eventType,
+              eventTime: new Date(event.eventTime),
+              lat: event.lat,
+              lng: event.lng,
+              address: event.address,
+              odometer: event.odometer,
+              comment: event.comment,
+              photoUrls,
+              clientEventId: event.clientEventId,
+            },
+          });
+
+          if (!movesTrip) return;
+
+          // The expected status is part of the WHERE clause, so two devices
+          // syncing the same trip cannot both apply the transition.
+          const { count } = await tx.trip.updateMany({
+            where: { id: trip.id, status: trip.status },
+            data: { status: target, ...this.transitionData(target!, trip, event) },
+          });
+          if (count === 0) throw new TransitionConflict();
+
+          await tx.auditLog.create({
+            data: {
+              companyId: actor.companyId,
+              userId: actor.userId,
+              action: 'STATUS_CHANGE',
+              entityType: 'Trip',
+              entityId: trip.id,
+              before: { status: trip.status },
+              after: { status: target, via: event.eventType },
+            },
+          });
+        });
+      } catch (error) {
+        if (error instanceof TransitionConflict) {
+          result.rejected.push({
+            clientEventId: event.clientEventId,
+            code: 'TRIP_INVALID_STATUS',
+          });
+          continue;
+        }
+        throw error;
+      }
+
       seen.add(event.clientEventId);
       result.accepted.push(event.clientEventId);
     }
@@ -90,6 +154,38 @@ export class EventsService {
       },
     });
     return result;
+  }
+
+  /**
+   * Trip fields the transition fills in from the event itself, so the times and
+   * odometer readings come from the driver's phone rather than from whenever
+   * the batch happened to reach the server.
+   */
+  private transitionData(
+    target: TripStatus,
+    trip: Trip,
+    event: DriverEventDto,
+  ): Prisma.TripUncheckedUpdateInput {
+    const eventTime = new Date(event.eventTime);
+    if (target === 'IN_PROGRESS') {
+      return {
+        startedAt: trip.startedAt ?? eventTime,
+        startOdometer: trip.startOdometer ?? event.odometer,
+      };
+    }
+
+    const endOdometer = event.odometer ?? trip.endOdometer;
+    // A negative distance would poison fuel norms and cost-per-km; it is left
+    // unset here and rejected outright in TASK-3.6.
+    const distanceIsSane =
+      endOdometer != null && trip.startOdometer != null && endOdometer >= trip.startOdometer;
+    return {
+      finishedAt: eventTime,
+      endOdometer,
+      actualDistanceKm: distanceIsSane
+        ? new Prisma.Decimal(endOdometer - trip.startOdometer!)
+        : undefined,
+    };
   }
 
   async listByTrip(actor: CurrentUserPayload, tripId: string): Promise<TripEvent[]> {

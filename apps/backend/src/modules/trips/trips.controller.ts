@@ -48,6 +48,7 @@ export class TripsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT, UserRole.DRIVER)
   getById(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.tripsService.getById(user, id);
   }

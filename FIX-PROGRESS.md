@@ -81,6 +81,18 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   (postgres + redis service, backend/web/mobil job'lari) · `packages/shared/package.json`,
   `apps/backend/package.json`, `apps/backend/test/*`, `.github/workflows/ci.yml` ·
   **e2e 0 → 17 test**, hammasi real PostgreSQL'da.
+- **TASK-1.4 (C-7)** · Haydovchi tugmasi endi reysni haqiqatan harakatga keltiradi: `ingestBatch`
+  START/LOADED → `IN_PROGRESS` (`startedAt`, `startOdometer` hodisadan), FINISH → `COMPLETED`
+  (`finishedAt`, `endOdometer`, `actualDistanceKm`). Status o'zgarishi atomik
+  (`updateMany({ where: { id, status: kutilgan } })` + `count === 0` → rejected), hodisa yozuvi +
+  status + audit bitta `$transaction` ichida. `TRANSITIONS` guard'i
+  `common/trip-transitions.ts`ga chiqarildi (logist va haydovchi yo'llari bitta manbadan).
+  `GET /trips/:id` endi DRIVER uchun ham ochiq, lekin faqat o'z reysi
+  (`trip.driverId === driver.id`, aks holda 404). · `src/common/trip-transitions.ts`,
+  `src/modules/events/events.service.ts`, `src/modules/trips/trips.service.ts`,
+  `src/modules/trips/trips.controller.ts`, `src/test-utils/tenant-db.mock.ts`,
+  `events.service.spec.ts` (+6), `test/driver-flow.e2e-spec.ts` (+5 e2e) ·
+  unit 82 → 88, e2e 17 → 22. Jonli xaritada START → `MOVING` e2e bilan tasdiqlangan.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -106,4 +118,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.4 (haydovchi hodisalari reys statusini o'zgartirmaydi).
+PHASE 1 → TASK-1.5 (rate limiting, helmet, NODE_ENV xavfsizligi).

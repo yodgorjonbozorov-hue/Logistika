@@ -9,10 +9,16 @@ export function createTenantDbMock(models: string[]) {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn(),
       deleteMany: jest.fn(),
     };
   }
+  // Interactive transactions run their callback against the same scoped stubs,
+  // so a test can assert on the writes made inside one.
+  (db as Record<string, unknown>).$transaction = jest.fn(
+    (arg: unknown) => (typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(db) : arg),
+  );
   const forCompany = jest.fn().mockReturnValue(db);
   return {
     prisma: { forCompany } as unknown as import('../prisma/prisma.service').PrismaService,

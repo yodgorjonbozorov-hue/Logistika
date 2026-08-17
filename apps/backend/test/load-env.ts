@@ -6,7 +6,7 @@
 import { config } from 'dotenv';
 import { join } from 'node:path';
 
-config({ path: join(__dirname, '..', '.env') });
-config({ path: join(__dirname, '..', '..', '..', '.env') });
+config({ path: join(__dirname, '..', '.env'), quiet: true });
+config({ path: join(__dirname, '..', '..', '..', '.env'), quiet: true });
 
 process.env.NODE_ENV ??= 'test';
