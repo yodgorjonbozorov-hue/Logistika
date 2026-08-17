@@ -12,10 +12,27 @@ import { AppException } from './exceptions/app.exception';
 export const TRIP_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
   DRAFT: ['ASSIGNED', 'CANCELLED'],
   ASSIGNED: ['IN_PROGRESS', 'DRAFT', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED'],
+  // A trip that breaks down or is refused mid-route used to have nowhere to go
+  // but COMPLETED, which put work that never happened into the revenue.
+  IN_PROGRESS: ['COMPLETED', 'PARTIALLY_DELIVERED', 'RETURNED', 'FAILED', 'CANCELLED'],
   COMPLETED: [],
+  PARTIALLY_DELIVERED: [],
+  RETURNED: [],
+  FAILED: [],
   CANCELLED: [],
 };
+
+/** Outcomes that need an explanation before they are accepted. */
+export const REASON_REQUIRED_STATUSES: TripStatus[] = [
+  'PARTIALLY_DELIVERED',
+  'RETURNED',
+  'FAILED',
+  'CANCELLED',
+];
+
+export function isTerminal(status: TripStatus): boolean {
+  return TRIP_TRANSITIONS[status].length === 0;
+}
 
 export function canTransition(from: TripStatus, to: TripStatus): boolean {
   return TRIP_TRANSITIONS[from].includes(to);

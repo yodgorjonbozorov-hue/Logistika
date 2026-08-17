@@ -97,11 +97,14 @@ describe('TripsService', () => {
       expect(String(data.actualDistanceKm)).toBe('1240');
     });
 
+    // IN_PROGRESS → CANCELLED is deliberately allowed now (TASK-3.4): a trip
+    // that breaks down mid-route has to be able to end as something other than
+    // "delivered".
     it.each([
       ['DRAFT', 'complete'],
       ['COMPLETED', 'start'],
       ['CANCELLED', 'start'],
-      ['IN_PROGRESS', 'cancel'],
+      ['COMPLETED', 'cancel'],
     ] as const)('rejects %s → %s', async (status, action) => {
       const { service, db } = setup();
       db.trip!.findUnique!.mockResolvedValue({ id: 't1', status });

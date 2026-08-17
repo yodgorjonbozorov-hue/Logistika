@@ -63,7 +63,10 @@
     "ASSIGNED": "Бириктирилган",
     "IN_PROGRESS": "Йўлда",
     "COMPLETED": "Якунланган",
-    "CANCELLED": "Бекор қилинган"
+    "CANCELLED": "Бекор қилинган",
+    "PARTIALLY_DELIVERED": "Қисман етказилган",
+    "RETURNED": "Қайтарилган",
+    "FAILED": "Бажарилмаган"
   },
   "trips": {
     "title": "Рейслар",

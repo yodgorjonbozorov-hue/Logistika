@@ -44,6 +44,12 @@ enum TripStatus {
   ASSIGNED
   IN_PROGRESS
   COMPLETED
+  /// Delivered in part — only `deliveredAmount` is invoiced.
+  PARTIALLY_DELIVERED
+  /// Cargo came back: nothing is invoiced, the costs stay as a loss.
+  RETURNED
+  /// The trip could not be carried out (breakdown, refusal, lost cargo).
+  FAILED
   CANCELLED
 
   @@map("trip_status")
@@ -354,6 +360,14 @@ model Trip {
   currency          Currency   @default(UZS)
   driverAdvance     BigInt     @default(0) @map("driver_advance")
   status            TripStatus @default(DRAFT)
+  /// Why the trip ended the way it did. Required for the negative outcomes:
+  /// "the client refused it" is the difference between a bad month and a
+  /// mystery when the numbers are reviewed later.
+  statusReason      String?    @map("status_reason")
+  statusChangedAt   DateTime?  @map("status_changed_at")
+  /// What was actually delivered, when only part of the cargo arrived. This is
+  /// what gets invoiced for PARTIALLY_DELIVERED.
+  deliveredAmount   BigInt?    @map("delivered_amount")
   startOdometer     Int?       @map("start_odometer")
   endOdometer       Int?       @map("end_odometer")
   startedAt         DateTime?  @map("started_at")

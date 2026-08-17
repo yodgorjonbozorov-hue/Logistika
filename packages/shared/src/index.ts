@@ -76,6 +76,12 @@ export enum TripStatus {
   ASSIGNED = 'ASSIGNED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
+  /** Delivered in part — only the delivered amount is invoiced. */
+  PARTIALLY_DELIVERED = 'PARTIALLY_DELIVERED',
+  /** Cargo came back: nothing is invoiced, the costs stay as a loss. */
+  RETURNED = 'RETURNED',
+  /** The trip could not be carried out. */
+  FAILED = 'FAILED',
   CANCELLED = 'CANCELLED',
 }
 

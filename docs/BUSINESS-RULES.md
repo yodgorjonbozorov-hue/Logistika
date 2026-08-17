@@ -160,3 +160,44 @@ kifoya.
 Migratsiya `amount_base = amount` qilib to'ldirdi va `rate_used`ni `NULL` qoldirdi:
 bu paytgacha yozilgan hamma summa UZS edi (UI faqat UZS taklif qilardi, `currency`
 default'i ham UZS).
+
+## 4. Reys yakuni va uning moliyaviy ma'nosi (TASK-3.4)
+
+### Muammo
+
+`TRANSITIONS.IN_PROGRESS = ['COMPLETED']` edi — ya'ni yo'lda buzilgan yoki mijoz rad
+etgan reysni **faqat «yakunlangan»** deb yozish mumkin edi. Natijada bo'lmagan ish
+daromadga tushardi va moliyaviy hisobot aynan hech kim tekshirmaydigan tomonga
+qarab buzilardi.
+
+### Statuslar va o'tishlar
+
+```
+DRAFT       → ASSIGNED | CANCELLED
+ASSIGNED    → IN_PROGRESS | DRAFT | CANCELLED
+IN_PROGRESS → COMPLETED | PARTIALLY_DELIVERED | RETURNED | FAILED | CANCELLED
+COMPLETED / PARTIALLY_DELIVERED / RETURNED / FAILED / CANCELLED → terminal
+```
+
+### Har statusning moliyaviy qoidasi
+
+| Status                | Invoys                                   | Xarajatlar |
+| --------------------- | ---------------------------------------- | ---------- |
+| `COMPLETED`           | To'liq `agreedPrice`                     | Qoladi     |
+| `PARTIALLY_DELIVERED` | Faqat `deliveredAmount`                  | Qoladi     |
+| `RETURNED`            | **Yo'q**                                 | Qoladi (zarar) |
+| `FAILED`              | **Yo'q**                                 | Qoladi (zarar) |
+| `CANCELLED`           | Yo'q; avans berilgan bo'lsa — qaytarish yozuvi (`DRIVER_ADVANCE`) | Qoladi |
+
+Zararni yashirmaslik ataylab: RETURNED/FAILED reysning xarajatlari o'chirilmaydi,
+chunki ular haqiqatan sarflangan. Hisobotda bu reys zarar bo'lib ko'rinadi — bu
+to'g'ri tasvir.
+
+### Sabab majburiy
+
+`PARTIALLY_DELIVERED`, `RETURNED`, `FAILED` uchun `reason` (`@MinLength(10)`) shart.
+`«x»` degan izoh izohsizlik bilan bir xil: bir necha hafta o'tib zarar ko'rilgan oyni
+ko'rib chiqayotgan odam uchun hech narsa bermaydi. `statusReason` va `statusChangedAt`
+reysda saqlanadi.
+
+`POST /trips/:id/finish` — OWNER/LOGIST, idempotent.

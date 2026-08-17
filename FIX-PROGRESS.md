@@ -368,11 +368,25 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `expenses.service.ts`, `trip-invoicing.ts`, `trips/events` servislari,
   `test/currency.e2e-spec.ts` (+7 e2e), `docs/BUSINESS-RULES.md` ·
   unit 209 → 221, e2e 101 → 108.
+- **TASK-3.4 (H-7)** · Reys status modeli hayotga moslandi: `TripStatus`ga
+  `PARTIALLY_DELIVERED`, `RETURNED`, `FAILED` qo'shildi (migratsiya + `packages/shared`
+  enum'i — API kontrakti). `IN_PROGRESS` endi `COMPLETED | PARTIALLY_DELIVERED |
+  RETURNED | FAILED | CANCELLED`ga o'tadi (avval **faqat** `COMPLETED` — ya'ni buzilgan
+  reysni «yetkazildi» deb yozishga majbur edi). `Trip.statusReason` + `statusChangedAt`
+  + `deliveredAmount`; salbiy yakunlar uchun sabab majburiy (`@MinLength(10)`).
+  `POST /trips/:id/finish` (OWNER/LOGIST, idempotent). Moliyaviy qoida kodda:
+  COMPLETED → to'liq invoys, PARTIALLY_DELIVERED → faqat `deliveredAmount`,
+  RETURNED/FAILED → invoys yo'q (xarajatlar zarar bo'lib qoladi — yashirilmaydi),
+  CANCELLED → avans berilgan bo'lsa qaytarish yozuvi. Web `StatusBadge` + i18n × 3. ·
+  migratsiya `*_trip_outcomes`, `trip-transitions.ts`, `trips.service.ts`,
+  `trips.controller.ts`, `trip.dto.ts`, `packages/shared`, web `StatusBadge.tsx` + locales,
+  `test/trip-outcomes.e2e-spec.ts` (+10 e2e), `docs/BUSINESS-RULES.md` ·
+  e2e 108 → 118.
 
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.4 (reys status modeli: RETURNED / PARTIALLY_DELIVERED / FAILED).
+**Keyingi qadam:** TASK-3.5 (reys status o'tishidagi race condition — optimistic lock).
 
 PHASE 3 qolgan bog'liqliklar:
 

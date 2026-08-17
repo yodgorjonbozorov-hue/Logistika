@@ -63,7 +63,10 @@
     "ASSIGNED": "Назначен",
     "IN_PROGRESS": "В пути",
     "COMPLETED": "Завершён",
-    "CANCELLED": "Отменён"
+    "CANCELLED": "Отменён",
+    "PARTIALLY_DELIVERED": "Доставлено частично",
+    "RETURNED": "Возвращён",
+    "FAILED": "Не выполнен"
   },
   "trips": {
     "title": "Рейсы",

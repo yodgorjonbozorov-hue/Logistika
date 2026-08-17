@@ -1,6 +1,9 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import {
+  ValidateIf,
+  MinLength,
+  IsIn,
   IsDateString,
   IsEnum,
   IsInt,
@@ -160,4 +163,31 @@ export class ListTripsDto extends PaginationDto {
   @IsOptional()
   @Type(() => Date)
   to?: Date;
+}
+
+/**
+ * Ending a trip in something other than success.
+ *
+ * The reason is mandatory and has a minimum length on purpose: "x" as an
+ * explanation is the same as no explanation when somebody reviews a loss-making
+ * month six weeks later.
+ */
+export class FinishTripDto {
+  @IsIn(['PARTIALLY_DELIVERED', 'RETURNED', 'FAILED', 'CANCELLED'])
+  status!: 'PARTIALLY_DELIVERED' | 'RETURNED' | 'FAILED' | 'CANCELLED';
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  reason!: string;
+
+  /** Required for PARTIALLY_DELIVERED: the part that actually arrived. */
+  @ValidateIf((dto: FinishTripDto) => dto.status === 'PARTIALLY_DELIVERED')
+  @IsTiyin()
+  deliveredAmount?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  endOdometer?: number;
 }

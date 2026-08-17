@@ -19,6 +19,7 @@ import {
   AssignTripDto,
   CompleteTripDto,
   CreateTripDto,
+  FinishTripDto,
   ListTripsDto,
   StartTripDto,
   UpdateTripDto,
@@ -97,6 +98,19 @@ export class TripsController {
     @Body() dto: CompleteTripDto,
   ) {
     return this.tripsService.complete(user, id, dto);
+  }
+
+  /** Ends a trip in a non-success outcome, with a mandatory reason. */
+  @Post(':id/finish')
+  @Roles(UserRole.OWNER, UserRole.LOGIST)
+  @Idempotent()
+  @HttpCode(HttpStatus.OK)
+  finish(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: FinishTripDto,
+  ) {
+    return this.tripsService.finish(user, id, dto);
   }
 
   @Post(':id/cancel')

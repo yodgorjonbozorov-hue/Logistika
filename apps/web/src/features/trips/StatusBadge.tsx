@@ -7,7 +7,12 @@ const TONES: Record<TripStatus, 'gray' | 'blue' | 'green' | 'red' | 'orange'> = 
   ASSIGNED: 'blue',
   IN_PROGRESS: 'orange',
   COMPLETED: 'green',
-  CANCELLED: 'red',
+  // Delivered, but not all of it — green would overstate the outcome and red
+  // would hide that something did arrive.
+  PARTIALLY_DELIVERED: 'orange',
+  RETURNED: 'red',
+  FAILED: 'red',
+  CANCELLED: 'gray',
 };
 
 export function StatusBadge({ status }: { status: TripStatus }) {

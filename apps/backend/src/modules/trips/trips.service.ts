@@ -1,12 +1,15 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Trip, type TripStatus } from '@prisma/client';
-import { UserRole, type CurrentUserPayload } from 'shared';
+import { UserRole, type CurrentUserPayload, type TenantActor } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { assertTenantRefs } from '../../common/tenant-refs';
-import { assertTripTransition } from '../../common/trip-transitions';
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  assertTripTransition,
+  REASON_REQUIRED_STATUSES,
+} from '../../common/trip-transitions';
+import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
@@ -15,6 +18,7 @@ import {
   AssignTripDto,
   CompleteTripDto,
   CreateTripDto,
+  FinishTripDto,
   ListTripsDto,
   StartTripDto,
   UpdateTripDto,
@@ -192,19 +196,59 @@ export class TripsService {
     return this.transition(actor, trip, 'CANCELLED', {});
   }
 
+  /**
+   * Ends a trip in an outcome other than plain success.
+   *
+   * Before this the only exit from IN_PROGRESS was COMPLETED, so a trip that
+   * broke down or was refused had to be recorded as delivered — which invoiced
+   * the client for work that never happened.
+   */
+  async finish(actor: CurrentUserPayload, id: string, dto: FinishTripDto): Promise<Trip> {
+    const trip = await this.getById(actor, id);
+    assertTripTransition(trip.status, dto.status);
+
+    const data: Prisma.TripUncheckedUpdateInput = {
+      finishedAt: new Date(),
+      endOdometer: dto.endOdometer ?? trip.endOdometer,
+    };
+    if (dto.status === 'PARTIALLY_DELIVERED') {
+      const delivered = BigInt(dto.deliveredAmount!);
+      if (delivered <= 0n || delivered > trip.agreedPrice) {
+        throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [
+          'deliveredAmount must be greater than zero and no more than the agreed price',
+        ]);
+      }
+      data.deliveredAmount = delivered;
+    }
+
+    return this.transition(actor, trip, dto.status, data, dto.reason);
+  }
+
   private async transition(
     actor: CurrentUserPayload,
     trip: Trip,
     status: TripStatus,
     data: Prisma.TripUncheckedUpdateInput,
+    reason?: string,
   ): Promise<Trip> {
     const tenant = requireTenantActor(actor);
+    if (REASON_REQUIRED_STATUSES.includes(status) && !reason && status !== 'CANCELLED') {
+      throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [
+        `a reason is required when a trip ends as ${status}`,
+      ]);
+    }
+
     const updated = await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
-      const result = await tx.trip.update({ where: { id: trip.id }, data: { ...data, status } });
-      // Completing a trip is what turns work into a receivable.
-      if (status === 'COMPLETED') {
-        await invoiceCompletedTrip(this.ledger, this.currency, tx, tenant, result);
-      }
+      const result = await tx.trip.update({
+        where: { id: trip.id },
+        data: {
+          ...data,
+          status,
+          statusReason: reason ?? trip.statusReason,
+          statusChangedAt: new Date(),
+        },
+      });
+      await this.applyFinancialOutcome(tx, tenant, result, status);
       return result;
     });
     this.audit.log({
@@ -217,6 +261,51 @@ export class TripsService {
       after: { status },
     });
     return updated;
+  }
+
+  /**
+   * What each outcome means for the money (docs/BUSINESS-RULES.md §4).
+   *
+   * COMPLETED            → the whole agreed price is invoiced
+   * PARTIALLY_DELIVERED  → only the delivered part is invoiced
+   * RETURNED / FAILED    → nothing is invoiced; the costs already recorded stay
+   *                        as a loss, which is the honest picture
+   * CANCELLED            → nothing is invoiced, and any advance paid to the
+   *                        driver is written back so it is not silently lost
+   */
+  private async applyFinancialOutcome(
+    tx: TenantScopedClient,
+    tenant: TenantActor,
+    trip: Trip,
+    status: TripStatus,
+  ): Promise<void> {
+    if (status === 'COMPLETED') {
+      await invoiceCompletedTrip(this.ledger, this.currency, tx, tenant, trip);
+      return;
+    }
+
+    if (status === 'PARTIALLY_DELIVERED' && trip.deliveredAmount && trip.clientId) {
+      await invoiceCompletedTrip(this.ledger, this.currency, tx, tenant, {
+        ...trip,
+        // Only what arrived is owed.
+        agreedPrice: trip.deliveredAmount,
+      });
+      return;
+    }
+
+    if (status === 'CANCELLED' && trip.driverAdvance > 0n) {
+      const converted = await this.currency.toBase(trip.driverAdvance, trip.currency);
+      await this.ledger.record(tx, tenant, {
+        driverId: trip.driverId,
+        tripId: trip.id,
+        direction: 'DEBIT',
+        reason: 'DRIVER_ADVANCE',
+        amount: trip.driverAdvance,
+        currency: trip.currency,
+        amountBase: converted.amountBase,
+        reference: `advance to recover, trip ${trip.tripNumber}`,
+      });
+    }
   }
 
   /** Referenced vehicle/trailer/driver/client must exist within this tenant. */

@@ -63,7 +63,10 @@
     "ASSIGNED": "Biriktirilgan",
     "IN_PROGRESS": "Yo'lda",
     "COMPLETED": "Yakunlangan",
-    "CANCELLED": "Bekor qilingan"
+    "CANCELLED": "Bekor qilingan",
+    "PARTIALLY_DELIVERED": "Qisman yetkazilgan",
+    "RETURNED": "Qaytarilgan",
+    "FAILED": "Bajarilmagan"
   },
   "trips": {
     "title": "Reyslar",
