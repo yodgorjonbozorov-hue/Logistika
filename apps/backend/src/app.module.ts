@@ -9,7 +9,6 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { ThrottlingModule } from './common/throttling/throttling.module';
 import { validateEnv } from './config/env.validation';
-import { HealthController } from './health.controller';
 import { I18nModule } from './i18n/i18n.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,6 +18,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
+import { HealthModule } from './modules/health/health.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
@@ -53,8 +53,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ExpensesModule,
     FilesModule,
     PublicLinkModule,
+    HealthModule,
   ],
-  controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

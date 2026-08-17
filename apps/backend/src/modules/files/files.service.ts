@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { StoredFile } from '@prisma/client';
 import * as Minio from 'minio';
@@ -23,7 +23,7 @@ export interface UploadedFileInput {
 }
 
 @Injectable()
-export class FilesService {
+export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
   private readonly client: Minio.Client;
   /** Same credentials, browser-reachable host: only used to sign download URLs. */
@@ -55,6 +55,24 @@ export class FilesService {
       MINIO_PUBLIC_USE_SSL: config.get<string>('MINIO_PUBLIC_USE_SSL'),
     });
     this.publicClient = new Minio.Client({ ...publicEndpoint, accessKey, secretKey });
+  }
+
+  /**
+   * Create the bucket at boot so a fresh install is ready before the first
+   * upload — otherwise the readiness probe reports storage down until someone
+   * happens to upload a photo. A storage outage at boot is logged, not fatal:
+   * the lazy path retries on every upload.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureBucket();
+    } catch (error) {
+      this.logger.warn(
+        `Object storage not ready at startup, will retry on first upload: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async upload(actor: CurrentUserPayload, file: UploadedFileInput): Promise<StoredFile> {

@@ -5,7 +5,7 @@ Boshlangan: 2026-08-17
 ## Holat
 
 - [x] PHASE 0 — Baseline
-- [ ] PHASE 1 — Blockers (8 ta task)
+- [x] PHASE 1 — Blockers (8 ta task)
 - [ ] PHASE 2 — Security (9 ta task)
 - [ ] PHASE 3 — Core business (12 ta task)
 - [ ] PHASE 4 — Performance (6 ta task)
@@ -127,6 +127,20 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   tekshiruv: JWT sirlari ≥ 32 belgi va bir-biridan farqli, `MINIO_USE_SSL=true`,
   `WEB_URL` `https://`. · `src/config/env.validation.ts` (+spec: 13 test),
   `src/modules/files/files.service.ts` (+spec), `.env.example` · unit 95 → 104.
+- **TASK-1.8 (H-19, qismi)** · Deployment artefaktlari: `apps/backend/Dockerfile`
+  (multi-stage, non-root `app` user, `vips` + `dumb-init`, prod-only bog'liqliklar),
+  `apps/web/Dockerfile` (Vite build → nginx statik, `VITE_API_URL` build-arg),
+  `docker-compose.prod.yml` (healthcheck'lar, `restart: unless-stopped`, migratsiya —
+  **alohida bir martalik servis**, backend `service_completed_successfully` kutadi),
+  `nginx/nginx.conf` (TLS, HSTS, gzip, `/api` proxy + `X-Forwarded-For` — rate limiter
+  shu header'ni o'qiydi), `nginx/web.conf` (SPA fallback), `.dockerignore`,
+  `docs/DEPLOYMENT.md` (env jadvali, TLS, seed, rolling update, rollback, DB rollari).
+  `@nestjs/terminus` bilan real health: `/health` (liveness) va `/health/ready`
+  (Postgres `SELECT 1` + Redis `PING` + MinIO `bucketExists`, 503 va qaysi bog'liqlik
+  yiqilgani javobda). · unit 104, e2e 29 (+3 health).
+  **Konteyner real ishga tushirib tekshirildi**: `/health/ready` uchtala bog'liqlikni `up`
+  deb qaytardi, `/auth/login` token berdi, production hardening `MINIO_USE_SSL=false` bilan
+  ishga tushishdan bosh tortdi (kutilgan xatti-harakat).
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -141,6 +155,13 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-5 (HIGH, tuzatildi)**: `bootstrap.ts` `express`ni to'g'ridan-to'g'ri import qiladi, lekin
+  `express` backend `dependencies`ida yo'q edi — dev'da hoisting tufayli ishlardi, prod
+  konteynerida `Cannot find module 'express'` bilan yiqildi. Dependency qo'shildi.
+- **N-4 (HIGH, tuzatildi)**: `nest build` `dist/src/main.js` yaratardi (tsconfig `include`ga
+  `prisma` va `test` kirgani uchun `rootDir` paket ildiziga ko'tarilgan), ya'ni
+  `package.json`dagi `"start": "node dist/main.js"` **hech qachon ishlamagan**.
+  `tsconfig.build.json` + `nest-cli.json` qo'shildi → `dist/main.js`.
 - **N-3 (CRITICAL, tasdiqlangan)**: yangi e2e darhol C-1 davomini isbotladi — B tenant A'ning
   `tripId`/`clientId` bilan `POST /expenses` va `POST /incomes` yuborsa **201** qaytadi va yozuv
   yaratiladi. Ikkala test `it.failing()` bilan qoldirildi (hujjatlangan, bajariladigan zaiflik) —
@@ -152,4 +173,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 1 → TASK-1.8 (deployment artefaktlari: Dockerfile'lar, prod compose, nginx, health).
+PHASE 1 tugadi. PHASE 2 → TASK-2.1 (PostgreSQL RLS) — tasdiq kutilmoqda.

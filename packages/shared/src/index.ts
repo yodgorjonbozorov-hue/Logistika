@@ -157,5 +157,6 @@ export const ERROR_CODES = [
   'FILE_TYPE_NOT_ALLOWED',
   'RATE_LIMIT_EXCEEDED',
   'SMS_DAILY_LIMIT',
+  'SERVICE_UNAVAILABLE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

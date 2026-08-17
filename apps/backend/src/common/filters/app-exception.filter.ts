@@ -16,6 +16,8 @@ const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.UNAUTHORIZED]: 'AUTH_TOKEN_INVALID',
   [HttpStatus.FORBIDDEN]: 'AUTH_FORBIDDEN',
   [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMIT_EXCEEDED',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
 };
 
 @Catch()
@@ -44,10 +46,16 @@ export class AppExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       code = STATUS_CODES[status] ?? 'INTERNAL_ERROR';
       const body = exception.getResponse();
-      // ValidationPipe puts field errors into `message: string[]`.
-      if (typeof body === 'object' && body !== null && 'message' in body) {
-        const message = (body as { message: unknown }).message;
-        if (Array.isArray(message)) details = message;
+      // ValidationPipe puts field errors into `message: string[]`; other
+      // structured payloads (health checks name the failing dependency) are
+      // carried through as-is instead of collapsing into a bare status code.
+      if (typeof body === 'object' && body !== null) {
+        const message = (body as { message?: unknown }).message;
+        if (Array.isArray(message)) {
+          details = message;
+        } else if (!('statusCode' in body) || Object.keys(body).length > 2) {
+          details = body;
+        }
       }
     } else {
       this.logger.error(
