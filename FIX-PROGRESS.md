@@ -193,6 +193,22 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `events.controller.ts`, `events.service.ts` (+6 unit test),
   `tracking.controller.ts`, `apps/web/.../TripDetailPage.tsx`,
   `test/query-validation.e2e-spec.ts` (+8 e2e) · unit 124 → 130, e2e 36 → 44.
+- **TASK-2.4 (H-9)** · Refresh token: (A) rotatsiya endi atomik — `updateMany({ where: { id,
+  revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir → `update` edi,
+  2 parallel refresh ikkalasi ham yangi juftlik olardi). (B) **Reuse detection**: bekor qilingan
+  token qayta kelsa butun **oila** (`familyId`) revoke qilinadi + `REFRESH_REUSE_DETECTED`
+  audit yozuvi + `Logger.warn`; yangi kod `AUTH_REFRESH_REUSED` (401, 3 tilda). Migratsiya:
+  `replaced_by_id`, `family_id` (+`expires_at` va `family_id` indekslari — L-3). Har login
+  o'z oilasini boshlaydi, shuning uchun bitta qurilmadan chiqish boshqalarini yiqitmaydi.
+  Muddati o'tgan tokenlarni tozalaydigan kunlik cron qo'shildi (TASK-4.4 uni distributed
+  lock'ga o'tkazadi). (C) **Client single-flight**: web `client.ts` va mobil `api_client.dart`
+  parallel 401'larda bitta refresh promise'ini kutadi — avval har biri rotatsiya qilib,
+  birinchisidan boshqasi «sababsiz logout» olardi. ·
+  `prisma/migrations/20260817140000_refresh_token_family/`, `schema.prisma`,
+  `auth.service.ts` (+spec 5 test), `apps/web/.../client.ts` (+2 test),
+  `mobile/.../api_client.dart` (+`test/api_client_test.dart`, 2 test),
+  `test/refresh-rotation.e2e-spec.ts` (+6 e2e), shared + i18n × 3 ·
+  unit 130 → 134, web 11 → 13, mobil 14 → 16, e2e 44 → 50.
 
 ## Bloklangan / keyinga qoldirilgan
 
@@ -225,4 +241,4 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
-PHASE 2 → TASK-2.4 (refresh token: rotation race, reuse detection, client single-flight).
+PHASE 2 → TASK-2.5 (parol boshqarish oqimlari: change/forgot/reset, lockout, parol siyosati).

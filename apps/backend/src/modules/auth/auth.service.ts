@@ -1,5 +1,6 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { JwtService } from '@nestjs/jwt';
 import type { User } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -25,6 +26,8 @@ export function ttlToSeconds(ttl: string): number {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
@@ -62,8 +65,16 @@ export class AuthService {
     const stored = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: this.hashJti(payload.jti) },
     });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date()) {
       throw new AppException('AUTH_REFRESH_INVALID', HttpStatus.UNAUTHORIZED);
+    }
+
+    // A revoked token coming back means it was rotated already: either a race
+    // between two tabs, or a stolen copy being replayed. Either way the family
+    // can no longer be trusted (OWASP reuse detection).
+    if (stored.revokedAt) {
+      await this.revokeFamily(stored.familyId, stored.userId);
+      throw new AppException('AUTH_REFRESH_REUSED', HttpStatus.UNAUTHORIZED);
     }
 
     const user = await this.usersService.findById(payload.sub);
@@ -71,18 +82,71 @@ export class AuthService {
       throw new AppException('AUTH_USER_INACTIVE', HttpStatus.FORBIDDEN);
     }
 
-    // Rotation: the old token dies the moment a new pair is issued.
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
+    // Rotation is a compare-and-set: two parallel refreshes both read an
+    // unrevoked row, and only the one whose UPDATE matches gets a new pair.
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
-    return this.issueTokens(user);
+    if (count === 0) {
+      throw new AppException('AUTH_REFRESH_INVALID', HttpStatus.UNAUTHORIZED);
+    }
+
+    const tokens = await this.issueTokens(user, stored.familyId, stored.id);
+    return tokens;
+  }
+
+  /**
+   * Kills every live token descended from the same login. The user has to sign
+   * in again — which is the point: if a token was stolen, the thief's copies
+   * die with it.
+   */
+  private async revokeFamily(familyId: string, userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    this.logger.warn(`Refresh token reuse detected for user ${userId}; family ${familyId} revoked`);
+    this.audit.log({
+      companyId: null,
+      userId,
+      action: 'REFRESH_REUSE_DETECTED',
+      entityType: 'RefreshToken',
+      entityId: familyId,
+    });
+  }
+
+  /**
+   * Expired rows serve no purpose and the table only grows. Daily is often
+   * enough; TASK-4.4 moves every cron onto a distributed lock so this does not
+   * run once per instance.
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async purgeExpiredRefreshTokens(): Promise<void> {
+    try {
+      const { count } = await this.prisma.refreshToken.deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      });
+      if (count > 0) this.logger.log(`Purged ${count} expired refresh tokens`);
+    } catch (error) {
+      this.logger.error(
+        `Refresh token purge failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async logout(refreshToken: string): Promise<void> {
     const payload = await this.verifyRefreshToken(refreshToken);
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: this.hashJti(payload.jti) },
+    });
+    if (!stored) return;
+
+    // The whole rotation chain of this session ends, not just the token in
+    // hand: one login is one family, so signing out here leaves other devices
+    // (each with their own family) alone.
     await this.prisma.refreshToken.updateMany({
-      where: { tokenHash: this.hashJti(payload.jti), revokedAt: null },
+      where: { familyId: stored.familyId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }
@@ -96,7 +160,12 @@ export class AuthService {
     return safeUser;
   }
 
-  async issueTokens(user: User): Promise<AuthTokens> {
+  /**
+   * @param familyId  continues an existing rotation chain (refresh); a fresh
+   *                  login starts a new family.
+   * @param replacedId the token this pair replaces, recorded on that row.
+   */
+  async issueTokens(user: User, familyId?: string, replacedId?: string): Promise<AuthTokens> {
     const accessTtl = this.config.getOrThrow<string>('JWT_ACCESS_TTL');
     const refreshTtl = this.config.getOrThrow<string>('JWT_REFRESH_TTL');
     const jti = randomUUID();
@@ -112,13 +181,21 @@ export class AuthService {
       ),
     ]);
 
-    await this.prisma.refreshToken.create({
+    const created = await this.prisma.refreshToken.create({
       data: {
         userId: user.id,
         tokenHash: this.hashJti(jti),
         expiresAt: new Date(Date.now() + ttlToSeconds(refreshTtl) * 1000),
+        // A login without a family starts one, rooted at its own id.
+        familyId: familyId ?? randomUUID(),
       },
     });
+    if (replacedId) {
+      await this.prisma.refreshToken.update({
+        where: { id: replacedId },
+        data: { replacedById: created.id },
+      });
+    }
     return { accessToken, refreshToken };
   }
 

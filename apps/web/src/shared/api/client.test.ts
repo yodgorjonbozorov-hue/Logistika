@@ -75,4 +75,76 @@ describe('api client', () => {
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe('NOT_FOUND');
   });
+
+  it('refreshes once when several parallel requests hit an expired token', async () => {
+    tokenStore.set('expired-access', 'refresh-1');
+    const expired = {
+      success: false,
+      data: null,
+      error: { code: 'AUTH_TOKEN_EXPIRED', message: 'expired' },
+      meta: null,
+    };
+    const refreshed = {
+      success: true,
+      data: { accessToken: 'new-access', refreshToken: 'new-refresh' },
+      error: null,
+      meta: null,
+    };
+    const ok = { success: true, data: { id: '1' }, error: null, meta: null };
+
+    const calls: string[] = [];
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      calls.push(url);
+      if (url.includes('/auth/refresh')) return Promise.resolve({ json: () => Promise.resolve(refreshed) });
+      // Every business call fails once with an expired token, then succeeds.
+      const isRetry = calls.filter((c) => c === url).length > 1;
+      return Promise.resolve({ json: () => Promise.resolve(isRetry ? ok : expired) });
+    });
+
+    const results = await Promise.all([api('/trips'), api('/drivers'), api('/vehicles')]);
+
+    // The whole point: one rotation, not three. Three would leave two requests
+    // holding a token the server has already replaced.
+    expect(calls.filter((c) => c.includes('/auth/refresh'))).toHaveLength(1);
+    expect(results).toHaveLength(3);
+    expect(tokenStore.access).toBe('new-access');
+  });
+
+  it('starts a fresh refresh after the previous one settled', async () => {
+    tokenStore.set('expired-access', 'refresh-1');
+    const expired = {
+      success: false,
+      data: null,
+      error: { code: 'AUTH_TOKEN_EXPIRED', message: 'expired' },
+      meta: null,
+    };
+    const refreshed = {
+      success: true,
+      data: { accessToken: 'a', refreshToken: 'r' },
+      error: null,
+      meta: null,
+    };
+    const ok = { success: true, data: null, error: null, meta: null };
+
+    let refreshes = 0;
+    let businessCalls = 0;
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/auth/refresh')) {
+        refreshes++;
+        return Promise.resolve({ json: () => Promise.resolve(refreshed) });
+      }
+      businessCalls++;
+      // Fail on the first call of each round, succeed on the retry.
+      return Promise.resolve({
+        json: () => Promise.resolve(businessCalls % 2 === 1 ? expired : ok),
+      });
+    });
+
+    await api('/trips');
+    await api('/trips');
+
+    // The in-flight promise is cleared once settled, so a later expiry can
+    // still refresh — single-flight, not once-per-session.
+    expect(refreshes).toBe(2);
+  });
 });

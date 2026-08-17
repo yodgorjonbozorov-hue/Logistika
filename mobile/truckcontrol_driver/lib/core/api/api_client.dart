@@ -93,7 +93,18 @@ class ApiClient {
     }
   }
 
-  Future<bool> _tryRefresh() async {
+  /// Single-flight refresh: several queued requests hitting an expired token at
+  /// once must not each rotate it. The first rotation wins and the rest would
+  /// present a token that no longer exists — logging the driver out mid-trip.
+  Future<bool>? _refreshInFlight;
+
+  Future<bool> _tryRefresh() {
+    return _refreshInFlight ??= _performRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  Future<bool> _performRefresh() async {
     final refresh = _tokens.refreshToken;
     if (refresh == null) return false;
     final envelope = await _raw(

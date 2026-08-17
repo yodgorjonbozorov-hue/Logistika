@@ -179,11 +179,17 @@ model RefreshToken {
   tokenHash String    @unique @map("token_hash")
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
+  // Rotation chain: replaying a token that already has a successor means the
+  // token was stolen, and the whole family is revoked (OWASP reuse detection).
+  replacedById String? @map("replaced_by_id")
+  familyId     String  @map("family_id")
   createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
+  @@index([familyId])
   @@map("refresh_tokens")
 }
 

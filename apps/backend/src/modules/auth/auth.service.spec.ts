@@ -37,6 +37,7 @@ describe('AuthService', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
       updateMany: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
   let usersService: { findByIdentifier: jest.Mock; findById: jest.Mock };
@@ -62,10 +63,13 @@ describe('AuthService', () => {
     prisma = {
       user: { update: jest.fn() },
       refreshToken: {
-        create: jest.fn(),
+        create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ id: 'rt-new', ...data }),
+        ),
         findUnique: jest.fn(),
         update: jest.fn(),
-        updateMany: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
     usersService = { findByIdentifier: jest.fn(), findById: jest.fn() };
@@ -127,6 +131,8 @@ describe('AuthService', () => {
       const storedHash = prisma.refreshToken.create.mock.calls[0][0].data.tokenHash;
       prisma.refreshToken.findUnique.mockResolvedValue({
         id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'fam-1',
         tokenHash: storedHash,
         revokedAt: null,
         expiresAt: new Date(Date.now() + 86_400_000),
@@ -135,23 +141,101 @@ describe('AuthService', () => {
       const newTokens = await service.refresh(refreshToken);
 
       expect(newTokens.accessToken).toBeTruthy();
+      // Compare-and-set: the revocation only applies to a row still unrevoked.
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rt-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      // The new token continues the same family and records the chain.
+      expect(prisma.refreshToken.create.mock.calls.at(-1)![0].data.familyId).toBe('fam-1');
       expect(prisma.refreshToken.update).toHaveBeenCalledWith({
         where: { id: 'rt-1' },
-        data: { revokedAt: expect.any(Date) },
+        data: { replacedById: 'rt-new' },
       });
     });
 
-    it('rejects a revoked refresh token', async () => {
+    it('a parallel refresh loses the compare-and-set instead of minting a second pair', async () => {
       usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
       const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      const storedHash = prisma.refreshToken.create.mock.calls[0][0].data.tokenHash;
       prisma.refreshToken.findUnique.mockResolvedValue({
         id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'fam-1',
+        tokenHash: storedHash,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+      // The other request got there first: no row left to revoke.
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_INVALID',
+      });
+    });
+
+    it('replaying a rotated token revokes the whole family (reuse detection)', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      const storedHash = prisma.refreshToken.create.mock.calls[0][0].data.tokenHash;
+      // Already rotated — so this copy is either a race or a stolen token.
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'fam-1',
+        tokenHash: storedHash,
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
       await expect(service.refresh(refreshToken)).rejects.toMatchObject({
-        code: 'AUTH_REFRESH_INVALID',
+        code: 'AUTH_REFRESH_REUSED',
+      });
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { familyId: 'fam-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'REFRESH_REUSE_DETECTED' }),
+      );
+    });
+
+    it('a fresh login starts its own token family', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      await service.login('owner@test.uz', 'correct-password');
+      const first = prisma.refreshToken.create.mock.calls[0][0].data.familyId;
+
+      await service.login('owner@test.uz', 'correct-password');
+      const second = prisma.refreshToken.create.mock.calls[1][0].data.familyId;
+
+      expect(first).toBeTruthy();
+      expect(second).not.toBe(first);
+    });
+
+    it('purges expired refresh tokens on its schedule', async () => {
+      prisma.refreshToken.deleteMany.mockResolvedValue({ count: 3 });
+      await service.purgeExpiredRefreshTokens();
+
+      expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
+        where: { expiresAt: { lt: expect.any(Date) } },
+      });
+    });
+
+    it('treats a revoked refresh token as reuse, not a plain rejection', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'fam-1',
+        revokedAt: new Date(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_REUSED',
       });
     });
 

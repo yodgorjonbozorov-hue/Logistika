@@ -17,5 +17,6 @@
   "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang",
   "RATE_LIMIT_EXCEEDED": "Juda ko'p so'rov yuborildi. Biroz kutib, qayta urinib ko'ring",
   "SMS_DAILY_LIMIT": "Bugun uchun SMS kod chegarasi tugadi. Ertaga urinib ko'ring yoki logistga murojaat qiling",
-  "SERVICE_UNAVAILABLE": "Xizmat vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring"
+  "SERVICE_UNAVAILABLE": "Xizmat vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring",
+  "AUTH_REFRESH_REUSED": "Xavfsizlik sababli barcha sessiyalar yopildi. Qaytadan kiring"
 }

@@ -63,7 +63,18 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
   }))) as ApiResponse<T>;
 }
 
-async function tryRefresh(): Promise<boolean> {
+/**
+ * Single-flight refresh.
+ *
+ * A page load fires several queries at once; when the access token has expired
+ * they all get AUTH_TOKEN_EXPIRED together. Without this, each one would rotate
+ * the refresh token: the first succeeds, the rest present a token that no
+ * longer exists and get logged out — the "it signs me out for no reason"
+ * complaint. Now they all await the same in-flight refresh.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function performRefresh(): Promise<boolean> {
   const refreshToken = tokenStore.refresh;
   if (!refreshToken) return false;
   const result = await rawRequest<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
@@ -76,6 +87,13 @@ async function tryRefresh(): Promise<boolean> {
   }
   tokenStore.clear();
   return false;
+}
+
+export async function tryRefresh(): Promise<boolean> {
+  refreshInFlight ??= performRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
 }
 
 /** Unwraps the { success, data, error, meta } envelope; auto-refreshes once on expiry. */
