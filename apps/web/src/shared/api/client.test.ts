@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, api, tokenStore } from './client';
+import { ApiError, api, isConflict, tokenStore } from './client';
 
-function mockFetchOnce(body: unknown) {
+function mockFetchOnce(body: unknown, status = 200) {
   (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    status,
     json: () => Promise.resolve(body),
   });
 }
@@ -69,6 +70,42 @@ describe('api client', () => {
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer my-access');
   });
 
+  it('carries the HTTP status so a lost race can be told from a bad request', async () => {
+    mockFetchOnce(
+      {
+        success: false,
+        data: null,
+        error: {
+          code: 'RESOURCE_CONFLICT',
+          message: "Ma'lumot boshqa foydalanuvchi tomonidan o'zgartirildi",
+        },
+        meta: null,
+      },
+      409,
+    );
+
+    const error = await api('/trips/1', { method: 'PATCH', body: {} }).catch((e: unknown) => e);
+
+    expect(isConflict(error)).toBe(true);
+    expect((error as ApiError).status).toBe(409);
+  });
+
+  it('does not mistake an ordinary rejection for a conflict', async () => {
+    mockFetchOnce(
+      {
+        success: false,
+        data: null,
+        error: { code: 'VALIDATION_FAILED', message: "Ma'lumot noto'g'ri" },
+        meta: null,
+      },
+      400,
+    );
+
+    const error = await api('/trips', { method: 'POST', body: {} }).catch((e: unknown) => e);
+
+    expect(isConflict(error)).toBe(false);
+  });
+
   it('exposes ApiError as Error instance', () => {
     const error = new ApiError('NOT_FOUND', 'topilmadi');
     expect(error).toBeInstanceOf(Error);
@@ -94,7 +131,8 @@ describe('api client', () => {
     const calls: string[] = [];
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       calls.push(url);
-      if (url.includes('/auth/refresh')) return Promise.resolve({ json: () => Promise.resolve(refreshed) });
+      if (url.includes('/auth/refresh'))
+        return Promise.resolve({ json: () => Promise.resolve(refreshed) });
       // Every business call fails once with an expired token, then succeeds.
       const isRetry = calls.filter((c) => c === url).length > 1;
       return Promise.resolve({ json: () => Promise.resolve(isRetry ? ok : expired) });
@@ -179,8 +217,8 @@ describe('api client', () => {
 
     await api('/trips');
 
-    const refreshCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
-      ([url]) => String(url).includes('/auth/refresh'),
+    const refreshCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.find(([url]) =>
+      String(url).includes('/auth/refresh'),
     );
     expect(refreshCall).toBeDefined();
     expect(String(refreshCall![1].body)).not.toContain('refreshToken');

@@ -111,7 +111,18 @@ export class CreateTripDto {
   driverAdvance?: string;
 }
 
-export class UpdateTripDto extends PartialType(CreateTripDto) {}
+export class UpdateTripDto extends PartialType(CreateTripDto) {
+  /**
+   * The version the client was looking at. Optional for backwards
+   * compatibility; when present the write is refused if somebody else changed
+   * the trip in the meantime.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  version?: number;
+}
 
 export class AssignTripDto {
   @IsUUID()

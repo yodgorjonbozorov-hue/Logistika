@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Expense, Income, Prisma } from '@prisma/client';
+import type { Currency, Expense, Income, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
@@ -68,6 +68,30 @@ export class ExpensesService {
     private readonly ledger: LedgerService,
     private readonly currency: CurrencyService,
   ) {}
+
+  /**
+   * Re-freezes the UZS value of a row that is being edited.
+   *
+   * Only when the edit actually touches the amount, the currency or the date
+   * the rate is read from. Re-running the conversion on every save would
+   * restate rows at today's rate and quietly change numbers a report has
+   * already shown — the whole point of freezing it is that it does not move.
+   */
+  private async reconvert(
+    existing: { amount: bigint; currency: Currency },
+    next: { amount?: bigint; currency?: Currency; on: Date; dateChanged: boolean },
+  ): Promise<{
+    amountBase: bigint;
+    rateUsed: Prisma.Decimal | null;
+    rateDate: Date | null;
+  } | null> {
+    const amount = next.amount ?? existing.amount;
+    const currency = next.currency ?? existing.currency;
+    if (amount === existing.amount && currency === existing.currency && !next.dateChanged) {
+      return null;
+    }
+    return this.currency.toBase(amount, currency, next.on);
+  }
 
   // ---------- Expenses ----------
 
@@ -147,8 +171,30 @@ export class ExpensesService {
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
     await assertTenantRefs(this.prisma.forCompany(actor.companyId), dto);
     try {
+      const changes = toExpenseData(dto);
+      // Editing the amount without re-freezing the base left the row saying
+      // "200 USD" and "1 250 000 tiyin" at the same time, and every report sums
+      // the second one.
+      const converted = await this.reconvert(existing, {
+        ...changes,
+        on: changes.expenseDate ?? existing.expenseDate,
+        dateChanged: changes.expenseDate !== undefined,
+      });
+
       return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
-        const expense = await tx.expense.update({ where: { id }, data: toExpenseData(dto) });
+        // The version read above is part of the WHERE clause, so an approval —
+        // or another edit — that landed since the read makes this write miss
+        // instead of silently overwriting a decision it never saw.
+        const { count } = await tx.expense.updateMany({
+          where: { id, isApproved: false, version: existing.version },
+          data: { ...changes, ...converted, version: { increment: 1 } },
+        });
+        if (count === 0) {
+          throw new AppException('RESOURCE_CONFLICT', HttpStatus.CONFLICT, undefined, {
+            expectedVersion: existing.version,
+          });
+        }
+        const expense = await tx.expense.findUniqueOrThrow({ where: { id } });
         await this.audit.logInTx(tx, {
           companyId: actor.companyId,
           userId: actor.userId,
@@ -168,7 +214,18 @@ export class ExpensesService {
   async approveExpense(actor: CurrentUserPayload, id: string): Promise<Expense> {
     try {
       return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
-        const expense = await tx.expense.update({ where: { id }, data: { isApproved: true } });
+        // Guarded on the current flag: two approvals racing must not both
+        // succeed and write two audit entries for one approval.
+        const { count } = await tx.expense.updateMany({
+          where: { id, isApproved: false },
+          data: { isApproved: true, version: { increment: 1 } },
+        });
+        if (count === 0) {
+          throw new AppException('RESOURCE_CONFLICT', HttpStatus.CONFLICT, undefined, {
+            reason: 'the expense is already approved or does not exist',
+          });
+        }
+        const expense = await tx.expense.findUniqueOrThrow({ where: { id } });
         await this.audit.logInTx(tx, {
           companyId: actor.companyId,
           userId: actor.userId,
@@ -191,7 +248,14 @@ export class ExpensesService {
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
     await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
-      await tx.expense.delete({ where: { id } });
+      // Same guard as the edit: an approval racing the delete must win, or an
+      // approved expense disappears from the financial record.
+      const { count } = await tx.expense.deleteMany({ where: { id, isApproved: false } });
+      if (count === 0) {
+        throw new AppException('RESOURCE_CONFLICT', HttpStatus.CONFLICT, undefined, {
+          reason: 'the expense was approved while it was being deleted',
+        });
+      }
       await this.audit.logInTx(tx, {
         companyId: actor.companyId,
         userId: actor.userId,
@@ -313,8 +377,27 @@ export class ExpensesService {
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     try {
       const tenant = requireTenantActor(actor);
+      const changes = toIncomeData(dto);
+      const converted = await this.reconvert(existing, {
+        ...changes,
+        on: changes.paymentDate ?? existing.paymentDate ?? existing.createdAt,
+        dateChanged: changes.paymentDate !== undefined,
+      });
+
       return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
-        const income = await tx.income.update({ where: { id }, data: toIncomeData(dto) });
+        // Guarded on the version read above. Two corrections racing would both
+        // find the same un-reversed ledger entry and reverse it twice, leaving
+        // the client's balance short by one payment.
+        const { count } = await tx.income.updateMany({
+          where: { id, version: existing.version },
+          data: { ...changes, ...converted, version: { increment: 1 } },
+        });
+        if (count === 0) {
+          throw new AppException('RESOURCE_CONFLICT', HttpStatus.CONFLICT, undefined, {
+            expectedVersion: existing.version,
+          });
+        }
+        const income = await tx.income.findUniqueOrThrow({ where: { id } });
 
         // Correcting a recorded payment is a reversal plus a new entry, never
         // an edit: the ledger keeps what was believed at the time.

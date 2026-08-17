@@ -3,8 +3,6 @@ import i18n from '../i18n';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-
-
 export class ApiError extends Error {
   constructor(
     readonly code: string,
@@ -15,6 +13,15 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * A write that lost a race: the row moved between the page reading it and the
+ * user saving it. The stale copy on screen is the immediate problem, so every
+ * caller answers this the same way — refetch, then show the server's message.
+ */
+export function isConflict(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 409;
 }
 
 /**
@@ -51,7 +58,13 @@ export interface RequestOptions {
   idempotencyKey?: string;
 }
 
-async function rawRequest<T>(path: string, options: RequestOptions): Promise<ApiResponse<T>> {
+interface RawResult<T> {
+  envelope: ApiResponse<T>;
+  /** Kept so callers can react to 409 without matching on every conflict code. */
+  status: number;
+}
+
+async function rawRequest<T>(path: string, options: RequestOptions): Promise<RawResult<T>> {
   const url = new URL(API_URL + path, window.location.origin);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
@@ -68,12 +81,13 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
     credentials: 'include',
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-  return (await response.json().catch(() => ({
+  const envelope = (await response.json().catch(() => ({
     success: false,
     data: null,
     error: { code: 'INTERNAL_ERROR', message: i18n.t('common.errorGeneric') },
     meta: null,
   }))) as ApiResponse<T>;
+  return { envelope, status: response.status };
 }
 
 /**
@@ -89,12 +103,12 @@ let refreshInFlight: Promise<boolean> | null = null;
 
 async function performRefresh(): Promise<boolean> {
   // No token is sent: the browser attaches the httpOnly cookie itself.
-  const result = await rawRequest<{ accessToken: string }>('/auth/refresh', {
+  const { envelope } = await rawRequest<{ accessToken: string }>('/auth/refresh', {
     method: 'POST',
     body: {},
   });
-  if (result.success && result.data) {
-    tokenStore.set(result.data.accessToken);
+  if (envelope.success && envelope.data) {
+    tokenStore.set(envelope.data.accessToken);
     return true;
   }
   tokenStore.clear();
@@ -115,7 +129,7 @@ export async function api<T>(
 ): Promise<{ data: T; meta: ApiMeta | null }> {
   let result = await rawRequest<T>(path, options);
 
-  if (!result.success && result.error?.code === 'AUTH_TOKEN_EXPIRED') {
+  if (!result.envelope.success && result.envelope.error?.code === 'AUTH_TOKEN_EXPIRED') {
     if (await tryRefresh()) {
       result = await rawRequest<T>(path, options);
     } else {
@@ -123,12 +137,13 @@ export async function api<T>(
     }
   }
 
-  if (!result.success || result.error) {
-    const error = result.error ?? {
+  const { envelope, status } = result;
+  if (!envelope.success || envelope.error) {
+    const error = envelope.error ?? {
       code: 'INTERNAL_ERROR',
       message: i18n.t('common.errorGeneric'),
     };
-    throw new ApiError(error.code, error.message, error.details);
+    throw new ApiError(error.code, error.message, error.details, status);
   }
-  return { data: result.data as T, meta: result.meta };
+  return { data: envelope.data as T, meta: envelope.meta };
 }

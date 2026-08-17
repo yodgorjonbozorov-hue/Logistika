@@ -74,7 +74,7 @@ describe('ExpensesService', () => {
 
   it('approval flips the flag and writes an audit entry', async () => {
     const { service, db } = setup();
-    db.expense!.update!.mockResolvedValue({
+    db.expense!.findUnique!.mockResolvedValue({
       id: 'e1',
       isApproved: true,
       amount: 100n,
@@ -83,9 +83,11 @@ describe('ExpensesService', () => {
 
     await service.approveExpense(ACTOR, 'e1');
 
-    expect(db.expense!.update).toHaveBeenCalledWith({
-      where: { id: 'e1' },
-      data: { isApproved: true },
+    // Guarded on the flag it expects to find: two approvals racing must not
+    // both succeed and write two audit entries for one approval.
+    expect(db.expense!.updateMany).toHaveBeenCalledWith({
+      where: { id: 'e1', isApproved: false },
+      data: { isApproved: true, version: { increment: 1 } },
     });
     // The audit row is written inside the same transaction as the flag now, so
     // an approval can never be recorded without the change (or the reverse).
@@ -268,10 +270,13 @@ describe('ExpensesService money conversion edge cases', () => {
     const { service, db } = setup();
     await service.updateExpense(ACTOR, 'e1', { description: 'typo fixed' } as never);
 
-    const data = db.expense!.update!.mock.calls[0][0].data;
+    const data = db.expense!.updateMany!.mock.calls[0][0].data;
     expect(data.description).toBe('typo fixed');
     expect(data.amount).toBeUndefined();
     expect(data.expenseDate).toBeUndefined();
+    // Nothing about the money changed, so the frozen conversion must not be
+    // restated at today's rate.
+    expect(data.amountBase).toBeUndefined();
   });
 
   it('converts amounts on update without losing precision', async () => {
@@ -279,13 +284,18 @@ describe('ExpensesService money conversion edge cases', () => {
     await service.updateExpense(ACTOR, 'e1', { amount: '9007199254740993' } as never);
 
     // Beyond Number.MAX_SAFE_INTEGER: exactly why money is BigInt tiyin.
-    expect(db.expense!.update!.mock.calls[0][0].data.amount).toBe(9_007_199_254_740_993n);
+    const data = db.expense!.updateMany!.mock.calls[0][0].data;
+    expect(data.amount).toBe(9_007_199_254_740_993n);
+    // The row used to keep the old base: "200 USD" and the tiyin of the amount
+    // it no longer holds, and every report sums the second one.
+    expect(data.amountBase).toBe(9_007_199_254_740_993n);
   });
 
   it('converts income amounts on update', async () => {
     const { service, db } = setup();
     await service.updateIncome(ACTOR, 'i1', { amount: '1', paymentDate: undefined } as never);
-    expect(db.income!.update!.mock.calls[0][0].data.amount).toBe(1n);
+    const data = db.income!.updateMany!.mock.calls[0][0].data;
+    expect(data.amount).toBe(1n);
   });
 });
 
@@ -335,6 +345,103 @@ describe('ExpensesService missing rows', () => {
   });
 });
 
+describe('ExpensesService optimistic locking (TASK-3.5)', () => {
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
+
+  // These tests assert that a losing write records *nothing*, so call history
+  // must not carry over from the test before.
+  beforeEach(() => jest.clearAllMocks());
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock([
+      'expense',
+      'income',
+      'trip',
+      'vehicle',
+      'driver',
+      'client',
+      'ledgerEntry',
+    ]);
+    for (const model of ['trip', 'vehicle', 'driver', 'client']) {
+      db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
+    }
+    const ledger = { record: jest.fn(), reverse: jest.fn() };
+    return {
+      service: new ExpensesService(prisma, audit, ledger as never, currencyStub),
+      db,
+      ledger,
+    };
+  }
+
+  it('guards an expense edit on the version it read', async () => {
+    const { service, db } = setup();
+    db.expense!.findUnique!.mockResolvedValue({ id: 'e1', isApproved: false, version: 4 });
+
+    await service.updateExpense(ACTOR, 'e1', { description: 'yangi izoh' } as never);
+
+    // isApproved is in the WHERE clause too: an approval landing in the gap
+    // must win, because an approved expense is part of the financial record.
+    expect(db.expense!.updateMany!.mock.calls[0][0].where).toEqual({
+      id: 'e1',
+      isApproved: false,
+      version: 4,
+    });
+  });
+
+  it('refuses an expense edit that lost to an approval', async () => {
+    const { service, db } = setup();
+    db.expense!.findUnique!.mockResolvedValue({ id: 'e1', isApproved: false, version: 4 });
+    db.expense!.updateMany!.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.updateExpense(ACTOR, 'e1', { amount: '1' } as never),
+    ).rejects.toMatchObject({ code: 'RESOURCE_CONFLICT', httpStatus: 409 });
+    expect(audit.logInTx).not.toHaveBeenCalled();
+  });
+
+  it('refuses a second approval instead of writing a second audit entry', async () => {
+    const { service, db } = setup();
+    db.expense!.updateMany!.mockResolvedValue({ count: 0 });
+
+    await expect(service.approveExpense(ACTOR, 'e1')).rejects.toMatchObject({
+      code: 'RESOURCE_CONFLICT',
+      httpStatus: 409,
+    });
+  });
+
+  it('refuses a delete that lost to an approval', async () => {
+    const { service, db } = setup();
+    db.expense!.findUnique!.mockResolvedValue({ id: 'e1', isApproved: false, version: 0 });
+    db.expense!.deleteMany!.mockResolvedValue({ count: 0 });
+
+    await expect(service.removeExpense(ACTOR, 'e1')).rejects.toMatchObject({
+      code: 'RESOURCE_CONFLICT',
+    });
+  });
+
+  it('refuses a payment correction that lost the race, leaving the ledger alone', async () => {
+    const { service, db, ledger } = setup();
+    db.income!.findUnique!.mockResolvedValue({
+      id: 'i1',
+      amount: 100n,
+      currency: 'UZS',
+      version: 2,
+    });
+    db.income!.updateMany!.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.updateIncome(ACTOR, 'i1', { amount: '900' } as never),
+    ).rejects.toMatchObject({ code: 'RESOURCE_CONFLICT', httpStatus: 409 });
+    // Two corrections both reversing the same entry would leave the client's
+    // balance short by a whole payment.
+    expect(ledger.reverse).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
+  });
+});
+
 describe('ExpensesService income ↔ ledger (TASK-3.1)', () => {
   const audit = {
     log: jest.fn(),
@@ -360,13 +467,23 @@ describe('ExpensesService income ↔ ledger (TASK-3.1)', () => {
     db.income!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: 'i1', tripId: 't1', currency: 'UZS', status: 'PENDING', ...data }),
     );
-    db.income!.findUnique!.mockResolvedValue({
+    // The row as the database holds it. A guarded update writes through
+    // updateMany and then reads the row back, so the stub has to actually
+    // change — otherwise the correction would look like it re-recorded the old
+    // amount and the test would pass for the wrong reason.
+    let row: Record<string, unknown> = {
       id: 'i1',
       tripId: 't1',
       clientId: 'c1',
       amount: 100n,
       currency: 'UZS',
       status: 'PENDING',
+      version: 0,
+    };
+    db.income!.findUnique!.mockImplementation(() => Promise.resolve({ ...row }));
+    db.income!.updateMany!.mockImplementation(({ data }: { data: Record<string, unknown> }) => {
+      row = { ...row, ...data, version: (row.version as number) + 1 };
+      return Promise.resolve({ count: 1 });
     });
     db.ledgerEntry!.groupBy = jest.fn().mockResolvedValue([
       { direction: 'DEBIT', _sum: { amountBase: options.invoiced ?? 0n } },

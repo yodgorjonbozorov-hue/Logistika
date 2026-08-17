@@ -263,6 +263,7 @@ model Driver {
   rating        Decimal?    @db.Decimal(3, 2)
   isActive      Boolean     @default(true) @map("is_active")
   createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
 
   company      Company       @relation(fields: [companyId], references: [id])
   user         User?         @relation(fields: [userId], references: [id])
@@ -293,6 +294,7 @@ model Vehicle {
   nextServiceOdometer  Int?        @map("next_service_odometer")
   isActive             Boolean     @default(true) @map("is_active")
   createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
 
   company      Company       @relation(fields: [companyId], references: [id])
   trips        Trip[]        @relation("TripVehicle")
@@ -323,6 +325,7 @@ model Client {
   /// never read-modify-written (see LedgerService).
   balance          BigInt  @default(0)
   createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   company Company  @relation(fields: [companyId], references: [id])
   trips   Trip[]
@@ -374,6 +377,10 @@ model Trip {
   finishedAt        DateTime?  @map("finished_at")
   createdById       String?    @map("created_by")
   createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+  /// Optimistic lock. Every guarded write increments it, so a client editing a
+  /// stale copy is told rather than silently overwriting somebody else's edit.
+  version           Int        @default(0)
 
   company   Company    @relation(fields: [companyId], references: [id])
   client    Client?    @relation(fields: [clientId], references: [id])
@@ -411,6 +418,7 @@ model TripEvent {
   clientEventId String?       @unique @map("client_event_id")
   isSynced      Boolean       @default(true) @map("is_synced")
   createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id])
   trip    Trip    @relation(fields: [tripId], references: [id])
@@ -445,6 +453,10 @@ model Expense {
   createdById   String?         @map("created_by")
   isApproved    Boolean         @default(false) @map("is_approved")
   createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  /// Optimistic lock, as on Trip. Editing an expense is a read-then-write, and
+  /// an approval landing in between used to let an approved row be rewritten.
+  version       Int             @default(0)
 
   company Company  @relation(fields: [companyId], references: [id])
   trip    Trip?    @relation(fields: [tripId], references: [id])
@@ -497,6 +509,10 @@ model Income {
   invoiceNumber String?       @map("invoice_number")
   status        PaymentStatus @default(PENDING)
   createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  /// Optimistic lock, as on Trip. Two corrections to the same payment used to
+  /// both reverse the same ledger entry.
+  version       Int           @default(0)
 
   company Company @relation(fields: [companyId], references: [id])
   trip    Trip?   @relation(fields: [tripId], references: [id])

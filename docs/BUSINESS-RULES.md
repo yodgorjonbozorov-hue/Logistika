@@ -20,10 +20,10 @@ xato **REVERSAL** yozuvi bilan tuzatiladi. Sabab: bir necha oydan keyin
 
 ### Yo'nalish (direction) — firma nuqtai nazaridan
 
-| Direction | Ma'nosi                          | Misol                       |
-| --------- | -------------------------------- | --------------------------- |
-| `DEBIT`   | Mijoz **ko'proq qarzdor** bo'ldi | Reys yakunlandi → invoys     |
-| `CREDIT`  | Mijoz **qarzini qopladi**        | To'lov keldi                 |
+| Direction | Ma'nosi                          | Misol                    |
+| --------- | -------------------------------- | ------------------------ |
+| `DEBIT`   | Mijoz **ko'proq qarzdor** bo'ldi | Reys yakunlandi → invoys |
+| `CREDIT`  | Mijoz **qarzini qopladi**        | To'lov keldi             |
 
 ```
 balance = SUM(CREDIT) - SUM(DEBIT)      // manfiy = mijoz qarzdor
@@ -36,11 +36,11 @@ qarzdor» degan savolga to'g'ridan-to'g'ri javob. Ortiqcha to'lov `debt = 0` va 
 
 ### Qachon yoziladi
 
-| Hodisa                    | Yozuv                                   |
-| ------------------------- | --------------------------------------- |
-| Reys `COMPLETED` bo'ldi   | `DEBIT` / `TRIP_INVOICED` (`agreedPrice`) |
-| Kirim (`Income`) yaratildi | `CREDIT` / `PAYMENT_RECEIVED`           |
-| To'lov summasi tuzatildi  | `REVERSAL` + yangi `CREDIT`             |
+| Hodisa                     | Yozuv                                     |
+| -------------------------- | ----------------------------------------- |
+| Reys `COMPLETED` bo'ldi    | `DEBIT` / `TRIP_INVOICED` (`agreedPrice`) |
+| Kirim (`Income`) yaratildi | `CREDIT` / `PAYMENT_RECEIVED`             |
+| To'lov summasi tuzatildi   | `REVERSAL` + yangi `CREDIT`               |
 
 Reysni **ikki yo'l** yakunlaydi: logist (`POST /trips/:id/complete`) va haydovchi
 (`FINISH` hodisasi). Ikkalasi ham bitta invoys yaratishi kerak — shuning uchun
@@ -100,13 +100,13 @@ uradi, formada esa ikki marta bosish odatiy hol.
 4. Ish xato bersa kalit **bo'shatiladi** — klient payload'ni tuzatib o'sha kalit bilan
    qayta yuboradi.
 
-| Holat                                   | Natija                               |
-| --------------------------------------- | ------------------------------------ |
-| Kalit yo'q                              | 400 `VALIDATION_FAILED`              |
-| O'sha kalit, o'sha payload              | Saqlangan javob (yangi yozuv yo'q)   |
-| O'sha kalit, **boshqa** payload         | 409 `IDEMPOTENCY_KEY_REUSED`         |
-| O'sha kalit, birinchisi hali ishlayapti | 5 s kutadi, keyin javobni qaytaradi  |
-| Boshqa kompaniya, o'sha kalit           | Mustaqil (kalit `(companyId, key)`)  |
+| Holat                                   | Natija                              |
+| --------------------------------------- | ----------------------------------- |
+| Kalit yo'q                              | 400 `VALIDATION_FAILED`             |
+| O'sha kalit, o'sha payload              | Saqlangan javob (yangi yozuv yo'q)  |
+| O'sha kalit, **boshqa** payload         | 409 `IDEMPOTENCY_KEY_REUSED`        |
+| O'sha kalit, birinchisi hali ishlayapti | 5 s kutadi, keyin javobni qaytaradi |
+| Boshqa kompaniya, o'sha kalit           | Mustaqil (kalit `(companyId, key)`) |
 
 ### Qayerda majburiy
 
@@ -181,13 +181,13 @@ COMPLETED / PARTIALLY_DELIVERED / RETURNED / FAILED / CANCELLED → terminal
 
 ### Har statusning moliyaviy qoidasi
 
-| Status                | Invoys                                   | Xarajatlar |
-| --------------------- | ---------------------------------------- | ---------- |
-| `COMPLETED`           | To'liq `agreedPrice`                     | Qoladi     |
-| `PARTIALLY_DELIVERED` | Faqat `deliveredAmount`                  | Qoladi     |
-| `RETURNED`            | **Yo'q**                                 | Qoladi (zarar) |
-| `FAILED`              | **Yo'q**                                 | Qoladi (zarar) |
-| `CANCELLED`           | Yo'q; avans berilgan bo'lsa — qaytarish yozuvi (`DRIVER_ADVANCE`) | Qoladi |
+| Status                | Invoys                                                            | Xarajatlar     |
+| --------------------- | ----------------------------------------------------------------- | -------------- |
+| `COMPLETED`           | To'liq `agreedPrice`                                              | Qoladi         |
+| `PARTIALLY_DELIVERED` | Faqat `deliveredAmount`                                           | Qoladi         |
+| `RETURNED`            | **Yo'q**                                                          | Qoladi (zarar) |
+| `FAILED`              | **Yo'q**                                                          | Qoladi (zarar) |
+| `CANCELLED`           | Yo'q; avans berilgan bo'lsa — qaytarish yozuvi (`DRIVER_ADVANCE`) | Qoladi         |
 
 Zararni yashirmaslik ataylab: RETURNED/FAILED reysning xarajatlari o'chirilmaydi,
 chunki ular haqiqatan sarflangan. Hisobotda bu reys zarar bo'lib ko'rinadi — bu
@@ -201,3 +201,76 @@ ko'rib chiqayotgan odam uchun hech narsa bermaydi. `statusReason` va `statusChan
 reysda saqlanadi.
 
 `POST /trips/:id/finish` — OWNER/LOGIST, idempotent.
+
+## 5. Bir vaqtda kelgan yozuvlar — kim yutadi (TASK-3.5)
+
+### Muammo
+
+Har bir muhim yozuv «o'qi → qaror qil → yoz» edi:
+
+```ts
+const trip = await db.trip.findUnique({ where: { id } });
+assertTripTransition(trip.status, 'COMPLETED'); // ← o'qish va yozish orasidagi bo'shliq
+await db.trip.update({ where: { id }, data: { status: 'COMPLETED' } });
+```
+
+Ikki so'rov birga kelsa (logist tugmani bosdi, haydovchi ilovasi ham `FINISH`
+hodisasini yubordi) ikkalasi ham bir xil `IN_PROGRESS`ni o'qiydi, ikkalasi ham
+o'tishni qonuniy deb topadi va ikkalasi ham yozadi. Natija: `finishedAt` qayta
+yozildi, `actualDistanceKm` qayta hisoblandi va TASK-3.1 dan keyin **mijoz bitta
+yetkazib berish uchun ikki marta hisob-kitob qilindi**.
+
+### Qoida
+
+Qaror **yozuvning `WHERE` shartiga** kiritiladi, shundan keyingina yozish bajariladi:
+
+```ts
+const { count } = await tx.trip.updateMany({
+  where: { id, status: trip.status },              // kutilgan holat shart ichida
+  data:  { status, version: { increment: 1 } },
+});
+if (count === 0) throw new AppException('TRIP_INVALID_STATUS', 409, …);
+```
+
+Ikki parallel so'rovdan **aynan bittasi** qatorga mos keladi. Yutqazgan so'rov
+409 oladi va **hech narsa yozmaydi** — guard tranzaksiya ichida va invoyslashdan
+oldin turgani uchun ledger ham tegilmaydi.
+
+### `version` ustuni
+
+`Trip`, `Expense`, `Income`da `version Int @default(0)`. Har himoyalangan yozuv
+uni bittaga oshiradi. Ikki vazifasi bor:
+
+- **ichki** — servis o'zi o'qigan versiyaga qarshi yozadi (klient hech narsa
+  yubormasa ham poyga yopiladi);
+- **tashqi** — klient ko'rgan versiyani `PATCH` bilan yuborishi mumkin
+  (`{ ..., version: 7 }`). Qator o'shandan keyin o'zgargan bo'lsa —
+  409 `RESOURCE_CONFLICT`, ya'ni «sen ko'rmagan o'zgarishni ustidan yozmaysan».
+
+`version` — faqat qulf belgisi; uni klient o'zi tanlab qo'ya olmaydi
+(`data`ga har doim `{ increment: 1 }` yoziladi).
+
+### Qayerda qo'llangan
+
+| Amal                                                       | Guard                               | Nega                                                            |
+| ---------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
+| `trips.transition()` (start/complete/finish/cancel/assign) | `status` = kutilgan                 | ikki marta invoyslash                                           |
+| `trips.update()`                                           | klient yuborgan `version`           | ikki logist bir reysni tahrirlaydi                              |
+| `expenses.approveExpense()`                                | `isApproved: false`                 | bitta tasdiqlash — ikkita audit yozuvi                          |
+| `expenses.updateExpense()`                                 | `isApproved: false` + `version`     | tasdiqlangan xarajat jimgina tahrirlanardi                      |
+| `expenses.removeExpense()`                                 | `deleteMany({ isApproved: false })` | tasdiqlangan xarajat moliyaviy yozuvdan yo'qolardi              |
+| `expenses.updateIncome()`                                  | `version`                           | ikki tuzatish bir ledger yozuvini ikki marta `REVERSAL` qilardi |
+
+### Klient tomoni
+
+409 kelganda web avtomatik `invalidateQueries` qiladi (`onConflictRefetch`) —
+ekrandagi eskirgan nusxa darhol yangilanadi. Xabar backend'dan keladi
+(`RESOURCE_CONFLICT`, uch tilda): «Ma'lumot boshqa foydalanuvchi tomonidan
+o'zgartirildi. Sahifani yangilang va qayta urinib ko'ring».
+
+### Test
+
+Bunday xatoni faqat haqiqiy parallel test ushlaydi — ketma-ket test buzuq kodda
+ham yashil bo'ladi. `test/optimistic-locking.e2e-spec.ts` `Promise.all` bilan
+ikkitadan so'rov yuboradi va `[200, 409]` hamda **bitta** ledger yozuvini talab
+qiladi.

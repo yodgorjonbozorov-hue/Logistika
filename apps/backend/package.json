@@ -94,10 +94,16 @@
         "functions": 30
       },
       "./src/modules/expenses/expenses.service.ts": {
-        "statements": 83,
-        "lines": 82,
-        "branches": 85,
-        "functions": 86
+        "statements": 90,
+        "lines": 90,
+        "branches": 91,
+        "functions": 91
+      },
+      "./src/modules/trips/trips.service.ts": {
+        "statements": 67,
+        "lines": 68,
+        "branches": 42,
+        "functions": 75
       },
       "./src/modules/ledger/ledger.service.ts": {
         "statements": 91,

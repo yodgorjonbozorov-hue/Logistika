@@ -16,16 +16,16 @@ Boshlangan: 2026-08-17
 Muhit: Node v22.22.2, pnpm 9.15.0, Docker 29.3.1 (daemon qo'lda ishga tushirildi),
 `docker compose up -d` → postgres/redis/minio healthy.
 
-| Gate buyrug'i                        | Natija                                                     |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `pnpm --filter shared build`          | OK (dist yaratildi)                                        |
-| `pnpm --filter backend prisma generate` | OK                                                       |
-| `pnpm lint`                           | 0 xato                                                     |
-| `pnpm --filter backend exec tsc --noEmit` | 0 xato                                                 |
-| `pnpm --filter web exec tsc -b`       | 0 xato                                                     |
-| `pnpm test`                           | backend **15/15 suite, 82 test o'tdi**; web 2 fayl, 11 test o'tdi; shared `tsc --noEmit` OK |
-| `pnpm --filter backend test:e2e`      | **"No tests found, exiting with code 0"** — 0 e2e test      |
-| `pnpm build`                          | OK (backend + web + shared)                                |
+| Gate buyrug'i                             | Natija                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm --filter shared build`              | OK (dist yaratildi)                                                                         |
+| `pnpm --filter backend prisma generate`   | OK                                                                                          |
+| `pnpm lint`                               | 0 xato                                                                                      |
+| `pnpm --filter backend exec tsc --noEmit` | 0 xato                                                                                      |
+| `pnpm --filter web exec tsc -b`           | 0 xato                                                                                      |
+| `pnpm test`                               | backend **15/15 suite, 82 test o'tdi**; web 2 fayl, 11 test o'tdi; shared `tsc --noEmit` OK |
+| `pnpm --filter backend test:e2e`          | **"No tests found, exiting with code 0"** — 0 e2e test                                      |
+| `pnpm build`                              | OK (backend + web + shared)                                                                 |
 
 ### Audit bashorati bilan farq (muhim)
 
@@ -194,7 +194,7 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
   `tracking.controller.ts`, `apps/web/.../TripDetailPage.tsx`,
   `test/query-validation.e2e-spec.ts` (+8 e2e) · unit 124 → 130, e2e 36 → 44.
 - **TASK-2.4 (H-9)** · Refresh token: (A) rotatsiya endi atomik — `updateMany({ where: { id,
-  revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir → `update` edi,
+revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir → `update` edi,
   2 parallel refresh ikkalasi ham yangi juftlik olardi). (B) **Reuse detection**: bekor qilingan
   token qayta kelsa butun **oila** (`familyId`) revoke qilinadi + `REFRESH_REUSE_DETECTED`
   audit yozuvi + `Logger.warn`; yangi kod `AUTH_REFRESH_REUSED` (401, 3 tilda). Migratsiya:
@@ -290,8 +290,9 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 (sabab bilan)
 
-- **Coverage 60% / 90% maqsadi** — hozir global 25% statements / 34% lines, `expenses.service.ts`
-  51%. 60/90 ni bir taskda urish mumkin emas (keyingi fazalarning har bir taski test qo'shadi),
+- **Coverage 60% / 90% maqsadi** — TASK-3.5 dan keyin global 36.8% statements / 44.2% lines,
+  `expenses.service.ts` 90%, `ledger.service.ts` 91%, `trips.service.ts` 68%.
+  60/90 ni bir taskda urish mumkin emas (keyingi fazalarning har bir taski test qo'shadi),
   shuning uchun threshold **ratchet** sifatida joriy darajadan sal pastga qo'yildi: coverage
   hech qachon pasaymaydi, har faza oxirida ko'tariladi. Maqsad PHASE 5 oxirida 60/90.
 
@@ -299,6 +300,21 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-8 (MEDIUM, ochiq)**: `pnpm format:check` **baseline'dan beri qizil** — 35 faylda
+  Prettier farqi bor (`docs/*`, `pnpm-lock.yaml`, eski manba fayllar). Butun repo'ni
+  formatlash bu fazadagi diff'ni o'qib bo'lmas holga keltiradi, shuning uchun har taskda
+  **faqat o'zim tekkan fayllar** formatlanadi. Repo bo'ylab bir martalik
+  `pnpm format` — PHASE 5 oxirida, alohida commit bilan.
+- **N-7 (HIGH, tuzatildi — TASK-3.5)**: web `useTripMutations` `POST /trips` va
+  `/trips/:id/complete|finish`ga `idempotency-key` **yubormasdi**, holbuki bu endpointlar
+  TASK-3.2 dan beri uni majburiy qiladi — ya'ni web'dan reys yaratish va yakunlash
+  400 `VALIDATION_FAILED` bilan qaytardi. `keyFor()` `crud.ts`dan eksport qilindi va
+  trips mutatsiyalariga ulandi.
+- **N-6 (HIGH, tuzatildi — TASK-3.5)**: `updateExpense`/`updateIncome` summa o'zgarganda
+  `amountBase`ni **qayta hisoblamasdi** — qator «200 USD» va eski summaning tiyinini bir
+  vaqtda saqlab qolardi, hisobotlar esa aynan `amountBase`ni yig'adi. `reconvert()`
+  qo'shildi: faqat summa/valyuta/sana o'zgarganda qayta qotiradi (aks holda qotirilgan
+  kurs joyida qoladi — hisobot o'tmishda o'zgarmasligi kerak).
 - **N-5 (HIGH, tuzatildi)**: `bootstrap.ts` `express`ni to'g'ridan-to'g'ri import qiladi, lekin
   `express` backend `dependencies`ida yo'q edi — dev'da hoisting tufayli ishlardi, prod
   konteynerida `Cannot find module 'express'` bilan yiqildi. Dependency qo'shildi.
@@ -371,29 +387,56 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 - **TASK-3.4 (H-7)** · Reys status modeli hayotga moslandi: `TripStatus`ga
   `PARTIALLY_DELIVERED`, `RETURNED`, `FAILED` qo'shildi (migratsiya + `packages/shared`
   enum'i — API kontrakti). `IN_PROGRESS` endi `COMPLETED | PARTIALLY_DELIVERED |
-  RETURNED | FAILED | CANCELLED`ga o'tadi (avval **faqat** `COMPLETED` — ya'ni buzilgan
+RETURNED | FAILED | CANCELLED`ga o'tadi (avval **faqat** `COMPLETED` — ya'ni buzilgan
   reysni «yetkazildi» deb yozishga majbur edi). `Trip.statusReason` + `statusChangedAt`
-  + `deliveredAmount`; salbiy yakunlar uchun sabab majburiy (`@MinLength(10)`).
-  `POST /trips/:id/finish` (OWNER/LOGIST, idempotent). Moliyaviy qoida kodda:
-  COMPLETED → to'liq invoys, PARTIALLY_DELIVERED → faqat `deliveredAmount`,
-  RETURNED/FAILED → invoys yo'q (xarajatlar zarar bo'lib qoladi — yashirilmaydi),
-  CANCELLED → avans berilgan bo'lsa qaytarish yozuvi. Web `StatusBadge` + i18n × 3. ·
-  migratsiya `*_trip_outcomes`, `trip-transitions.ts`, `trips.service.ts`,
-  `trips.controller.ts`, `trip.dto.ts`, `packages/shared`, web `StatusBadge.tsx` + locales,
-  `test/trip-outcomes.e2e-spec.ts` (+10 e2e), `docs/BUSINESS-RULES.md` ·
-  e2e 108 → 118.
+  - `deliveredAmount`; salbiy yakunlar uchun sabab majburiy (`@MinLength(10)`).
+    `POST /trips/:id/finish` (OWNER/LOGIST, idempotent). Moliyaviy qoida kodda:
+    COMPLETED → to'liq invoys, PARTIALLY_DELIVERED → faqat `deliveredAmount`,
+    RETURNED/FAILED → invoys yo'q (xarajatlar zarar bo'lib qoladi — yashirilmaydi),
+    CANCELLED → avans berilgan bo'lsa qaytarish yozuvi. Web `StatusBadge` + i18n × 3. ·
+    migratsiya `*_trip_outcomes`, `trip-transitions.ts`, `trips.service.ts`,
+    `trips.controller.ts`, `trip.dto.ts`, `packages/shared`, web `StatusBadge.tsx` + locales,
+    `test/trip-outcomes.e2e-spec.ts` (+10 e2e), `docs/BUSINESS-RULES.md` ·
+    e2e 108 → 118.
+- **TASK-3.5 (H-1)** · Race condition: har bir «o'qi → qaror qil → yoz» yozuvi atomik
+  qilindi. `Trip`, `Expense`, `Income`ga `version Int @default(0)` (+ `updatedAt`
+  `Trip`/`Expense`/`Income`/`Client`/`Driver`/`Vehicle`/`TripEvent`ga — **M-18 ham
+  yopildi**). `trips.transition()` endi `updateMany({ where: { id, status: <kutilgan> },
+data: { …, version: { increment: 1 } } })` — kutilgan status **WHERE ichida**, shuning
+  uchun ikki parallel `complete`dan aynan bittasi mos keladi; `count === 0` → 409
+  `TRIP_INVALID_STATUS`. Guard tranzaksiya **ichida**, invoyslashdan **oldin** — yutqazgan
+  so'rov mijozni ikkinchi marta hisob-kitob qilmaydi. `trips.update()` ixtiyoriy `version`
+  qabul qiladi → mos kelmasa 409 `RESOURCE_CONFLICT` (yangi kod, i18n × 3).
+  Shu naqsh butun bazaga qo'llandi: `expenses.approveExpense` (`isApproved: false` guard),
+  `updateExpense` (`isApproved: false` + `version`), `removeExpense` (`deleteMany` guard —
+  tasdiqlash o'chirish bilan poyga qilsa tasdiqlash yutadi), `updateIncome` (`version` —
+  ikki tuzatish bir xil ledger yozuvini ikki marta `REVERSAL` qilardi).
+  Web: `ApiError` endi HTTP status'ni olib yuradi, `isConflict()` + `onConflictRefetch()` —
+  409 kelganda barcha mutatsiyalar avtomatik `invalidateQueries` qiladi, ekrandagi
+  eskirgan nusxa yangisiga almashadi; xabar backend'dan (3 tilda) keladi. ·
+  migratsiyalar `20260817180000_optimistic_locking`, `20260817160125_money_optimistic_locking`,
+  `trips.service.ts`, `expenses.service.ts`, `trip.dto.ts`, `packages/shared`,
+  `apps/web/.../client.ts`, `crud.ts`, `features/trips/api.ts`,
+  `test/optimistic-locking.e2e-spec.ts` (+5 e2e, hammasi haqiqiy `Promise.all` bilan) ·
+  unit 221 → 230, e2e 118 → 123. `expenses.service` qamrovi 83% → 90%,
+  `trips.service` uchun yangi threshold qo'yildi (ratchet).
+  Guard olib tashlanib tekshirildi: guardsiz `optimistic-locking` e2e **qizil** bo'ladi
+  (ikkita `TRIP_INVOICED` yozuvi) — ya'ni test haqiqatan ham bu xatoni ushlaydi.
 
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.5 (reys status o'tishidagi race condition — optimistic lock).
+**Keyingi qadam:** TASK-3.6 (odometr / manfiy masofa + DB CHECK cheklovlari).
+`start`/`complete` odometr qiymatlarini tekshirmaydi: `endOdometer < startOdometer`
+manfiy `actualDistanceKm` beradi va yoqilg'i normasi hisobini buzadi. DB darajasida
+`CHECK` qo'shiladi (`agreed_price >= 0`, `amount >= 0`, `end_odometer >= start_odometer`),
+kod darajasida esa `AppException('VALIDATION_FAILED')`. Test: manfiy masofa, teng
+odometr, `null` odometr; e2e'da normadan chetlanish hisoboti.
 
 PHASE 3 qolgan bog'liqliklar:
 
 - TASK-3.3 (valyuta): ledger'da `amountBase`/`rateUsed`/`rateDate` maydonlari **allaqachon bor**
   va hozircha `amountBase = amount` (hammasi UZS deb faraz). 3.3 faqat konvertatsiyani
   to'ldiradi — migratsiya qayta yozilmaydi.
-- TASK-3.5 (optimistic lock) `trips.service.transition()`ga tegadi — u TASK-1.4 da
-  `events.service` bilan umumiy `trip-transitions.ts` orqali bog'langan, ikkalasini birga tekshir.
 - TASK-3.4 (yangi status'lar) `packages/shared` enum'ini va web `StatusBadge`ni ham talab qiladi
   (API kontrakti).

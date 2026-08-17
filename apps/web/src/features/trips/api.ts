@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TripStatus } from 'shared';
 import { api } from '../../shared/api/client';
+import { keyFor, onConflictRefetch } from '../../shared/api/crud';
 import type { Client, Driver, Expense, Income, Trip, Vehicle } from '../../shared/api/entities';
 
 export function useTrips(filter: { page: number; status?: TripStatus }) {
@@ -52,16 +53,28 @@ export function useTripMutations(tripId?: string) {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['trips'] });
+    // Completing a trip invoices it, so the money on screen moved too.
+    void queryClient.invalidateQueries({ queryKey: ['incomes'] });
   };
+  const onError = onConflictRefetch(invalidate);
 
   const create = useMutation({
-    mutationFn: (body: Record<string, unknown>) => api<Trip>('/trips', { method: 'POST', body }),
+    // Creating a trip is an idempotent endpoint: a double-clicked Save used to
+    // be rejected outright, because the key the server requires was missing.
+    mutationFn: (body: Record<string, unknown>) =>
+      api<Trip>('/trips', { method: 'POST', body, idempotencyKey: keyFor(body) }),
     onSuccess: invalidate,
+    onError,
   });
   const action = useMutation({
-    mutationFn: ({ verb, body }: { verb: string; body?: Record<string, unknown> }) =>
-      api<Trip>(`/trips/${tripId}/${verb}`, { method: 'POST', body: body ?? {} }),
+    mutationFn: (variables: { verb: string; body?: Record<string, unknown> }) =>
+      api<Trip>(`/trips/${tripId}/${variables.verb}`, {
+        method: 'POST',
+        body: variables.body ?? {},
+        idempotencyKey: keyFor(variables),
+      }),
     onSuccess: invalidate,
+    onError,
   });
   return { create, action };
 }

@@ -9,24 +9,30 @@ export function createTenantDbMock(models: string[]) {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
       update: jest.fn(),
+      // A guarded write lands by default; a test that cares about losing the
+      // race overrides this with { count: 0 }.
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn(),
-      deleteMany: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     };
+    // A guarded write reads the row back after its updateMany. Delegating keeps
+    // one mock per model: a test still only has to stub findUnique.
+    db[model]!.findUniqueOrThrow = jest.fn((args: unknown) => db[model]!.findUnique!(args));
   }
   // Interactive transactions run their callback against the same scoped stubs,
   // so a test can assert on the writes made inside one.
-  (db as Record<string, unknown>).$transaction = jest.fn(
-    (arg: unknown) => (typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(db) : arg),
+  (db as Record<string, unknown>).$transaction = jest.fn((arg: unknown) =>
+    typeof arg === 'function' ? (arg as (tx: unknown) => unknown)(db) : arg,
   );
   const forCompany = jest.fn().mockReturnValue(db);
   // forCompanyTx hands the callback the same scoped stubs, so a test can assert
   // on writes made inside a tenant transaction.
-  const forCompanyTx = jest.fn(
-    (_companyId: unknown, fn: (tx: unknown) => unknown) => fn(db),
-  );
+  const forCompanyTx = jest.fn((_companyId: unknown, fn: (tx: unknown) => unknown) => fn(db));
   return {
-    prisma: { forCompany, forCompanyTx } as unknown as import('../prisma/prisma.service').PrismaService,
+    prisma: {
+      forCompany,
+      forCompanyTx,
+    } as unknown as import('../prisma/prisma.service').PrismaService,
     db,
     forCompany,
     forCompanyTx,

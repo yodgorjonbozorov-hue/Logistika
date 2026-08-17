@@ -67,16 +67,17 @@ describe('TripsService', () => {
     it('allows ASSIGNED → IN_PROGRESS and stamps startedAt', async () => {
       const { service, db } = setup();
       db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'ASSIGNED' });
-      db.trip!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ id: 't1', ...data }),
-      );
 
       await service.start(ACTOR, 't1', { startOdometer: 100_000 });
 
-      const data = db.trip!.update!.mock.calls[0][0].data;
+      const [{ where, data }] = db.trip!.updateMany!.mock.calls[0];
+      // The status it expects to find is part of the WHERE clause, so a second
+      // start racing this one matches nothing instead of re-stamping startedAt.
+      expect(where).toMatchObject({ id: 't1', status: 'ASSIGNED' });
       expect(data.status).toBe('IN_PROGRESS');
       expect(data.startedAt).toBeInstanceOf(Date);
       expect(data.startOdometer).toBe(100_000);
+      expect(data.version).toEqual({ increment: 1 });
     });
 
     it('computes actualDistanceKm from odometers on completion', async () => {
@@ -86,13 +87,10 @@ describe('TripsService', () => {
         status: 'IN_PROGRESS',
         startOdometer: 100_000,
       });
-      db.trip!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ id: 't1', ...data }),
-      );
 
       await service.complete(ACTOR, 't1', { endOdometer: 101_240 });
 
-      const data = db.trip!.update!.mock.calls[0][0].data;
+      const data = db.trip!.updateMany!.mock.calls[0][0].data;
       expect(data.status).toBe('COMPLETED');
       expect(String(data.actualDistanceKm)).toBe('1240');
     });
@@ -123,6 +121,62 @@ describe('TripsService', () => {
       await expect(service.update(ACTOR, 't1', { cargoName: 'x' })).rejects.toMatchObject({
         code: 'TRIP_INVALID_STATUS',
       });
+    });
+  });
+
+  describe('optimistic locking (TASK-3.5)', () => {
+    it('rejects a transition whose row moved between the read and the write', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'IN_PROGRESS', version: 3 });
+      // Somebody else completed it in the gap; the guarded write matches nothing.
+      db.trip!.updateMany!.mockResolvedValue({ count: 0 });
+
+      await expect(service.complete(ACTOR, 't1', {})).rejects.toMatchObject({
+        code: 'TRIP_INVALID_STATUS',
+        httpStatus: 409,
+      });
+    });
+
+    it('never invoices a trip whose completion lost the race', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({
+        id: 't1',
+        status: 'IN_PROGRESS',
+        version: 3,
+        agreedPrice: 1_000_000n,
+        clientId: 'c1',
+      });
+      db.trip!.updateMany!.mockResolvedValue({ count: 0 });
+
+      await expect(service.complete(ACTOR, 't1', {})).rejects.toMatchObject({
+        code: 'TRIP_INVALID_STATUS',
+      });
+      // The whole reason the guard is inside the transaction: the loser must
+      // not bill the client a second time for the same delivery.
+      expect(ledgerStub.record).not.toHaveBeenCalled();
+    });
+
+    it('refuses an edit that was written against an older version', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'DRAFT', version: 7 });
+      db.trip!.updateMany!.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(ACTOR, 't1', { cargoName: 'x', version: 5 }),
+      ).rejects.toMatchObject({ code: 'RESOURCE_CONFLICT', httpStatus: 409 });
+    });
+
+    it('lets an edit through when the client is looking at the current version', async () => {
+      const { service, db } = setup();
+      db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'DRAFT', version: 7 });
+
+      await service.update(ACTOR, 't1', { cargoName: 'paxta', version: 7 });
+
+      const [{ where, data }] = db.trip!.updateMany!.mock.calls[0];
+      expect(where).toEqual({ id: 't1', version: 7 });
+      expect(data.version).toEqual({ increment: 1 });
+      // The lock token itself is not a column the caller gets to set.
+      expect(data.cargoName).toBe('paxta');
     });
   });
 });

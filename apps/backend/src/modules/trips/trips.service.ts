@@ -5,10 +5,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { assertTenantRefs } from '../../common/tenant-refs';
-import {
-  assertTripTransition,
-  REASON_REQUIRED_STATUSES,
-} from '../../common/trip-transitions';
+import { assertTripTransition, REASON_REQUIRED_STATUSES } from '../../common/trip-transitions';
 import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrencyService } from '../currency/currency.service';
@@ -147,11 +144,25 @@ export class TripsService {
       throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT);
     }
     await this.assertRefsExist(actor, dto);
+
+    const { version, ...changes } = dto;
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .trip.update({ where: { id }, data: toData(dto) });
+      // When the client tells us which version it was looking at, the write
+      // only lands on that version — otherwise two people editing the same
+      // trip silently overwrite each other, last-save-wins.
+      const { count } = await this.prisma.forCompany(actor.companyId).trip.updateMany({
+        where: { id, ...(version === undefined ? {} : { version }) },
+        data: { ...toData(changes), version: { increment: 1 } },
+      });
+      if (count === 0) {
+        throw new AppException('RESOURCE_CONFLICT', HttpStatus.CONFLICT, undefined, {
+          expectedVersion: version,
+          currentVersion: trip.version,
+        });
+      }
+      return await this.getById(actor, id);
     } catch (error) {
+      if (error instanceof AppException) throw error;
       rethrowPrismaError(error);
     }
   }
@@ -239,15 +250,28 @@ export class TripsService {
     }
 
     const updated = await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
-      const result = await tx.trip.update({
-        where: { id: trip.id },
+      // The expected status is part of the WHERE clause, so of two parallel
+      // completes exactly one matches a row. Checking first and updating after
+      // let both through: finishedAt was overwritten, the distance
+      // recalculated, and the client invoiced twice.
+      const { count } = await tx.trip.updateMany({
+        where: { id: trip.id, status: trip.status },
         data: {
           ...data,
           status,
           statusReason: reason ?? trip.statusReason,
           statusChangedAt: new Date(),
+          version: { increment: 1 },
         },
       });
+      if (count === 0) {
+        throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT, undefined, {
+          from: trip.status,
+          to: status,
+        });
+      }
+
+      const result = await tx.trip.findUniqueOrThrow({ where: { id: trip.id } });
       await this.applyFinancialOutcome(tx, tenant, result, status);
       return result;
     });
