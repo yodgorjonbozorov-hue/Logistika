@@ -3,6 +3,7 @@ import { Prisma, type Trip, type TripStatus } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertRefsInCompany } from '../../common/tenant-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -219,21 +220,10 @@ export class TripsService {
    * the tenant-scoped lookup makes cross-company ids indistinguishable from
    * missing ones (isolation requirement).
    */
-  private async assertRefsExist(
+  private assertRefsExist(
     actor: CurrentUserPayload,
     refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },
   ): Promise<void> {
-    const db = this.prisma.forCompany(actor.companyId);
-    const checks: Array<[string | undefined, () => Promise<unknown | null>]> = [
-      [refs.vehicleId, () => db.vehicle.findUnique({ where: { id: refs.vehicleId! } })],
-      [refs.trailerId, () => db.vehicle.findUnique({ where: { id: refs.trailerId! } })],
-      [refs.driverId, () => db.driver.findUnique({ where: { id: refs.driverId! } })],
-      [refs.clientId, () => db.client.findUnique({ where: { id: refs.clientId! } })],
-    ];
-    for (const [id, lookup] of checks) {
-      if (id && !(await lookup())) {
-        throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND, undefined, { id });
-      }
-    }
+    return assertRefsInCompany(this.prisma.forCompany(actor.companyId), refs);
   }
 }

@@ -158,8 +158,13 @@
       testlar bilan tekshiriladi), pilot onboarding qo'llanmasi — `docs/PILOT.md`
 - [x] CI (`.github/workflows/ci.yml`): lint, tiplar, unit testlar + real bazada
       tenant-izolyatsiya e2e paketi va `prisma migrate deploy`
-- [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
-      tasdiqlash → reys P&L → dashboard
+- [x] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
+      tasdiqlash → reys P&L → dashboard — `apps/backend/test/trip-lifecycle.e2e-spec.ts`;
+      P&L raqamlari tiyingacha tekshiriladi, AI tasdig'i hech narsa yozmasligi ham
+      shu yerda isbotlanadi
+- [x] Ikkala e2e paketi haqiqiy PostgreSQL'da bajarildi (mahalliy 16-versiya):
+      izolyatsiya paketi birinchi yugurishdayoq tenant chegarasidan o'tib ketadigan
+      tashqi kalitni topdi — `docs/SECURITY.md` F-10, tuzatildi
 
 ## Pilotdan keyin (TZ §10 Bosqich 4 — bu rejaga kirmaydi)
 

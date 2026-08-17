@@ -112,9 +112,32 @@ o'zgarmaganligi bazadan tekshiriladi. CI (`.github/workflows/ci.yml`) postgres
 service ko'taradi va shu yerda `prisma migrate deploy` ni ham bajaradi — ya'ni
 migratsiya buzilgani deploy kunida emas, PR'da bilinadi.
 
-> Bu testlar shu muhitda ishga tushirilmadi (Docker demoni yo'q). Ular
-> birinchi marta CI'da bajariladi; ishlamay qolsa — baland ovozda yiqiladi,
-> jimgina o'tib ketmaydi.
+Endi ular haqiqatan bajarildi: muhitga PostgreSQL 16 mahalliy ko'tarilib,
+`prisma migrate deploy` va ikkala e2e paketi ishga tushirildi. Birinchi
+yugurishdayoq ular haqiqiy teshik topdi — pastdagi **F-10**. Ya'ni bu testlar
+bezak emas.
+
+### F-10 · Yuqori · Tashqi kalit tenant chegarasidan o'tib ketardi — tuzatildi
+
+Izolyatsiya paketi birinchi marta real bazada ishlaganda `POST /expenses`
+B firmasiga A firmasining `tripId` si bilan **201** qaytardi.
+
+Yozuv B ning tenantida tug'iladi (extension `company_id` ni to'g'ri qo'yadi),
+lekin uning tashqi kaliti A ga qaraydi. Keyin A o'z reysining P&L sini
+so'raganda Prisma `expenses` relatsiyasi orqali begona qatorni ham qo'shib
+beradi: birovning xarajati A ning foydasini kamaytiradi. Tenant extension buni
+tuta olmasdi — `create` da u faqat yangi qatorga `company_id` bosadi, body'dan
+kelgan `tripId` ni tekshirmaydi.
+
+Bir joyda emas, bir sinfda muammo edi: `expenses` (xarajat va kirim, create va
+update), `fuel` (`tripId`, `driverId` — `vehicleId` tekshirilardi).
+
+**Tuzatildi:** `src/common/tenant-refs.ts` — `assertRefsInCompany(db, refs)`.
+Har `tripId`/`vehicleId`/`trailerId`/`driverId`/`clientId` yozishdan oldin
+tenant-klient orqali qidiriladi; begona id yo'q id bilan bir xil 404 oladi
+(F-3 dagi qoida). `trips.service` ning o'z tekshiruvi shu umumiy funksiyaga
+ko'chirildi, ya'ni qoida bitta joyda yashaydi. Qamrov: `tenant-refs.spec.ts`
+va izolyatsiya e2e'sida to'rt yangi stsenariy (xarajat, kirim, yoqilg'i, reys).
 
 ### F-8 · Past · Ilova o'zi xavfsizlik sarlavhalarini qo'ymasdi — tuzatildi
 
@@ -148,9 +171,16 @@ qo'riqlanadi: `@Public` bo'lmagan har yo'lda `@Roles` bo'lishi shart.
 | Mijoz tracking-havolasi            | muddatli token, javob sanitizatsiyasi test bilan (TZ §4.2)                         |
 | Sirlar start'da tekshiriladi       | `config/env.validation.ts` — JWT sirlarisiz ilova ko'tarilmaydi                    |
 | Tarmoq yuzasi                      | production compose'da faqat nginx port ochadi                                      |
+| Body'dagi begona id                | `tenant-refs.spec.ts` + izolyatsiya e2e'si (F-10)                                  |
 
 ## Keyingi audit uchun
 
 Ochiq qolgani: **F-4 (RLS)**. Endi uni sinaydigan asos bor — izolyatsiya
-e2e paketi CI'da real bazada ishlaydi, ya'ni RLS siyosatini yoqib, xuddi shu
-testlar bilan tekshirish mumkin. Keyingi audit shu ishdan boshlanadi.
+e2e paketi real bazada ishlaydi (CI'da ham, mahalliy postgres'da ham), ya'ni
+RLS siyosatini yoqib, xuddi shu testlar bilan tekshirish mumkin. Keyingi audit
+shu ishdan boshlanadi.
+
+F-10 shuni ko'rsatdi: tenant extension yozuvning **egasini** kafolatlaydi,
+uning **havolalarini** emas. RLS ham xuddi shunday — u ham `expenses.trip_id`
+begona reysga qarashini o'zi to'xtatmaydi. Shuning uchun `assertRefsInCompany`
+RLS kelgandan keyin ham kerak bo'ladi, undan keyin ham olib tashlanmaydi.

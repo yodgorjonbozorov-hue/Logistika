@@ -5,6 +5,7 @@ import { AlertType, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { divRound, fromScaledInt, toScaledInt } from '../../common/money';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertRefsInCompany } from '../../common/tenant-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { AuditService } from '../audit/audit.service';
@@ -115,8 +116,7 @@ export class FuelService {
   async create(actor: CurrentUserPayload, dto: CreateFuelLogDto): Promise<FuelLog> {
     const db = this.prisma.forCompany(actor.companyId);
     // Cross-tenant ids look missing through the tenant client.
-    const vehicle = await db.vehicle.findUnique({ where: { id: dto.vehicleId } });
-    if (!vehicle) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await assertRefsInCompany(db, dto);
 
     const data = toFuelData(dto);
     try {
@@ -137,6 +137,7 @@ export class FuelService {
     const db = this.prisma.forCompany(actor.companyId);
     const existing = await db.fuelLog.findUnique({ where: { id } });
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await assertRefsInCompany(db, dto);
     try {
       const updated = await db.fuelLog.update({ where: { id }, data: toFuelData(dto) });
       this.audit.record(actor, 'UPDATE', 'FuelLog', updated, existing);

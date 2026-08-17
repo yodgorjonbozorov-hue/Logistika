@@ -50,11 +50,7 @@ interface Fixtures {
   tripId: string;
 }
 
-async function seedCompany(
-  ids: typeof A,
-  suffix: string,
-  withFixtures: boolean,
-): Promise<Fixtures | null> {
+async function seedCompany(ids: typeof A, suffix: string): Promise<Fixtures> {
   await prisma.company.upsert({
     where: { id: ids.company },
     update: {},
@@ -72,22 +68,20 @@ async function seedCompany(
       role: 'OWNER',
     },
   });
-  if (!withFixtures) return null;
-
   const vehicle = await prisma.vehicle.upsert({
     where: { id: ids.vehicle },
     update: {},
-    create: { id: ids.vehicle, companyId: ids.company, plateNumber: '01 A 111 AA' },
+    create: { id: ids.vehicle, companyId: ids.company, plateNumber: `01 ${suffix} 111 AA` },
   });
   const driver = await prisma.driver.upsert({
     where: { id: ids.driver },
     update: {},
-    create: { id: ids.driver, companyId: ids.company, fullName: 'A driver' },
+    create: { id: ids.driver, companyId: ids.company, fullName: `${suffix} driver` },
   });
   const client = await prisma.client.upsert({
     where: { id: ids.client },
     update: {},
-    create: { id: ids.client, companyId: ids.company, name: 'A client' },
+    create: { id: ids.client, companyId: ids.company, name: `${suffix} client` },
   });
   const trip = await prisma.trip.upsert({
     where: { id: ids.trip },
@@ -95,7 +89,7 @@ async function seedCompany(
     create: {
       id: ids.trip,
       companyId: ids.company,
-      tripNumber: 'A-001',
+      tripNumber: `${suffix}-001`,
       vehicleId: vehicle.id,
       driverId: driver.id,
       clientId: client.id,
@@ -109,6 +103,9 @@ async function wipe(): Promise<void> {
   // Children first; every row is keyed by one of the two test companies.
   const companies = [A.company, B.company];
   await prisma.chatMessage.deleteMany({ where: { companyId: { in: companies } } });
+  await prisma.expense.deleteMany({ where: { companyId: { in: companies } } });
+  await prisma.income.deleteMany({ where: { companyId: { in: companies } } });
+  await prisma.fuelLog.deleteMany({ where: { companyId: { in: companies } } });
   await prisma.tripEvent.deleteMany({ where: { companyId: { in: companies } } });
   await prisma.trip.deleteMany({ where: { companyId: { in: companies } } });
   await prisma.driver.deleteMany({ where: { companyId: { in: companies } } });
@@ -123,6 +120,7 @@ async function wipe(): Promise<void> {
 describe('tenant isolation (TZ §9)', () => {
   let app: INestApplication;
   let ownA: Fixtures;
+  let ownB: Fixtures;
   let tokenB: string;
 
   beforeAll(async () => {
@@ -133,8 +131,8 @@ describe('tenant isolation (TZ §9)', () => {
     await app.init();
 
     await wipe();
-    ownA = (await seedCompany(A, 'A', true)) as Fixtures;
-    await seedCompany(B, 'B', false);
+    ownA = await seedCompany(A, 'A');
+    ownB = await seedCompany(B, 'B');
 
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
@@ -196,6 +194,12 @@ describe('tenant isolation (TZ §9)', () => {
         .expect(404);
     });
 
+    /**
+     * The dangerous direction: B writes a row of its own but points its foreign
+     * key at A. The row lands in B's tenant, yet A picks it up through its own
+     * relations — a stranger's expense would join A's trip P&L. Every endpoint
+     * that takes an id from the request body is checked here.
+     */
     it("cannot attach an expense to A's trip", async () => {
       await request(app.getHttpServer())
         .post('/api/v1/expenses')
@@ -210,6 +214,60 @@ describe('tenant isolation (TZ §9)', () => {
         .expect(404);
       const expenses = await prisma.expense.count({ where: { tripId: ownA.tripId } });
       expect(expenses).toBe(0);
+    });
+
+    it("cannot attach an expense to A's vehicle or driver", async () => {
+      for (const refs of [{ vehicleId: ownA.vehicleId }, { driverId: ownA.driverId }]) {
+        await request(app.getHttpServer())
+          .post('/api/v1/expenses')
+          .set(auth())
+          .send({
+            ...refs,
+            category: 'PARKING',
+            amount: '100000',
+            expenseDate: new Date().toISOString(),
+          })
+          .expect(404);
+      }
+      expect(await prisma.expense.count({ where: { companyId: B.company } })).toBe(0);
+    });
+
+    it("cannot book an income against A's trip or client", async () => {
+      for (const refs of [{ tripId: ownA.tripId }, { clientId: ownA.clientId }]) {
+        await request(app.getHttpServer())
+          .post('/api/v1/incomes')
+          .set(auth())
+          .send({ ...refs, amount: '100000' })
+          .expect(404);
+      }
+      expect(await prisma.income.count({ where: { companyId: B.company } })).toBe(0);
+    });
+
+    it("cannot log a refuel on A's vehicle, trip or driver", async () => {
+      for (const refs of [
+        { vehicleId: ownA.vehicleId },
+        { vehicleId: ownB.vehicleId, tripId: ownA.tripId },
+        { vehicleId: ownB.vehicleId, driverId: ownA.driverId },
+      ]) {
+        await request(app.getHttpServer())
+          .post('/api/v1/fuel')
+          .set(auth())
+          .send({ ...refs, liters: 100, refuelTime: new Date().toISOString() })
+          .expect(404);
+      }
+      expect(await prisma.fuelLog.count({ where: { companyId: B.company } })).toBe(0);
+    });
+
+    it("cannot open a trip on A's vehicle, driver or client", async () => {
+      for (const refs of [
+        { vehicleId: ownA.vehicleId },
+        { driverId: ownA.driverId },
+        { clientId: ownA.clientId },
+      ]) {
+        await request(app.getHttpServer()).post('/api/v1/trips').set(auth()).send(refs).expect(404);
+      }
+      // Only B's own fixture trip; none of the attempts above added a row.
+      expect(await prisma.trip.count({ where: { companyId: B.company } })).toBe(1);
     });
   });
 

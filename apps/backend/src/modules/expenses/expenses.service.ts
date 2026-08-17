@@ -3,6 +3,7 @@ import type { Expense, Income, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertRefsInCompany } from '../../common/tenant-refs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -64,8 +65,12 @@ export class ExpensesService {
   }
 
   async createExpense(actor: CurrentUserPayload, dto: CreateExpenseDto): Promise<Expense> {
+    const db = this.prisma.forCompany(actor.companyId);
+    // The trip, vehicle and driver in the body must be this company's, or the
+    // row would join a stranger's trip P&L through the `expenses` relation.
+    await assertRefsInCompany(db, dto);
     try {
-      return await this.prisma.forCompany(actor.companyId).expense.create({
+      return await db.expense.create({
         data: {
           ...toExpenseData(dto),
           createdById: actor.userId,
@@ -87,10 +92,10 @@ export class ExpensesService {
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     // An approved expense is part of the financial record — no silent edits.
     if (existing.isApproved) throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
+    const db = this.prisma.forCompany(actor.companyId);
+    await assertRefsInCompany(db, dto);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .expense.update({ where: { id }, data: toExpenseData(dto) });
+      return await db.expense.update({ where: { id }, data: toExpenseData(dto) });
     } catch (error) {
       rethrowPrismaError(error);
     }
@@ -146,8 +151,10 @@ export class ExpensesService {
   }
 
   async createIncome(actor: CurrentUserPayload, dto: CreateIncomeDto): Promise<Income> {
+    const db = this.prisma.forCompany(actor.companyId);
+    await assertRefsInCompany(db, dto);
     try {
-      return await this.prisma.forCompany(actor.companyId).income.create({
+      return await db.income.create({
         data: toIncomeData(dto) as Prisma.IncomeUncheckedCreateInput,
       });
     } catch (error) {
@@ -156,10 +163,12 @@ export class ExpensesService {
   }
 
   async updateIncome(actor: CurrentUserPayload, id: string, dto: UpdateIncomeDto): Promise<Income> {
+    const db = this.prisma.forCompany(actor.companyId);
+    const existing = await db.income.findUnique({ where: { id } });
+    if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    await assertRefsInCompany(db, dto);
     try {
-      return await this.prisma
-        .forCompany(actor.companyId)
-        .income.update({ where: { id }, data: toIncomeData(dto) });
+      return await db.income.update({ where: { id }, data: toIncomeData(dto) });
     } catch (error) {
       rethrowPrismaError(error);
     }
