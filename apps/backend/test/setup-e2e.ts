@@ -20,6 +20,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 const TABLES = [
   'gps_tracks_archive',
   'gps_tracks',
+  'ledger_entries',
   'tracking_links',
   'trip_events',
   'fuel_logs',

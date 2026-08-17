@@ -89,6 +89,28 @@ enum Currency {
   @@map("currency")
 }
 
+/// Which way money moved, from the company's point of view.
+/// DEBIT  — the counterparty now owes us more (a trip was invoiced).
+/// CREDIT — the counterparty settled some of it (a payment arrived).
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+
+  @@map("ledger_direction")
+}
+
+/// Why the entry exists. Every row must be explainable without reading code.
+enum LedgerReason {
+  TRIP_INVOICED
+  PAYMENT_RECEIVED
+  ADJUSTMENT
+  REFUND
+  DRIVER_ADVANCE
+  REVERSAL
+
+  @@map("ledger_reason")
+}
+
 enum PaymentStatus {
   PENDING
   PARTIAL
@@ -144,6 +166,7 @@ model Company {
   auditLogs     AuditLog[]
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
+  ledgerEntries LedgerEntry[]
 
   @@map("companies")
 }
@@ -288,12 +311,17 @@ model Client {
   email            String?
   address          String?
   paymentTermsDays Int?    @map("payment_terms_days")
+  /// Cache of SUM(CREDIT) - SUM(DEBIT) over ledger_entries, in UZS tiyin.
+  /// Negative means the client owes us. Only ever moved by an atomic
+  /// increment inside the same transaction as the entry that caused it —
+  /// never read-modify-written (see LedgerService).
   balance          BigInt  @default(0)
   createdAt        DateTime @default(now()) @map("created_at")
 
   company Company  @relation(fields: [companyId], references: [id])
   trips   Trip[]
   incomes Income[]
+  ledgerEntries LedgerEntry[]
 
   @@index([companyId])
   @@map("clients")
@@ -345,6 +373,7 @@ model Trip {
   incomes       Income[]
   gpsTracks     GpsTrack[]
   trackingLinks TrackingLink[]
+  ledgerEntries LedgerEntry[]
 
   @@unique([companyId, tripNumber])
   @@index([companyId, status])
@@ -449,9 +478,57 @@ model Income {
   company Company @relation(fields: [companyId], references: [id])
   trip    Trip?   @relation(fields: [tripId], references: [id])
   client  Client? @relation(fields: [clientId], references: [id])
+  ledgerEntries LedgerEntry[]
 
   @@index([companyId, status])
   @@map("incomes")
+}
+
+// ---------- Ledger (TZ §6: "how much does this client owe?") ----------
+
+/// Immutable money movements.
+///
+/// Rows are never updated or deleted: a mistake is corrected by a REVERSAL
+/// entry pointing back at the original, so the history of what was believed
+/// and when survives. `Client.balance` is a cache of the sum of these rows.
+model LedgerEntry {
+  id        String  @id @default(uuid())
+  companyId String  @map("company_id")
+  clientId  String? @map("client_id")
+  driverId  String? @map("driver_id")
+  tripId    String? @map("trip_id")
+  incomeId  String? @map("income_id")
+  expenseId String? @map("expense_id")
+
+  direction LedgerDirection
+  reason    LedgerReason
+  /// Money as entered, in the smallest unit of `currency` (tiyin for UZS).
+  amount    BigInt
+  currency  Currency @default(UZS)
+  /// The same amount in UZS tiyin, frozen at entry time (TASK-3.3). Reports
+  /// only ever aggregate this: adding USD cents to UZS tiyin is nonsense.
+  amountBase BigInt   @map("amount_base")
+  /// Rate used and its date, kept so a historical report stays reproducible.
+  rateUsed   Decimal? @map("rate_used") @db.Decimal(18, 6)
+  rateDate   DateTime? @map("rate_date")
+
+  reference   String?
+  createdById String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  /// Set on the original entry once a reversal cancels it.
+  reversedByEntryId String?      @unique @map("reversed_by_entry_id")
+  reversedBy        LedgerEntry? @relation("LedgerReversal", fields: [reversedByEntryId], references: [id])
+  reverses          LedgerEntry? @relation("LedgerReversal")
+
+  company Company  @relation(fields: [companyId], references: [id])
+  client  Client?  @relation(fields: [clientId], references: [id])
+  trip    Trip?    @relation(fields: [tripId], references: [id])
+  income  Income?  @relation(fields: [incomeId], references: [id])
+
+  @@index([companyId, clientId, createdAt])
+  @@index([companyId, tripId])
+  @@map("ledger_entries")
 }
 
 // ---------- Telemetry ----------

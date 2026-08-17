@@ -2,9 +2,12 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Driver, type Trip, type TripEvent, type TripStatus } from '@prisma/client';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
+import { requireTenantActor } from '../../common/tenant-actor';
 import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { LedgerService } from '../ledger/ledger.service';
+import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
 import { DriverEventDto, EventBatchDto, ListEventsDto } from './dto/event.dto';
 
 export interface BatchResult {
@@ -32,6 +35,7 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ledger: LedgerService,
   ) {}
 
   /** The driver profile linked to the logged-in user (DRIVER role). */
@@ -114,6 +118,14 @@ export class EventsService {
             data: { status: target, ...this.transitionData(target!, trip, event) },
           });
           if (count === 0) throw new TransitionConflict();
+
+          if (target === 'COMPLETED') {
+            // Same receivable the logist path creates; whichever gets there
+            // first wins and the other finds the entry already present.
+            // The invoice is the agreed price, which the transition never
+            // touches — the pre-update row is the right source for it.
+            await invoiceCompletedTrip(this.ledger, tx, requireTenantActor(actor), trip);
+          }
 
           await tx.auditLog.create({
             data: {

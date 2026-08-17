@@ -2,12 +2,18 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { TripsService } from './trips.service';
 
+/** The ledger is exercised for real in ledger.service.spec.ts and the e2e suite. */
+const ledgerStub = {
+  record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
+  reverse: jest.fn(),
+} as unknown as import('../ledger/ledger.service').LedgerService;
+
 describe('TripsService', () => {
   const audit = { log: jest.fn() } as unknown as AuditService;
 
   function setup() {
     const { prisma, db } = createTenantDbMock(['trip', 'vehicle', 'driver', 'client']);
-    const service = new TripsService(prisma, audit);
+    const service = new TripsService(prisma, audit, ledgerStub);
     return { service, db };
   }
 

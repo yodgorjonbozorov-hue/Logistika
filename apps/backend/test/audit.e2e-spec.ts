@@ -101,13 +101,24 @@ describe('Audit trail (e2e)', () => {
     await api()
       .patch(`/api/v1/incomes/${income.body.data.id}`)
       .set(as(tenant.tokens.owner))
-      .send({ status: 'PAID' })
+      .send({ paymentMethod: 'bank' })
       .expect(200);
 
     expect(await entriesFor('Expense', expense.body.data.id)).toHaveLength(1);
     const incomeEntries = await entriesFor('Income', income.body.data.id);
     expect(incomeEntries.map((e) => e.action)).toEqual(['CREATE', 'UPDATE']);
-    expect((incomeEntries[1]?.after as Record<string, unknown>).status).toBe('PAID');
+    expect((incomeEntries[1]?.after as Record<string, unknown>).paymentMethod).toBe('bank');
+  });
+
+  it('ignores a client-supplied payment status: it comes from the ledger', async () => {
+    const income = await api()
+      .post('/api/v1/incomes')
+      .set(as(tenant.tokens.owner))
+      .send({ amount: '1000', clientId: tenant.client.id, status: 'PAID' })
+      .expect(201);
+
+    // Marking an unpaid trip PAID by hand used to be one <Select> away.
+    expect(income.body.data.status).toBe('PENDING');
   });
 
   it('keeps no audit entry when the change itself rolls back', async () => {

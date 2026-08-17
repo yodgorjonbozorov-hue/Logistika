@@ -23,6 +23,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'Notification',
   'StoredFile',
   'GpsTrackArchive',
+  'LedgerEntry',
 ]);
 
 type AnyArgs = Record<string, unknown>;

@@ -89,15 +89,21 @@
     "coverageThreshold": {
       "global": {
         "statements": 30,
-        "lines": 37,
-        "branches": 29,
-        "functions": 30
+        "lines": 38,
+        "branches": 30,
+        "functions": 31
       },
       "./src/modules/expenses/expenses.service.ts": {
-        "statements": 79,
-        "lines": 77,
-        "branches": 78,
-        "functions": 84
+        "statements": 83,
+        "lines": 82,
+        "branches": 85,
+        "functions": 86
+      },
+      "./src/modules/ledger/ledger.service.ts": {
+        "statements": 91,
+        "lines": 90,
+        "branches": 83,
+        "functions": 91
       }
     }
   }

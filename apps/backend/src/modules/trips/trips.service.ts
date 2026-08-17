@@ -3,10 +3,13 @@ import { Prisma, type Trip, type TripStatus } from '@prisma/client';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { requireTenantActor } from '../../common/tenant-actor';
 import { assertTenantRefs } from '../../common/tenant-refs';
 import { assertTripTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { LedgerService } from '../ledger/ledger.service';
+import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
 import {
   AssignTripDto,
   CompleteTripDto,
@@ -34,6 +37,7 @@ export class TripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ledger: LedgerService,
   ) {}
 
   async list(
@@ -192,9 +196,15 @@ export class TripsService {
     status: TripStatus,
     data: Prisma.TripUncheckedUpdateInput,
   ): Promise<Trip> {
-    const updated = await this.prisma
-      .forCompany(actor.companyId)
-      .trip.update({ where: { id: trip.id }, data: { ...data, status } });
+    const tenant = requireTenantActor(actor);
+    const updated = await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
+      const result = await tx.trip.update({ where: { id: trip.id }, data: { ...data, status } });
+      // Completing a trip is what turns work into a receivable.
+      if (status === 'COMPLETED') {
+        await invoiceCompletedTrip(this.ledger, tx, tenant, result);
+      }
+      return result;
+    });
     this.audit.log({
       companyId: actor.companyId,
       userId: actor.userId,

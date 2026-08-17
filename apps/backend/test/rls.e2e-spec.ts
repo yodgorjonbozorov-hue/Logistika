@@ -36,6 +36,7 @@ const TENANT_TABLES = [
   'documents',
   'notifications',
   'stored_files',
+  'ledger_entries',
 ];
 
 describe('PostgreSQL row-level security (e2e)', () => {

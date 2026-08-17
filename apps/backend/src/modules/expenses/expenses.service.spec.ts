@@ -3,6 +3,12 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { ExpensesService } from './expenses.service';
 
+/** Ledger behaviour is covered by ledger.service.spec.ts and the e2e suite. */
+const ledgerStub = {
+  record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
+  reverse: jest.fn(),
+} as unknown as import('../ledger/ledger.service').LedgerService;
+
 describe('ExpensesService', () => {
   const audit = {
     log: jest.fn(),
@@ -22,7 +28,7 @@ describe('ExpensesService', () => {
     for (const model of ['trip', 'vehicle', 'driver', 'client']) {
       db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
     }
-    const service = new ExpensesService(prisma, audit);
+    const service = new ExpensesService(prisma, audit, ledgerStub);
     return { service, db };
   }
 
@@ -106,7 +112,7 @@ describe('ExpensesService tenant references (TASK-2.2)', () => {
     db.expense!.findUnique!.mockResolvedValue({ id: 'e1', isApproved: false });
     db.expense!.update!.mockResolvedValue({ id: 'e1' });
     db.income!.update!.mockResolvedValue({ id: 'i1' });
-    return { service: new ExpensesService(prisma, audit), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
   }
 
   const expense = (overrides: Record<string, unknown> = {}) => ({
@@ -220,7 +226,7 @@ describe('ExpensesService money conversion edge cases', () => {
       Promise.resolve({ id: 'i1', ...data }),
     );
     db.income!.findUnique!.mockResolvedValue({ id: 'i1', amount: 1n });
-    return { service: new ExpensesService(prisma, audit), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
   }
 
   it('leaves omitted optional money fields unset rather than zero', async () => {
@@ -294,7 +300,7 @@ describe('ExpensesService missing rows', () => {
     for (const model of ['trip', 'vehicle', 'driver', 'client']) {
       db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
     }
-    return { service: new ExpensesService(prisma, audit), db };
+    return { service: new ExpensesService(prisma, audit, ledgerStub), db };
   }
 
   it('reports a missing income as not found instead of updating nothing', async () => {
@@ -319,5 +325,133 @@ describe('ExpensesService missing rows', () => {
     await expect(service.removeExpense(ACTOR, 'gone')).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
+  });
+});
+
+describe('ExpensesService income ↔ ledger (TASK-3.1)', () => {
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
+
+  function setup(options: { invoiced?: bigint; paid?: bigint } = {}) {
+    const { prisma, db } = createTenantDbMock([
+      'expense',
+      'income',
+      'trip',
+      'vehicle',
+      'driver',
+      'client',
+      'ledgerEntry',
+    ]);
+    for (const model of ['trip', 'vehicle', 'driver', 'client']) {
+      db[model]!.findUnique!.mockResolvedValue({ id: 'ref' });
+    }
+    db.income!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'i1', status: 'PENDING', currency: 'UZS', ...data }),
+    );
+    db.income!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'i1', tripId: 't1', currency: 'UZS', status: 'PENDING', ...data }),
+    );
+    db.income!.findUnique!.mockResolvedValue({
+      id: 'i1',
+      tripId: 't1',
+      clientId: 'c1',
+      amount: 100n,
+      currency: 'UZS',
+      status: 'PENDING',
+    });
+    db.ledgerEntry!.groupBy = jest.fn().mockResolvedValue([
+      { direction: 'DEBIT', _sum: { amountBase: options.invoiced ?? 0n } },
+      { direction: 'CREDIT', _sum: { amountBase: options.paid ?? 0n } },
+    ]);
+    db.ledgerEntry!.findFirst = jest.fn().mockResolvedValue({ id: 'ledger-1' });
+
+    const ledger = {
+      record: jest.fn().mockResolvedValue({ id: 'ledger-2' }),
+      reverse: jest.fn().mockResolvedValue({ id: 'mirror' }),
+    };
+    return {
+      service: new ExpensesService(prisma, audit, ledger as never),
+      db,
+      ledger,
+    };
+  }
+
+  const payment = (amount: string, extra: Record<string, unknown> = {}) =>
+    ({ amount, clientId: 'c1', tripId: 't1', ...extra }) as never;
+
+  it('credits the client ledger when a payment is recorded', async () => {
+    const { service, ledger } = setup();
+    await service.createIncome(ACTOR, payment('400000000'));
+
+    expect(ledger.record).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ companyId: ACTOR.companyId }),
+      expect.objectContaining({
+        direction: 'CREDIT',
+        reason: 'PAYMENT_RECEIVED',
+        amount: 400_000_000n,
+        clientId: 'c1',
+      }),
+    );
+  });
+
+  it('records an income with no client without touching any balance', async () => {
+    const { service, ledger } = setup();
+    await service.createIncome(ACTOR, { amount: '1000' } as never);
+    expect(ledger.record).not.toHaveBeenCalled();
+  });
+
+  it('marks the payment PARTIAL while the invoice is not covered', async () => {
+    const { service, db } = setup({ invoiced: 1000n, paid: 400n });
+    await service.createIncome(ACTOR, payment('400'));
+
+    expect(db.income!.update!.mock.calls.at(-1)![0].data).toEqual({ status: 'PARTIAL' });
+  });
+
+  it('marks the payment PAID once the invoice is fully covered', async () => {
+    const { service, db } = setup({ invoiced: 1000n, paid: 1000n });
+    await service.createIncome(ACTOR, payment('1000'));
+
+    expect(db.income!.update!.mock.calls.at(-1)![0].data).toEqual({ status: 'PAID' });
+  });
+
+  it('treats an overpayment as PAID, not as something beyond it', async () => {
+    const { service, db } = setup({ invoiced: 1000n, paid: 1200n });
+    await service.createIncome(ACTOR, payment('1200'));
+    expect(db.income!.update!.mock.calls.at(-1)![0].data).toEqual({ status: 'PAID' });
+  });
+
+  it('leaves the status alone when there is no invoice to measure against', async () => {
+    const { service, db } = setup({ invoiced: 0n, paid: 500n });
+    await service.createIncome(ACTOR, payment('500'));
+    expect(db.income!.update).not.toHaveBeenCalled();
+  });
+
+  it('corrects a payment amount by reversing and re-recording, never editing', async () => {
+    const { service, ledger } = setup({ invoiced: 1000n, paid: 900n });
+
+    await service.updateIncome(ACTOR, 'i1', { amount: '900' } as never);
+
+    expect(ledger.reverse).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ companyId: ACTOR.companyId }),
+      'ledger-1',
+      expect.stringContaining('correction'),
+    );
+    expect(ledger.record).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ direction: 'CREDIT', amount: 900n }),
+    );
+  });
+
+  it('does not touch the ledger when the amount did not change', async () => {
+    const { service, ledger } = setup({ invoiced: 1000n, paid: 100n });
+    await service.updateIncome(ACTOR, 'i1', { paymentMethod: 'bank' } as never);
+
+    expect(ledger.reverse).not.toHaveBeenCalled();
+    expect(ledger.record).not.toHaveBeenCalled();
   });
 });

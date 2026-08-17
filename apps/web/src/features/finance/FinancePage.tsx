@@ -221,22 +221,8 @@ function IncomesTab() {
                 <Cell>{income.invoiceNumber ?? '—'}</Cell>
                 <Cell className="tabular-nums">{formatTiyin(income.amount)}</Cell>
                 <Cell>
-                  <Select
-                    className="w-40"
-                    value={income.status}
-                    onChange={(e) =>
-                      void update.mutateAsync({
-                        id: income.id,
-                        body: { status: e.target.value },
-                      })
-                    }
-                  >
-                    {Object.values(PaymentStatus).map((status) => (
-                      <option key={status} value={status}>
-                        {t(`finance.paymentStatuses.${status}`)}
-                      </option>
-                    ))}
-                  </Select>{' '}
+                  {/* Read-only: the status follows the ledger (how much of the
+                      trip's invoice is covered), so it cannot be set by hand. */}
                   <Badge tone={PAYMENT_TONES[income.status]}>
                     {t(`finance.paymentStatuses.${income.status}`)}
                   </Badge>

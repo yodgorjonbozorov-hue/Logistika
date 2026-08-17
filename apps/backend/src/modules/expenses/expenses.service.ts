@@ -5,8 +5,9 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { toAuditJson } from '../audit/audit.service';
+import { LedgerService } from '../ledger/ledger.service';
 import { assertTenantRefs } from '../../common/tenant-refs';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
   CreateExpenseDto,
@@ -63,6 +64,7 @@ export class ExpensesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ledger: LedgerService,
   ) {}
 
   // ---------- Expenses ----------
@@ -217,19 +219,65 @@ export class ExpensesService {
         const income = await tx.income.create({
           data: { ...toIncomeCreateData(dto), companyId: tenant.companyId },
         });
+
+        // Money received against a client account is what pays a trip down.
+        // Without a client there is nobody to credit — the row is still a
+        // valid income record, it just does not move any balance.
+        if (income.clientId) {
+          await this.ledger.record(tx, tenant, {
+            clientId: income.clientId,
+            tripId: income.tripId,
+            incomeId: income.id,
+            direction: 'CREDIT',
+            reason: 'PAYMENT_RECEIVED',
+            amount: income.amount,
+            currency: income.currency,
+            // TASK-3.3 converts non-UZS payments.
+            amountBase: income.amount,
+            reference: income.invoiceNumber ?? undefined,
+          });
+        }
+
+        const withStatus = await this.syncPaymentStatus(tx, income);
+
         await this.audit.logInTx(tx, {
           companyId: tenant.companyId,
           userId: tenant.userId,
           action: 'CREATE',
           entityType: 'Income',
           entityId: income.id,
-          after: toAuditJson(income),
+          after: toAuditJson(withStatus),
         });
-        return income;
+        return withStatus;
       });
     } catch (error) {
       rethrowPrismaError(error);
     }
+  }
+
+  /**
+   * Payment status follows the ledger rather than being typed in: an income is
+   * PAID once the trip's invoice is fully covered, PARTIAL while something is
+   * still outstanding, and PENDING when there is no invoice to measure against.
+   */
+  private async syncPaymentStatus(tx: TenantScopedClient, income: Income): Promise<Income> {
+    if (!income.tripId) return income;
+
+    const totals = await tx.ledgerEntry.groupBy({
+      by: ['direction'],
+      where: { tripId: income.tripId },
+      _sum: { amountBase: true },
+    });
+    const sumOf = (direction: 'DEBIT' | 'CREDIT') =>
+      totals.find((row) => row.direction === direction)?._sum.amountBase ?? 0n;
+
+    const invoiced = sumOf('DEBIT');
+    const paid = sumOf('CREDIT');
+    if (invoiced === 0n) return income;
+
+    const status = paid >= invoiced ? 'PAID' : 'PARTIAL';
+    if (income.status === status) return income;
+    return tx.income.update({ where: { id: income.id }, data: { status } });
   }
 
   async updateIncome(actor: CurrentUserPayload, id: string, dto: UpdateIncomeDto): Promise<Income> {
@@ -238,8 +286,33 @@ export class ExpensesService {
     const existing = await db.income.findUnique({ where: { id } });
     if (!existing) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     try {
-      return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+      const tenant = requireTenantActor(actor);
+      return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
         const income = await tx.income.update({ where: { id }, data: toIncomeData(dto) });
+
+        // Correcting a recorded payment is a reversal plus a new entry, never
+        // an edit: the ledger keeps what was believed at the time.
+        if (dto.amount !== undefined && BigInt(dto.amount) !== existing.amount) {
+          const original = await tx.ledgerEntry.findFirst({
+            where: { incomeId: id, reason: 'PAYMENT_RECEIVED', reversedByEntryId: null },
+          });
+          if (original) {
+            await this.ledger.reverse(tx, tenant, original.id, `correction of income ${id}`);
+            await this.ledger.record(tx, tenant, {
+              clientId: income.clientId,
+              tripId: income.tripId,
+              incomeId: income.id,
+              direction: 'CREDIT',
+              reason: 'PAYMENT_RECEIVED',
+              amount: income.amount,
+              currency: income.currency,
+              amountBase: income.amount,
+              reference: income.invoiceNumber ?? undefined,
+            });
+          }
+        }
+        await this.syncPaymentStatus(tx, income);
+
         await this.audit.logInTx(tx, {
           companyId: actor.companyId,
           userId: actor.userId,

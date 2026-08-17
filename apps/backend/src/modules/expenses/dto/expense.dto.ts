@@ -9,7 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { Currency, ExpenseCategory, PaymentStatus } from 'shared';
+import { Currency, ExpenseCategory } from 'shared';
 import { IsTiyin } from '../../../common/dto/money';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
@@ -110,9 +110,10 @@ export class CreateIncomeDto {
   @MaxLength(60)
   invoiceNumber?: string;
 
-  @IsOptional()
-  @IsEnum(PaymentStatus)
-  status?: PaymentStatus;
+  // `status` is deliberately absent: it is derived from the ledger (how much of
+  // the trip's invoice this and earlier payments cover), not typed in. It used
+  // to be a free-form <Select> on the finance page, so anyone could mark an
+  // unpaid trip PAID and nothing anywhere disagreed.
 }
 
 export class UpdateIncomeDto extends PartialType(CreateIncomeDto) {}

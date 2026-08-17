@@ -317,13 +317,36 @@ TASK-1.3 shu ikki nuqtani (dist kafolati + real e2e) yopadi.
 
 ## Keyingi qadam
 
+### PHASE 3 — CORE BUSINESS
+
+- **TASK-3.1 (H-3)** · Qarz/balans ledger'i. `ledger_entries` — **o'zgarmas** jurnal
+  (`direction` DEBIT/CREDIT, `reason`, `amount`, `amountBase`, `rateUsed`/`rateDate`
+  TASK-3.3 uchun tayyor, `reversedByEntryId`). RLS + append-only trigger (UPDATE/DELETE
+  DB darajasida taqiqlangan — tuzatish faqat `REVERSAL` yozuvi bilan).
+  Reys `COMPLETED` → `TRIP_INVOICED` DEBIT; kirim → `PAYMENT_RECEIVED` CREDIT — ikkalasi
+  ham o'zgarish bilan **bitta tranzaksiyada**. Reysni logist ham, haydovchi ham
+  yakunlashi mumkin, shuning uchun `invoiceCompletedTrip()` idempotent (ikki marta
+  invoys qilmaydi). `Client.balance` kesh sifatida qoldi va faqat atomik `increment`
+  bilan yangilanadi (DB-5 — read-modify-write emas). `GET /clients/:id/ledger` va
+  `GET /clients/:id/balance` (`balance`, `debt`, `overdue` — to'lovlar eng eski
+  invoysdan yopiladi). `Income.status` endi **hisoblanadi**: DTO'dan olib tashlandi,
+  ledger'dan PAID/PARTIAL, web'da faqat `Badge` (avval `<Select>` bilan to'lanmagan
+  reysni PAID qilish mumkin edi). To'lov summasi tuzatilsa — `REVERSAL` + yangi yozuv. ·
+  migratsiyalar `*_ledger`, `20260817170000_ledger_rls`, `ledger/*` (service +spec 21 test),
+  `trip-invoicing.ts`, `trips/events/expenses` servislari, `clients.controller.ts`,
+  `tenant.extension.ts`, web `FinancePage.tsx`, `docs/BUSINESS-RULES.md` (yangi) ·
+  unit 175 → 200, e2e 81 → 92. `expenses.service` qamrovi 83%, `ledger.service` 92%.
+
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-PHASE 3 boshlanishida diqqat qilinadigan bog'liqliklar:
+**Keyingi qadam:** TASK-3.2 (pul endpointlarida idempotency).
 
-- TASK-3.1 (ledger) TASK-3.3 (`amountBase`, valyuta) bilan chambarchas — ikkalasini ketma-ket
-  qilish tavsiya etiladi, aks holda ledger migratsiyasi ikki marta o'zgaradi.
+PHASE 3 qolgan bog'liqliklar:
+
+- TASK-3.3 (valyuta): ledger'da `amountBase`/`rateUsed`/`rateDate` maydonlari **allaqachon bor**
+  va hozircha `amountBase = amount` (hammasi UZS deb faraz). 3.3 faqat konvertatsiyani
+  to'ldiradi — migratsiya qayta yozilmaydi.
 - TASK-3.5 (optimistic lock) `trips.service.transition()`ga tegadi — u TASK-1.4 da
   `events.service` bilan umumiy `trip-transitions.ts` orqali bog'langan, ikkalasini birga tekshir.
 - TASK-3.4 (yangi status'lar) `packages/shared` enum'ini va web `StatusBadge`ni ham talab qiladi

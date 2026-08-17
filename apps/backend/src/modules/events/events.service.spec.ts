@@ -3,6 +3,12 @@ import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { EventsService } from './events.service';
 
+/** The ledger is exercised for real in ledger.service.spec.ts and the e2e suite. */
+const ledgerStub = {
+  record: jest.fn().mockResolvedValue({ id: 'ledger-1' }),
+  reverse: jest.fn(),
+} as unknown as import('../ledger/ledger.service').LedgerService;
+
 const DRIVER_ACTOR = { ...ACTOR, role: 'DRIVER' } as typeof ACTOR;
 
 describe('EventsService.ingestBatch (offline idempotent sync)', () => {
@@ -29,7 +35,7 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
       Promise.resolve({ id: 'e1', ...data }),
     );
     db.storedFile!.findMany!.mockResolvedValue([]);
-    const service = new EventsService(prisma, audit);
+    const service = new EventsService(prisma, audit, ledgerStub);
     return { service, db };
   }
 
@@ -207,7 +213,7 @@ describe('EventsService.listByTrip (TASK-2.3)', () => {
     db.driver!.findFirst!.mockResolvedValue({ id: 'd1', userId: 'user-1' });
     db.tripEvent!.findMany!.mockResolvedValue([{ id: 'e1' }]);
     db.tripEvent!.count!.mockResolvedValue(1);
-    return { service: new EventsService(prisma, audit), db };
+    return { service: new EventsService(prisma, audit, ledgerStub), db };
   }
 
   const filter = (overrides: Record<string, unknown> = {}) =>
