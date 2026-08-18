@@ -17,11 +17,13 @@ import {
   Pagination,
   Row,
   Select,
-  Spinner,
   Table,
+  TableSkeleton,
 } from '../../shared/ui';
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
 import { MoneyInput } from '../../shared/ui/MoneyInput';
+import { useFormErrors } from '../../shared/api/useFormErrors';
+import { checkAmount, checkRecordedDate, checkText, problems } from '../../shared/utils/validate';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
@@ -92,7 +94,7 @@ function ExpensesTab() {
       </div>
       <ErrorMessage error={error ?? post.error} />
       {isLoading ? (
-        <Spinner />
+        <TableSkeleton columns={6} />
       ) : expenses.length === 0 ? (
         <EmptyState />
       ) : (
@@ -197,8 +199,19 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const errors = useFormErrors(create.error);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    // Checked before the round trip, and again by the server afterwards: this
+    // is a courtesy, not the rule (see validate.ts).
+    const found = problems({
+      amount: checkAmount(form.amount),
+      expenseDate: checkRecordedDate(form.expenseDate),
+      description: checkText(form.description, { max: 1000 }),
+    });
+    if (!errors.check(found)) return;
+
     await create.mutateAsync({
       category: form.category,
       amount: somToTiyin(form.amount),
@@ -221,21 +234,24 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
               ))}
             </Select>
           </Field>
-          <Field label={t('finance.amount')} hint={t('finance.amountHint')}>
+          <Field
+            label={t('finance.amount')}
+            hint={t('finance.amountHint')}
+            error={errors.of('amount')}
+          >
             <MoneyInput
               value={form.amount}
               onChange={(digits) => setForm((f) => ({ ...f, amount: digits }))}
-              required
             />
           </Field>
-          <Field label={t('finance.date')}>
-            <Input type="date" value={form.expenseDate} onChange={set('expenseDate')} required />
+          <Field label={t('finance.date')} error={errors.of('expenseDate')}>
+            <Input type="date" value={form.expenseDate} onChange={set('expenseDate')} />
           </Field>
-          <Field label={t('finance.description')}>
+          <Field label={t('finance.description')} error={errors.of('description')}>
             <Input value={form.description} onChange={set('description')} />
           </Field>
         </div>
-        <ErrorMessage error={create.error} />
+        <ErrorMessage error={create.error} only={errors.general} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             {t('common.cancel')}
@@ -266,7 +282,7 @@ function IncomesTab() {
       </div>
       <ErrorMessage error={error ?? update.error} />
       {isLoading ? (
-        <Spinner />
+        <TableSkeleton columns={6} />
       ) : incomes.length === 0 ? (
         <EmptyState />
       ) : (
@@ -312,8 +328,17 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const errors = useFormErrors(create.error);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const found = problems({
+      amount: checkAmount(form.amount),
+      paymentDate: checkRecordedDate(form.paymentDate, { required: false }),
+      invoiceNumber: checkText(form.invoiceNumber, { max: 100 }),
+    });
+    if (!errors.check(found)) return;
+
     await create.mutateAsync({
       amount: somToTiyin(form.amount),
       invoiceNumber: form.invoiceNumber || undefined,
@@ -326,21 +351,24 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
     <Modal title={t('finance.newIncome')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('finance.amount')} hint={t('finance.amountHint')}>
+          <Field
+            label={t('finance.amount')}
+            hint={t('finance.amountHint')}
+            error={errors.of('amount')}
+          >
             <MoneyInput
               value={form.amount}
               onChange={(digits) => setForm((f) => ({ ...f, amount: digits }))}
-              required
             />
           </Field>
-          <Field label={t('finance.invoiceNumber')}>
+          <Field label={t('finance.invoiceNumber')} error={errors.of('invoiceNumber')}>
             <Input value={form.invoiceNumber} onChange={set('invoiceNumber')} />
           </Field>
-          <Field label={t('finance.paymentDate')}>
+          <Field label={t('finance.paymentDate')} error={errors.of('paymentDate')}>
             <Input type="date" value={form.paymentDate} onChange={set('paymentDate')} />
           </Field>
         </div>
-        <ErrorMessage error={create.error} />
+        <ErrorMessage error={create.error} only={errors.general} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             {t('common.cancel')}

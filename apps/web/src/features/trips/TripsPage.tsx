@@ -11,8 +11,8 @@ import {
   Pagination,
   Row,
   Select,
-  Spinner,
   Table,
+  TableSkeleton,
 } from '../../shared/ui';
 import { formatTiyin } from '../../shared/utils/money';
 import { StatusBadge } from './StatusBadge';
@@ -57,7 +57,7 @@ export function TripsPage() {
       />
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
+        <TableSkeleton columns={6} />
       ) : trips.length === 0 ? (
         <EmptyState />
       ) : (

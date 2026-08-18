@@ -1080,3 +1080,42 @@ tushmaguncha ko'rinmaydi.
 spinner'i bilan sichqoncha g'ildiragi orqali pulni o'zgartirish yo'lini ochadi.
 `type="text"` + `inputMode="numeric"`, va tashqariga har doim **toza raqamlar**
 beriladi — `somToTiyin` avvalgidek ishlaydi.
+
+---
+
+## 20. Forma validatsiyasi va xato holatlari (TASK-5.3)
+
+### Xato qaysi maydonda ekani ko'rinadi
+
+`ValidationPipe` javobni tekis `string[]` qilib yuboradi va har bir satr
+o'zi tegishli maydon nomi bilan boshlanadi:
+`"amount must be a tiyin amount (digits only)"`. Bu ro'yxat bitta abzats bo'lib
+chiqardi va foydalanuvchi **qaysi katak noto'g'ri ekanini o'zi qidirardi**.
+
+Endi `fieldErrors()` uni maydonlar bo'yicha ajratadi va xabar **o'sha
+maydonning tagida** chiqadi. Ajratish **ataylab ehtiyotkor**: birinchi so'zi
+ishonchli maydon nomiga o'xshamagan har qanday xabar forma darajasida qoladi —
+**noto'g'ri maydon tagidagi xabar yuqoridagisidan yomonroq**.
+
+### Klient tekshiruvi — qoida emas, xushmuomalalik
+
+`validate.ts` dagi tekshiruvlar backend DTO'larini **takrorlaydi**, almashtirmaydi:
+server baribir hal qiladi va uning rad javobi baribir ko'rsatiladi. Ular
+shunchaki aniq xatoni foydalanuvchi hali o'sha katakka qarab turganda aytadi.
+
+**Muhim qoida: klient serverdan qattiqroq bo'lmasligi kerak.** API qabul
+qiladigan narsani rad etadigan klient — umuman tekshirmaganidan yomonroq.
+
+Shu tekshirilganda **haqiqiy nomuvofiqlik topildi**: `IsTiyin` **`0` ni qabul
+qilardi**, ya'ni nol so'mlik xarajat yaroqli so'rov edi — hech narsani
+anglatmaydigan, hech narsa turmaydigan, lekin har o'rtachani jimgina
+kengaytiradigan qator. Ledger allaqachon nolni rad etadi. Endi `IsPositiveTiyin`
+bor va u **xarajat, kirim va reys narxiga** qo'llanadi. Haydovchi avansida esa
+`0` — «avans berilmagan» degan haqiqiy javob, shuning uchun u o'zgarmadi.
+
+### Skelet yuklagichlar
+
+Jadval va xarita `Spinner` o'rniga **o'z shaklidagi kulrang blok** ko'rsatadi.
+Spinner qatorlar kelganda sahifani sakratadi va qancha narsa kelayotgani haqida
+hech narsa aytmaydi; to'g'ri balandlikdagi bloklar esa **maketni joyida
+ushlab turadi** — butun maqsad shu.

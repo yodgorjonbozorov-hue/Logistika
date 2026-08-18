@@ -16,7 +16,7 @@ import {
   Min,
 } from 'class-validator';
 import { Currency, TripStatus } from 'shared';
-import { IsTiyin } from '../../../common/dto/money';
+import { IsPositiveTiyin, IsTiyin } from '../../../common/dto/money';
 import { DateRangeDto } from '../../../common/dto/date-range.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
@@ -100,7 +100,7 @@ export class CreateTripDto {
   plannedDistanceKm?: number;
 
   @IsOptional()
-  @IsTiyin()
+  @IsPositiveTiyin()
   agreedPrice?: string;
 
   @IsOptional()

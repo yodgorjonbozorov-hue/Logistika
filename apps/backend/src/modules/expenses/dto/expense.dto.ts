@@ -11,7 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { Currency, ExpenseCategory } from 'shared';
-import { IsTiyin } from '../../../common/dto/money';
+import { IsPositiveTiyin, IsTiyin } from '../../../common/dto/money';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { IsWithinDateWindow, RECORDED_DATE_WINDOW } from '../../../common/dto/date-bounds';
 
@@ -31,7 +31,7 @@ export class CreateExpenseDto {
   @IsEnum(ExpenseCategory)
   category!: ExpenseCategory;
 
-  @IsTiyin()
+  @IsPositiveTiyin()
   amount!: string;
 
   @IsOptional()
@@ -92,7 +92,7 @@ export class CreateIncomeDto {
   @IsUUID()
   clientId?: string;
 
-  @IsTiyin()
+  @IsPositiveTiyin()
   amount!: string;
 
   @IsOptional()

@@ -5,11 +5,14 @@ import { dateInputToIso } from '../../shared/utils/date';
 import { somToTiyin } from '../../shared/utils/money';
 import { useRefLists, useTripMutations } from './api';
 import { MoneyInput } from '../../shared/ui/MoneyInput';
+import { useFormErrors } from '../../shared/api/useFormErrors';
+import { checkAmount, checkText, problems } from '../../shared/utils/validate';
 
 export function TripFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { vehicles, drivers, clients } = useRefLists();
   const { create } = useTripMutations();
+  const errors = useFormErrors(create.error);
 
   const [form, setForm] = useState({
     clientId: '',
@@ -32,6 +35,18 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    // Dates on a trip are a plan, so they may sit in the future — unlike a
+    // recorded expense. Only the obviously wrong (unparseable, or a year that
+    // is clearly a typo) is caught here; the server decides the rest.
+    const found = problems({
+      agreedPrice: checkAmount(form.agreedPrice, { required: false }),
+      driverAdvance: checkAmount(form.driverAdvance, { required: false }),
+      cargoName: checkText(form.cargoName, { max: 200 }),
+      loadingAddress: checkText(form.loadingAddress, { max: 500 }),
+      unloadingAddress: checkText(form.unloadingAddress, { max: 500 }),
+    });
+    if (!errors.check(found)) return;
+
     await create.mutateAsync({
       clientId: form.clientId || undefined,
       vehicleId: form.vehicleId || undefined,
@@ -67,7 +82,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
           </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('trips.cargoName')}>
+          <Field label={t('trips.cargoName')} error={errors.of('cargoName')}>
             <Input value={form.cargoName} onChange={set('cargoName')} />
           </Field>
           <Field label={t('trips.cargoWeight')}>
@@ -81,7 +96,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('trips.loadingAddress')}>
+          <Field label={t('trips.loadingAddress')} error={errors.of('loadingAddress')}>
             <Input value={form.loadingAddress} onChange={set('loadingAddress')} />
           </Field>
           <Field label={t('trips.loadingDate')}>
@@ -89,7 +104,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('trips.unloadingAddress')}>
+          <Field label={t('trips.unloadingAddress')} error={errors.of('unloadingAddress')}>
             <Input value={form.unloadingAddress} onChange={set('unloadingAddress')} />
           </Field>
           <Field label={t('trips.unloadingDate')}>
@@ -140,20 +155,20 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
               onChange={set('plannedDistanceKm')}
             />
           </Field>
-          <Field label={t('trips.price')}>
+          <Field label={t('trips.price')} error={errors.of('agreedPrice')}>
             <MoneyInput
               value={form.agreedPrice}
               onChange={(digits) => setForm((f) => ({ ...f, agreedPrice: digits }))}
             />
           </Field>
-          <Field label={t('trips.advance')}>
+          <Field label={t('trips.advance')} error={errors.of('driverAdvance')}>
             <MoneyInput
               value={form.driverAdvance}
               onChange={(digits) => setForm((f) => ({ ...f, driverAdvance: digits }))}
             />
           </Field>
         </div>
-        <ErrorMessage error={create.error} />
+        <ErrorMessage error={create.error} only={errors.general} />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             {t('common.cancel')}

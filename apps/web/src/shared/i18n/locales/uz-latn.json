@@ -252,5 +252,15 @@
     "forbiddenTitle": "Bu sahifa sizga ochiq emas",
     "forbiddenBody": "Sizning rolingiz bu bo'limga kira olmaydi. Kerak bo'lsa firma egasidan huquq so'rang.",
     "forbiddenBack": "Ish sahifasiga qaytish"
+  },
+  "validation": {
+    "required": "Bu maydon to'ldirilishi shart",
+    "digitsOnly": "Faqat raqam kiriting",
+    "amountPositive": "Summa noldan katta bo'lishi kerak",
+    "dateInvalid": "Sana noto'g'ri",
+    "dateFuture": "Sana kelajakda bo'lishi mumkin emas",
+    "dateTooOld": "Sana juda eski — yilni tekshiring",
+    "tooLong": "Juda uzun (ko'pi bilan {{max}} belgi)",
+    "fixFields": "Belgilangan maydonlarni to'g'rilang"
   }
 }

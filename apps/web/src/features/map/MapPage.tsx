@@ -7,7 +7,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-le
 import { LiveStatus } from 'shared';
 import { api } from '../../shared/api/client';
 import type { Vehicle } from '../../shared/api/entities';
-import { Card, PageHeader, Select, Spinner } from '../../shared/ui';
+import { Card, MapSkeleton, PageHeader, Select } from '../../shared/ui';
 import { formatDateTime } from '../../shared/utils/date';
 
 const TASHKENT: [number, number] = [41.3, 69.25];
@@ -82,7 +82,7 @@ function LiveMap() {
     return map;
   }, [vehicles]);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) return <MapSkeleton />;
 
   return (
     <div className="flex min-h-0 flex-1 gap-3">

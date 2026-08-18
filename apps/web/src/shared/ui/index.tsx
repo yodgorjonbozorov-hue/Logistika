@@ -37,16 +37,27 @@ export function Field({
   label,
   children,
   hint,
+  error,
 }: {
   label: string;
   children: ReactNode;
   hint?: string;
+  /** Message for this field, usually from the server's `details` (TASK-5.3). */
+  error?: string;
 }) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-medium text-gray-700 dark:text-gray-300">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-muted">{hint}</span> : null}
+      {/* The error replaces the hint rather than stacking under it: once
+          something is wrong, telling the user how it normally works is noise. */}
+      {error ? (
+        <span role="alert" className="mt-1 block text-xs font-medium text-danger">
+          {error}
+        </span>
+      ) : hint ? (
+        <span className="mt-1 block text-xs text-muted">{hint}</span>
+      ) : null}
     </label>
   );
 }
@@ -194,16 +205,77 @@ export function Spinner() {
   return <div className="py-8 text-center text-sm text-muted">{t('common.loading')}</div>;
 }
 
+/**
+ * A table's shape while it loads (TASK-5.3).
+ *
+ * A spinner in place of a list makes the page jump when the rows arrive and
+ * says nothing about how much is coming. Grey rows of the right height keep
+ * the layout still, which is the entire point.
+ *
+ * `aria-hidden` because it carries no information a screen reader wants; the
+ * live region that announces "loading" belongs to the page, not to the bars.
+ */
+export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+  const { t } = useTranslation();
+  return (
+    <div role="status" aria-label={t('common.loading')} className="space-y-2 py-2">
+      {Array.from({ length: rows }, (_, row) => (
+        <div key={row} className="flex gap-3" aria-hidden="true">
+          {Array.from({ length: columns }, (_, column) => (
+            <div
+              key={column}
+              className="h-8 flex-1 animate-pulse rounded bg-gray-200 dark:bg-white/10"
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The map's shape while the first positions load. */
+export function MapSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="status"
+      aria-label={t('common.loading')}
+      className="h-[70vh] w-full animate-pulse rounded-xl bg-gray-200 dark:bg-white/10"
+    />
+  );
+}
+
 export function EmptyState() {
   const { t } = useTranslation();
   return <div className="py-8 text-center text-sm text-muted">{t('common.empty')}</div>;
 }
 
-export function ErrorMessage({ error }: { error: unknown }) {
+/**
+ * The failure a person needs to read.
+ *
+ * A validation reply carries a `details` list naming each bad field. Those are
+ * shown under the fields themselves when the form passes `fieldErrors` down;
+ * whatever is left over — a rule about the record as a whole, or a message the
+ * parser could not attribute — is listed here, because silently dropping it
+ * leaves the user with "something is wrong" and no way to find out what.
+ */
+export function ErrorMessage({ error, only }: { error: unknown; only?: string[] }) {
   const { t } = useTranslation();
   if (!error) return null;
   const message = error instanceof Error ? error.message : t('common.errorGeneric');
-  return <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{message}</div>;
+  const extra = only ?? [];
+  return (
+    <div role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+      {message}
+      {extra.length > 0 && (
+        <ul className="mt-1 list-inside list-disc text-xs">
+          {extra.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 // ---------- Pagination ----------

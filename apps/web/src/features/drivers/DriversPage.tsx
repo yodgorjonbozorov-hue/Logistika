@@ -16,8 +16,8 @@ import {
   Pagination,
   Row,
   Select,
-  Spinner,
   Table,
+  TableSkeleton,
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
@@ -41,7 +41,7 @@ export function DriversPage() {
       />
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
+        <TableSkeleton columns={5} />
       ) : drivers.length === 0 ? (
         <EmptyState />
       ) : (

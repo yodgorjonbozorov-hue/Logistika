@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../shared/api/client';
-import { Card, EmptyState, ErrorMessage, Select, Spinner } from '../../shared/ui';
+import { Card, EmptyState, ErrorMessage, Select, TableSkeleton } from '../../shared/ui';
 
 interface AuditRow {
   id: string;
@@ -52,7 +52,7 @@ export function AuditLogPage() {
 
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
+        <TableSkeleton columns={5} />
       ) : (data ?? []).length === 0 ? (
         <EmptyState />
       ) : (

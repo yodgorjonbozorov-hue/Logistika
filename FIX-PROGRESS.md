@@ -305,6 +305,13 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-14 (MEDIUM, tuzatildi — TASK-5.3)**: `IsTiyin` **`0` ni qabul qilardi** —
+  nol so'mlik xarajat/kirim/reys narxi yaroqli so'rov edi. Hech narsani
+  anglatmaydigan qator, lekin har o'rtachani jimgina kengaytiradi; ledger esa
+  nolni allaqachon rad etadi. Klient validatsiyasini backend bilan solishtirib
+  ko'rilganda topildi (klient serverdan qattiqroq bo'lib qolgandi).
+  `IsPositiveTiyin` qo'shildi. Haydovchi avansida `0` — «avans yo'q» degan
+  haqiqiy javob, o'zgarmadi.
 - **N-13 (HIGH, tuzatildi — TASK-4.6)**: `GET /trips` — **ilovada eng ko'p
   ochiladigan ekran** — o'z tartiblashi uchun indekssiz edi. Filtersiz ro'yxat
   firmaning butun reys tarixini `Seq Scan` qilib, yigirmata qator qaytarish
@@ -890,11 +897,33 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   (`post` endi `body` oladi), `shared/api/entities.ts` (`reversalOfId`),
   uchta `locales/*.json` · web testlari 51 → 67.
 
+- **TASK-5.3** · Forma validatsiyasi va xato holatlari. `ValidationPipe` javobni
+  tekis `string[]` qilib yuboradi, har satr o'z maydoni nomi bilan boshlanadi;
+  bu bitta abzats bo'lib chiqardi va foydalanuvchi **qaysi katak noto'g'ri
+  ekanini o'zi qidirardi**. `fieldErrors()` uni ajratadi, xabar o'sha maydon
+  tagida chiqadi. Ajratish ataylab ehtiyotkor — birinchi so'zi ishonchli maydon
+  nomiga o'xshamasa, xabar forma darajasida qoladi: **noto'g'ri maydon tagidagi
+  xabar yuqoridagisidan yomonroq**.
+  `validate.ts` — backend DTO'larini takrorlaydigan klient tekshiruvlari
+  (qoida emas, xushmuomalalik: server baribir hal qiladi). Asosiy shart —
+  **klient serverdan qattiqroq bo'lmasligi**. Shuni tekshirib ko'rish
+  **N-14 ni topdi**: `IsTiyin` nolni qabul qilardi; `IsPositiveTiyin` qo'shildi.
+  `useFormErrors` — lokal va server xatolarini birlashtiradi (lokal ustun,
+  chunki u ekrandagi qiymatdan chiqqan; server esa yuborilganini tasvirlaydi).
+  Skelet yuklagichlar: jadval va xarita uchun o'z shaklidagi bloklar — spinner
+  qatorlar kelganda sahifani sakratadi. ·
+  `shared/api/field-errors.ts` (+7 test), `shared/utils/validate.ts` (+17 test),
+  `shared/api/useFormErrors.ts`, `shared/ui/index.tsx` (`Field` `error` propi,
+  `ErrorMessage` `only` propi, `TableSkeleton`, `MapSkeleton`),
+  `FinancePage.tsx`, `TripForm.tsx`, 4 ta sahifada skelet,
+  `common/dto/money.ts` + `money.spec.ts` (+9 test), `expense.dto.ts`,
+  `trip.dto.ts`, uchta `locales/*.json` · unit 475 → 485, web 67 → 91.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**Keyingi qadam:** TASK-5.3 — forma validatsiyasi va xato holatlari.
+**Keyingi qadam:** TASK-5.4 — mobil UX va barqarorlik (H-14, M-10, M-11).
 
 PHASE 3 qolgan bog'liqliklar:
 
