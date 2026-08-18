@@ -989,3 +989,46 @@ To'liq qayta yuborilgan paketga to'g'ri javob — «yangisi yo'q»
 Oxirgi ma'lum pozitsiya (TASK-4.1) baribir yangilanadi: dublikat o'sha
 koordinatani olib keladi, `lastSeenAt` qorovuli esa xaritadagidan eskisini
 allaqachon rad etadi.
+
+---
+
+## 18. Kim qaysi sahifani ochadi (TASK-5.1, M-13)
+
+`ProtectedRoute` faqat **kimdir kirganmi** deb so'rardi, rolni emas. Natijada
+web'ga kirgan HAYDOVCHI menyudagi hamma sahifani ko'rardi va har birida
+API'dan 403 olardi: qorovul haqiqiy edi, interfeys esa nima ochiqligi haqida
+**yolg'on gapirardi**.
+
+### Bitta jadval
+
+`app/routes.ts` — **yagona manba**: router ham, yon menyu ham o'shani o'qiydi.
+Menyu taklif qiladigan, lekin router rad etadigan sahifa — bu o'sha xatoning
+chiroyliroq ko'rinishi.
+
+| Sahifa             | Rollar                    | Nimaga tayanadi              |
+| ------------------ | ------------------------- | ---------------------------- |
+| `/map`             | OWNER, LOGIST, ACCOUNTANT | `GET /tracking/live`         |
+| `/trips`           | OWNER, LOGIST, ACCOUNTANT | `GET /trips`                 |
+| `/vehicles`        | OWNER, LOGIST, ACCOUNTANT | `GET /vehicles`              |
+| `/drivers`         | OWNER, LOGIST, ACCOUNTANT | `GET /drivers`               |
+| `/clients`         | OWNER, LOGIST, ACCOUNTANT | `GET /clients`               |
+| `/finance`         | OWNER, LOGIST, ACCOUNTANT | `GET /expenses`              |
+| `/audit-logs`      | **OWNER, SUPERADMIN**     | `GET /audit-logs`            |
+| `/change-password` | **hamma** (haydovchi ham) | `POST /auth/change-password` |
+
+Rollar controller'lardagi `@Roles` bilan **aynan mos** — testlar shu juftlikni
+qotirib qo'yadi.
+
+### Uch qaror
+
+- **Rol `/auth/me` dan olinadi**, `localStorage`dan emas. Foydalanuvchi
+  o'zgartira oladigan rol — qorovul emas.
+- **Ruxsat yo'q bo'lsa 403 sahifasi ko'rsatiladi, boshqa sahifaga
+  yo'naltirilmaydi.** Jimgina boshqa ekranga otib yuborish foydalanuvchiga
+  «menda nimadir buzuq» degan taassurot beradi; sabab aytilishi kerak.
+- **`/` endi qat'iy `/trips` emas.** Haydovchi uchun bu butun ilovaning kirish
+  ekranini 403 qilib qo'yardi. Endi `/` — shu rol ocha oladigan **birinchi**
+  sahifa; hech qaysisi ochilmasa, parol o'zgartirish sahifasi.
+
+Haydovchi uchun yon menyu **butunlay bo'sh** — bu to'g'ri javob: haydovchi
+mobil ilovada ishlaydi.

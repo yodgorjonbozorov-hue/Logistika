@@ -845,11 +845,31 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `docs/DEPLOYMENT.md` §10, `eslint.config.mjs` (k6/Node global'lari) ·
   unit 475 (o'zgarmadi — bu o'lchov taski), e2e 232.
 
+- **TASK-5.1 (M-13)** · Rol-asosidagi router va navigatsiya. `ProtectedRoute`
+  faqat «kimdir kirganmi» deb so'rardi: web'ga kirgan HAYDOVCHI menyudagi hamma
+  sahifani ko'rib, har birida API'dan 403 olardi — qorovul haqiqiy, interfeys
+  esa yolg'on gapirardi.
+  `app/routes.ts` — **yagona jadval**, router ham yon menyu ham o'shani o'qiydi
+  (menyu taklif qiladigan, router rad etadigan sahifa — o'sha xatoning
+  chiroyliroq ko'rinishi). Rollar controller'lardagi `@Roles` bilan aynan mos
+  va testlar shu juftlikni qotirib qo'yadi.
+  Uch qaror: (1) rol **`/auth/me` dan**, `localStorage`dan emas — foydalanuvchi
+  o'zgartira oladigan rol qorovul emas; (2) ruxsat yo'q bo'lsa **403 sahifasi**,
+  boshqa sahifaga jimgina yo'naltirish emas — bunday otib yuborish «menda
+  nimadir buzuq» degan taassurot beradi; (3) `/` endi qat'iy `/trips` emas,
+  balki **shu rol ocha oladigan birinchi** sahifa — haydovchi uchun eski holat
+  butun ilovaning kirish ekranini 403 qilardi.
+  Haydovchi uchun yon menyu butunlay bo'sh — bu to'g'ri javob.
+  Matnlar uchta tilda. **Isbot**: qorovul olib tashlanganda 2 ta test qizil. ·
+  `app/routes.ts` (+23 test), `app/ProtectedRoute.tsx` (+6 test),
+  `app/ForbiddenPage.tsx`, `app/HomeRedirect.tsx`, `app/App.tsx`,
+  `app/AppLayout.tsx`, uchta `locales/*.json` · web testlari 22 → 51.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**Keyingi qadam:** PHASE 5 — UX. TASK-5.1 (rol-asosidagi router, M-13).
+**Keyingi qadam:** TASK-5.2 — pul o'zgarishlarida xavfsiz UX (M-14).
 
 PHASE 3 qolgan bog'liqliklar:
 

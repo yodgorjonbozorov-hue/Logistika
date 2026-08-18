@@ -6,18 +6,9 @@ import { useAuth } from '../shared/auth/AuthContext';
 import { setLocale } from '../shared/i18n';
 import { Select } from '../shared/ui';
 import { cn } from '../shared/utils/cn';
+import { canOpen, ROUTES } from './routes';
 
 const THEME_KEY = 'tc.theme';
-
-const NAV_ITEMS = [
-  { to: '/map', key: 'nav.map' },
-  { to: '/trips', key: 'nav.trips' },
-  { to: '/vehicles', key: 'nav.vehicles' },
-  { to: '/drivers', key: 'nav.drivers' },
-  { to: '/clients', key: 'nav.clients' },
-  { to: '/finance', key: 'nav.finance' },
-  { to: '/audit-logs', key: 'nav.audit' },
-] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {
   'uz-latn': "O'zbekcha",
@@ -28,6 +19,9 @@ const LOCALE_LABELS: Record<Locale, string> = {
 export function AppLayout() {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
+  // The menu is built from the same table the router uses (TASK-5.1): offering
+  // a page the router then refuses is the same bug wearing a nicer hat.
+  const navItems = ROUTES.filter((route) => route.navKey && canOpen(route, user?.role));
   const [dark, setDark] = useState(() => localStorage.getItem(THEME_KEY) !== 'light');
 
   useEffect(() => {
@@ -45,10 +39,10 @@ export function AppLayout() {
           <span className="ml-1 rounded bg-accent/20 px-1 text-xs font-bold text-accent">AI</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
-              key={item.to}
-              to={item.to}
+              key={item.path}
+              to={item.path}
               className={({ isActive }) =>
                 cn(
                   'block rounded-lg px-3 py-2 text-sm font-medium transition',
@@ -58,7 +52,7 @@ export function AppLayout() {
                 )
               }
             >
-              {t(item.key)}
+              {t(item.navKey!)}
             </NavLink>
           ))}
         </nav>

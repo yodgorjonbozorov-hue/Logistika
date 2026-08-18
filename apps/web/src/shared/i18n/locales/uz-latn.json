@@ -242,5 +242,10 @@
     "action": "Amal",
     "entity": "Obyekt",
     "changed": "O'zgargan maydonlar"
+  },
+  "errors": {
+    "forbiddenTitle": "Bu sahifa sizga ochiq emas",
+    "forbiddenBody": "Sizning rolingiz bu bo'limga kira olmaydi. Kerak bo'lsa firma egasidan huquq so'rang.",
+    "forbiddenBack": "Ish sahifasiga qaytish"
   }
 }

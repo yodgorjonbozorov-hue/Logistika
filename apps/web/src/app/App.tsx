@@ -13,7 +13,22 @@ import { PublicTrackPage } from '../features/track/PublicTrackPage';
 import { TripDetailPage } from '../features/trips/TripDetailPage';
 import { TripsPage } from '../features/trips/TripsPage';
 import { AppLayout } from './AppLayout';
+import { HomeRedirect } from './HomeRedirect';
 import { ProtectedRoute } from './ProtectedRoute';
+import { ROUTES } from './routes';
+
+/** The element for each guarded path, kept next to the role table in routes.ts. */
+const PAGES: Record<string, JSX.Element> = {
+  '/map': <MapPage />,
+  '/trips': <TripsPage />,
+  '/trips/:id': <TripDetailPage />,
+  '/vehicles': <VehiclesPage />,
+  '/drivers': <DriversPage />,
+  '/clients': <ClientsPage />,
+  '/finance': <FinancePage />,
+  '/audit-logs': <AuditLogPage />,
+  '/change-password': <ChangePasswordPage />,
+};
 
 export function App() {
   return (
@@ -24,16 +39,14 @@ export function App() {
       <Route path="/track/:token" element={<PublicTrackPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/trips" replace />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/trips" element={<TripsPage />} />
-          <Route path="/trips/:id" element={<TripDetailPage />} />
-          <Route path="/vehicles" element={<VehiclesPage />} />
-          <Route path="/drivers" element={<DriversPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/finance" element={<FinancePage />} />
-          <Route path="/change-password" element={<ChangePasswordPage />} />
-          <Route path="/audit-logs" element={<AuditLogPage />} />
+          <Route path="/" element={<HomeRedirect />} />
+          {/* Rendered from the same table the sidebar reads, so a page the
+              menu offers and a page the router allows can never drift apart. */}
+          {ROUTES.map((route) => (
+            <Route key={route.path} element={<ProtectedRoute allowedRoles={route.roles} />}>
+              <Route path={route.path} element={PAGES[route.path]} />
+            </Route>
+          ))}
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
