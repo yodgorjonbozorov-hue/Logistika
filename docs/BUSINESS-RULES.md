@@ -1119,3 +1119,58 @@ Jadval va xarita `Spinner` o'rniga **o'z shaklidagi kulrang blok** ko'rsatadi.
 Spinner qatorlar kelganda sahifani sakratadi va qancha narsa kelayotgani haqida
 hech narsa aytmaydi; to'g'ri balandlikdagi bloklar esa **maketni joyida
 ushlab turadi** — butun maqsad shu.
+
+---
+
+## 21. Mobil: foto — dalil, va GPS jimgina o'chmaydi (TASK-5.4)
+
+### Foto yo'qolmaydi (H-14)
+
+`_uploadPhoto` `null` qaytarganda hodisa **fotosiz** yuborilardi, server uni
+qabul qilardi va qator `synced=1` bo'lardi. Ya'ni chek yoki yetkazib berish
+fotosi **boshqa hech qachon yuborilmasdi** — u telefonda qolib, hech kimga
+yetib bormasdi.
+
+Endi: foto fayli **hali diskda bo'lsa**, hodisa shu paketga qo'shilmaydi va
+navbatda qoladi — keyingi flush qayta urinadi. Fayl **o'chib ketgan** bo'lsa,
+kutish uni qaytarmaydi, shuning uchun hodisa fotosiz ketadi: bitta yo'qolgan
+foto butun navbatni abadiy to'sib qo'ymasligi kerak.
+
+Yo'lakay: agar paketdagi **hamma** hodisa ushlab qolinsa, bo'sh so'rov umuman
+yuborilmaydi — bu haydovchi mobil trafigidan behuda ketadigan aylanma.
+
+### Yuklash endi umumiy klient orqali
+
+Ilgari `_uploadPhoto` o'zining `MultipartRequest`ini qurardi:
+
+- **`accessToken` to'g'ridan-to'g'ri** olinardi — refresh yo'q, ya'ni muddati
+  o'tgan token shunchaki «yuklash bo'lmadi» degani edi;
+- javobdan `id` **regex bilan** sug'urib olinardi — konvert shakli ozgina
+  o'zgarsa, jimgina `null` qaytarardi.
+
+Endi `ApiClient.upload()`: o'sha konvert, o'sha `AUTH_TOKEN_EXPIRED` → refresh
+→ qayta urinish, va `data.id` **jsonDecode bilan**.
+
+### GPS ruxsati rad etilsa — ekranda aytiladi (M-11)
+
+`gps.start()` faqat `true/false` qaytarardi va chaqiruvchi uni e'tiborsiz
+qoldirardi: bir marta «rad etish»ni bosgan haydovchi **umuman treki yo'q reys**
+oladi va ekranda buni tushuntiradigan hech narsa yo'q. Firma buni bir necha
+kundan keyin, butun marshrut yo'qligidan biladi.
+
+Endi `GpsBlock` uch holatni ajratadi va banner **shu holatga mos** tugma
+beradi:
+
+| Holat           | Ma'nosi                         | Tugma                 |
+| --------------- | ------------------------------- | --------------------- |
+| `serviceOff`    | Telefonda joylashuv o'chirilgan | Tizim sozlamalari     |
+| `denied`        | Bu safar rad etildi             | **Qayta so'rash**     |
+| `deniedForever` | Butunlay rad etildi             | **Ilova sozlamalari** |
+
+Noto'g'ri sozlama sahifasiga yuborish — bu boshi berk ko'cha, shuning uchun
+ular alohida.
+
+### Sinxronlangan yozuvlarni tozalash (M-10)
+
+`purgeSynced` va `onUpgrade` **TASK-1.2 da** bajarilgan — bu yerda o'zgarish
+yo'q, tekshirib o'tildi.

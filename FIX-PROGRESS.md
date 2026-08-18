@@ -919,11 +919,38 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `common/dto/money.ts` + `money.spec.ts` (+9 test), `expense.dto.ts`,
   `trip.dto.ts`, uchta `locales/*.json` · unit 475 → 485, web 67 → 91.
 
+- **TASK-5.4 (H-14, M-10, M-11)** · Mobil UX va barqarorlik.
+  **H-14 — foto yo'qolishi**: `_uploadPhoto` `null` qaytarganda hodisa
+  **fotosiz** yuborilardi, server qabul qilardi va qator `synced=1` bo'lardi —
+  ya'ni chek yoki yetkazib berish fotosi **boshqa hech qachon yuborilmasdi**.
+  Endi fayl hali diskda bo'lsa hodisa navbatda qoladi; fayl o'chib ketgan
+  bo'lsa (kutish yordam bermaydi) fotosiz ketadi — bitta yo'qolgan foto butun
+  navbatni abadiy to'smasligi kerak. Yo'lakay: hamma hodisa ushlab qolinsa
+  **bo'sh so'rov yuborilmaydi** (haydovchi trafigi).
+  Yuklash `ApiClient.upload()` ga o'tdi: ilgari o'z `MultipartRequest`i
+  `accessToken` ni to'g'ridan-to'g'ri olardi (**refresh yo'q** — muddati o'tgan
+  token shunchaki «yuklanmadi» edi) va `id` ni **regex bilan** sug'urardi
+  (konvert ozgina o'zgarsa — jimgina `null`). Endi o'sha konvert, o'sha
+  refresh, va `jsonDecode` bilan `data.id`.
+  **M-11 — GPS ruxsati**: `start()` faqat `true/false` qaytarardi va chaqiruvchi
+  uni e'tiborsiz qoldirardi — bir marta «rad etish» bosgan haydovchi **treksiz
+  reys** oladi va ekranda hech narsa yo'q. `GpsBlock` uch holatni ajratadi
+  (`serviceOff` / `denied` / `deniedForever`) va banner mos tugma beradi:
+  tizim sozlamalari, qayta so'rash, yoki ilova sozlamalari — noto'g'ri sahifaga
+  yuborish boshi berk ko'cha.
+  **M-10** (`purgeSynced`, `onUpgrade`) — TASK-1.2 da bajarilgan, tekshirildi.
+  **Isbot**: qorovul olib tashlanganda foto testi qizil. ·
+  `core/api/api_client.dart` (`upload()`), `core/sync/offline_queue.dart`,
+  `core/gps/gps_service.dart` (`GpsBlock`),
+  `features/home/gps_permission_banner.dart` (yangi), `features/home/home_screen.dart`,
+  `core/i18n/app_strings.dart` (uchta til), `test/offline_queue_test.dart` (+5) ·
+  Flutter testlari 23 → 28, `flutter analyze` toza.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**Keyingi qadam:** TASK-5.4 — mobil UX va barqarorlik (H-14, M-10, M-11).
+**Keyingi qadam:** TASK-5.5 — accessibility va sayqal (L-10).
 
 PHASE 3 qolgan bog'liqliklar:
 

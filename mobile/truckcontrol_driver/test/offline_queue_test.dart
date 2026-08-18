@@ -321,4 +321,192 @@ void main() {
         .query('pending_positions', where: 'synced = 0');
     expect(remaining, isEmpty);
   });
+
+
+  group('a photo is proof, so an event never goes without one (H-14)', () {
+    /// A real file on disk, because the queue checks existence before it
+    /// decides whether waiting could help.
+    Future<String> photoFile(String name) async {
+      final dir = await Directory.systemTemp.createTemp('tc-photo');
+      final file = File(p.join(dir.path, name));
+      await file.writeAsBytes([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+      return file.path;
+    }
+
+    /// Answers the upload however the test asks, and the batch normally.
+    MockClient serverWhere({required bool uploadWorks, List<Map<String, dynamic>>? sent}) =>
+        MockClient((request) async {
+          if (request.url.path.endsWith('/files/upload')) {
+            return uploadWorks
+                ? http.Response(
+                    jsonEncode({
+                      'success': true,
+                      'data': {'id': 'file-1', 'status': 'PROCESSING'},
+                      'error': null,
+                      'meta': null,
+                    }),
+                    201,
+                  )
+                : http.Response(
+                    jsonEncode({
+                      'success': false,
+                      'data': null,
+                      'error': {'code': 'INTERNAL_ERROR', 'message': 'storage down'},
+                      'meta': null,
+                    }),
+                    500,
+                  );
+          }
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          sent?.add(body);
+          final ids = (body['events'] as List).map((e) => e['clientEventId']).toList();
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'accepted': ids, 'duplicates': [], 'rejected': []},
+              'error': null,
+              'meta': null,
+            }),
+            200,
+          );
+        });
+
+    test('keeps the event queued when the photo upload fails', () async {
+      final path = await photoFile('receipt.jpg');
+      final sent = <Map<String, dynamic>>[];
+      final queue = queueWith(serverWhere(uploadWorks: false, sent: sent));
+
+      await queue.enqueueEvent(tripId: 'trip-1', eventType: 'REFUEL', photoPath: path);
+      // enqueueEvent fires its own sync; let it finish before asking again,
+      // or the _syncing guard turns the explicit call into a no-op.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await queue.syncAll();
+
+      // The old behaviour: send the event without the photo, mark it synced,
+      // and the receipt is gone for good. The file is still on the phone, so
+      // waiting for the next flush costs nothing.
+      expect(await queue.pendingEventCount(), 1);
+      expect(sent, isEmpty);
+    });
+
+    test('sends the event with its photo once the upload lands', () async {
+      final path = await photoFile('receipt.jpg');
+      final sent = <Map<String, dynamic>>[];
+      final queue = queueWith(serverWhere(uploadWorks: true, sent: sent));
+
+      await queue.enqueueEvent(tripId: 'trip-1', eventType: 'REFUEL', photoPath: path);
+      // enqueueEvent fires its own sync; let it finish before asking again,
+      // or the _syncing guard turns the explicit call into a no-op.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await queue.syncAll();
+
+      expect(await queue.pendingEventCount(), 0);
+      final event = (sent.single['events'] as List).single as Map<String, dynamic>;
+      expect(event['photoFileIds'], ['file-1']);
+    });
+
+    test('reads the id from the envelope, not from the shape of the text', () async {
+      // The id used to be pulled out with a regex over the raw body, so any
+      // change to the envelope would have silently produced a null.
+      final path = await photoFile('receipt.jpg');
+      final sent = <Map<String, dynamic>>[];
+      final queue = queueWith(MockClient((request) async {
+        if (request.url.path.endsWith('/files/upload')) {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              // A decoy `"id"` earlier in the payload than the real one.
+              'data': {'originalName': '{"id": "not-this"}', 'id': 'file-real'},
+              'error': null,
+              'meta': null,
+            }),
+            201,
+          );
+        }
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        sent.add(body);
+        final ids = (body['events'] as List).map((e) => e['clientEventId']).toList();
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'accepted': ids, 'duplicates': [], 'rejected': []},
+            'error': null,
+            'meta': null,
+          }),
+          200,
+        );
+      }));
+
+      await queue.enqueueEvent(tripId: 'trip-1', eventType: 'REFUEL', photoPath: path);
+      // enqueueEvent fires its own sync; let it finish before asking again,
+      // or the _syncing guard turns the explicit call into a no-op.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await queue.syncAll();
+
+      final event = (sent.single['events'] as List).single as Map<String, dynamic>;
+      expect(event['photoFileIds'], ['file-real']);
+    });
+
+    test('does not upload a photo twice across two flushes', () async {
+      final path = await photoFile('receipt.jpg');
+      var uploads = 0;
+      final queue = queueWith(MockClient((request) async {
+        if (request.url.path.endsWith('/files/upload')) {
+          uploads += 1;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {'id': 'file-1'},
+              'error': null,
+              'meta': null,
+            }),
+            201,
+          );
+        }
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final ids = (body['events'] as List).map((e) => e['clientEventId']).toList();
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'accepted': ids, 'duplicates': [], 'rejected': []},
+            'error': null,
+            'meta': null,
+          }),
+          200,
+        );
+      }));
+
+      await queue.enqueueEvent(tripId: 'trip-1', eventType: 'REFUEL', photoPath: path);
+      // enqueueEvent fires its own sync; let it finish before asking again,
+      // or the _syncing guard turns the explicit call into a no-op.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await queue.syncAll();
+      await queue.syncAll();
+
+      // The stored file id is remembered on the row; re-uploading would leave
+      // an orphan object behind on every retry.
+      expect(uploads, 1);
+    });
+
+    test('sends the event without a photo the phone no longer has', () async {
+      final sent = <Map<String, dynamic>>[];
+      final queue = queueWith(serverWhere(uploadWorks: false, sent: sent));
+
+      await queue.enqueueEvent(
+        tripId: 'trip-1',
+        eventType: 'REFUEL',
+        photoPath: '/tmp/tc-gone/never-existed.jpg',
+      );
+      // enqueueEvent fires its own sync; let it finish before asking again,
+      // or the _syncing guard turns the explicit call into a no-op.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await queue.syncAll();
+
+      // Waiting cannot bring back a deleted file, and one missing photo must
+      // not jam every event behind it for ever.
+      expect(await queue.pendingEventCount(), 0);
+      expect((sent.single['events'] as List).single, isNot(contains('photoFileIds')));
+    });
+  });
 }

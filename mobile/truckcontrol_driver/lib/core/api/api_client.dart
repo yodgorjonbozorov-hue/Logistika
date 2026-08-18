@@ -57,6 +57,50 @@ class ApiClient {
     );
   }
 
+  /// Uploads a file and returns the stored file's id (TASK-5.4, H-14).
+  ///
+  /// Goes through the same envelope and the same refresh as every other call.
+  /// The queue used to build its own MultipartRequest with the raw access
+  /// token and pull the id out with a regex over the response text: an expired
+  /// token was simply a failed upload, and any change to the envelope would
+  /// have silently returned null.
+  Future<String?> upload(String path, String filePath) async {
+    var envelope = await _rawUpload(path, filePath);
+    if (envelope['success'] != true &&
+        _errorCode(envelope) == 'AUTH_TOKEN_EXPIRED') {
+      if (await _tryRefresh()) {
+        envelope = await _rawUpload(path, filePath);
+      } else {
+        onSessionExpired?.call();
+      }
+    }
+    if (envelope['success'] != true) return null;
+    final data = envelope['data'] as Map<String, dynamic>?;
+    return data?['id'] as String?;
+  }
+
+  Future<Map<String, dynamic>> _rawUpload(String path, String filePath) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$path'))
+      ..headers['accept-language'] = _tokens.locale
+      ..headers['x-client'] = 'mobile';
+    final token = _tokens.accessToken;
+    if (token != null) request.headers['authorization'] = 'Bearer $token';
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+    final streamed = await _http.send(request);
+    final text = await streamed.stream.bytesToString();
+    try {
+      return jsonDecode(text) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'success': false,
+        'data': null,
+        'error': {'code': 'INTERNAL_ERROR', 'message': 'HTTP ${streamed.statusCode}'},
+        'meta': null,
+      };
+    }
+  }
+
   String? _errorCode(Map<String, dynamic> envelope) =>
       (envelope['error'] as Map<String, dynamic>?)?['code'] as String?;
 

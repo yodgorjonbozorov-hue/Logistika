@@ -6,6 +6,18 @@ import 'package:geolocator/geolocator.dart';
 import '../config.dart';
 import '../sync/offline_queue.dart';
 
+/// What is stopping GPS, when something is (M-11, TASK-5.4).
+enum GpsBlock {
+  /// The phone's location switch is off — a system setting, not ours.
+  serviceOff,
+
+  /// Refused this time. Asking again is allowed, so the screen offers that.
+  denied,
+
+  /// Refused permanently. Only the app's settings page can change it.
+  deniedForever,
+}
+
 /// Background-friendly GPS (TZ §3.3): positions buffer into SQLite via the
 /// queue and are flushed as a batch every few minutes. On Android the
 /// foreground-notification keeps the stream alive when the app is minimized.
@@ -20,6 +32,15 @@ class GpsService {
 
   bool get isRunning => _activeTripId != null;
 
+  /// Why tracking is not running, so the screen can say something useful.
+  ///
+  /// `start` used to answer only true/false and the caller ignored it, so a
+  /// driver who tapped "deny" once got a trip with no track at all and nothing
+  /// on screen to explain it (M-11). Whether the driver can still fix it from
+  /// inside the app decides what the screen offers.
+  GpsBlock? get blockedBy => _blockedBy;
+  GpsBlock? _blockedBy;
+
   Future<bool> start({
     required String tripId,
     required String notificationTitle,
@@ -28,14 +49,26 @@ class GpsService {
     if (_activeTripId == tripId) return true;
     await stop();
 
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      // The phone's location switch is off. No permission dialog will help.
+      _blockedBy = GpsBlock.serviceOff;
+      return false;
+    }
+
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied) {
+      _blockedBy = GpsBlock.denied;
       return false;
     }
+    if (permission == LocationPermission.deniedForever) {
+      // Android will not show the dialog again; only Settings can undo this.
+      _blockedBy = GpsBlock.deniedForever;
+      return false;
+    }
+    _blockedBy = null;
 
     _activeTripId = tripId;
     _positionSub = Geolocator.getPositionStream(

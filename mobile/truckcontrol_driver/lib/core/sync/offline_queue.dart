@@ -2,12 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../api/api_client.dart';
-import '../config.dart';
 import '../db/app_database.dart';
 import '../storage/token_store.dart';
 
@@ -254,7 +252,16 @@ class OfflineQueue {
             where: 'client_event_id = ?',
             whereArgs: [row['client_event_id']],
           );
+        } else if (File(photoPath).existsSync()) {
+          // The photo is the proof (H-14). Sending the event without it means
+          // the server accepts it, the row is marked synced, and the receipt
+          // or delivery photo is never sent again — gone for good. The event
+          // waits for the next flush instead; the file is still on the phone.
+          continue;
         }
+        // A photo file that is no longer on disk cannot be recovered by
+        // waiting, so the event goes without it rather than jamming the queue
+        // behind something that will never succeed.
       }
       events.add({
         'clientEventId': row['client_event_id'],
@@ -268,6 +275,11 @@ class OfflineQueue {
         if (photoFileId != null) 'photoFileIds': [photoFileId],
       });
     }
+
+    // Every candidate can be held back — waiting on a photo that has not
+    // uploaded yet — and an empty batch is a round trip over a driver's mobile
+    // data that asks the server for nothing.
+    if (events.isEmpty) return;
 
     final result = await _api.request<Map<String, dynamic>>(
       '/events/batch',
@@ -340,18 +352,20 @@ class OfflineQueue {
     );
   }
 
+  /// Uploads one photo and returns its stored id, or null if it did not land.
+  ///
+  /// Goes through [ApiClient.upload] (TASK-5.4): this used to build its own
+  /// request with the raw access token — no refresh, so an expired token was
+  /// just a failed upload — and dig the id out of the response text with a
+  /// regex, which would have returned null for any change to the envelope.
   Future<String?> _uploadPhoto(String path) async {
-    final file = File(path);
-    if (!file.existsSync()) return null;
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('${AppConfig.apiUrl}/files/upload'),
-    )
-      ..headers['authorization'] = 'Bearer ${_tokens.accessToken}'
-      ..files.add(await http.MultipartFile.fromPath('file', path));
-    final response = await request.send();
-    final body = await response.stream.bytesToString();
-    final match = RegExp('"id"\\s*:\\s*"([^"]+)"').firstMatch(body);
-    return response.statusCode < 300 ? match?.group(1) : null;
+    if (!File(path).existsSync()) return null;
+    try {
+      return await _api.upload('/files/upload', path);
+    } catch (_) {
+      // A failed upload is not an error the driver can act on; the event stays
+      // queued and the next flush tries again.
+      return null;
+    }
   }
 }

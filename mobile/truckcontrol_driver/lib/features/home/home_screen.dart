@@ -5,6 +5,8 @@ import '../../core/i18n/app_strings.dart';
 import '../events/events_tab.dart';
 import '../expenses/expenses_tab.dart';
 import '../profile/profile_tab.dart';
+import '../../core/gps/gps_service.dart';
+import 'gps_permission_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +19,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
   Map<String, dynamic>? _activeTrip;
   bool _loading = true;
+  /// What is stopping GPS, if anything (M-11).
+  GpsBlock? _gpsBlock;
 
   @override
   void didChangeDependencies() {
@@ -35,21 +39,30 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       final trip = _activeTrip;
       if (trip != null && trip['status'] == 'IN_PROGRESS') {
-        final t = AppStrings.of(context);
-        await scope.gps.start(
-          tripId: trip['id'] as String,
-          notificationTitle: t.t('gps.notification.title'),
-          notificationText: t.t('gps.notification.text'),
-        );
+        await _startTracking(trip['id'] as String);
       }
     } on Exception {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// Starts tracking and remembers what stopped it, so the screen can say so
+  /// rather than leaving the trip quietly untracked (M-11).
+  Future<void> _startTracking(String tripId) async {
+    final scope = AppScope.of(context);
+    final t = AppStrings.of(context);
+    await scope.gps.start(
+      tripId: tripId,
+      notificationTitle: t.t('gps.notification.title'),
+      notificationText: t.t('gps.notification.text'),
+    );
+    if (mounted) setState(() => _gpsBlock = scope.gps.blockedBy);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppStrings.of(context);
+    final trip = _activeTrip;
     final tabs = [
       EventsTab(trip: _activeTrip, loading: _loading, onRefresh: _loadTrip),
       const ExpensesTab(),
@@ -63,7 +76,16 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     return Scaffold(
       appBar: AppBar(title: Text(t.t('app.title'))),
-      body: tabs[_tab],
+      body: Column(
+        children: [
+          if (_gpsBlock != null && trip != null && trip['status'] == 'IN_PROGRESS')
+            GpsPermissionBanner(
+              block: _gpsBlock!,
+              onRetry: () => _startTracking(trip['id'] as String),
+            ),
+          Expanded(child: tabs[_tab]),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (index) => setState(() => _tab = index),
