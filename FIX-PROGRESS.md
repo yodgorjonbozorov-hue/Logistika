@@ -348,7 +348,7 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
   `analyzer.exclude` blokini o'zi qo'shadi (build/android/ios/... papkalari). Bu Flutter
   tool'ining o'zgarishi, qo'lda yozilgani emas — qayta-qayta paydo bo'lmasligi uchun
   commit qilindi.
-- **N-8 (MEDIUM, ochiq)**: `pnpm format:check` **baseline'dan beri qizil** — 35 faylda
+- **N-8 (MEDIUM, tuzatildi — yakuniy)**: `pnpm format:check` **baseline'dan beri qizil** — 35 faylda
   Prettier farqi bor (`docs/*`, `pnpm-lock.yaml`, eski manba fayllar). Butun repo'ni
   formatlash bu fazadagi diff'ni o'qib bo'lmas holga keltiradi, shuning uchun har taskda
   **faqat o'zim tekkan fayllar** formatlanadi. Repo bo'ylab bir martalik
@@ -976,14 +976,40 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `MapPage.tsx` (ro'yxat ko'rinishi), `FinancePage.tsx`, 15 ta faylda rang
   tokenlari, uchta `locales/*.json` · web testlari 91 → 111.
 
+- **YAKUNIY** · Hisobot va hujjatlar. `docs/FIX-REPORT.md` — BEFORE/AFTER
+  raqamlari, 6 faza xulosasi, eng qimmat beshta tuzatish, ish davomida topilgan
+  14 ta muammo, **NOT FIXED** bo'limi sabablari va **shartlari** bilan
+  (partitsiya — 10M qator sharti; 10k yuklama testi — prod-ga o'xshash muhit;
+  N-11 — alohida task), TESTED (93 → 855 test, 0 → 232 e2e), PRODUCTION READY
+  (42/100 → ~80/100, Data loss risk HIGH → LOW) va prodgacha qolgan
+  **infratuzilma** ro'yxati.
+  `docs/ROADMAP.md` — audit fazalari belgilandi, xavfsizlik auditi va i18n
+  punktlari yopildi, ochiq qolganlari sabab bilan yozildi.
+  `docs/ARCHITECTURE.md` — qarorlar jadvaliga 8 ta yangi qator (idempotency,
+  o'zgarmas ledger, `amountBase`, optimistik qulf, BullMQ, cron lock, GPS
+  unique, `readPage`).
+  `CLAUDE.md` — auditdan kelib chiqqan konventsiyalar: pul/yozuvlar, bir
+  vaqtdalik, ro'yxatlar, web va mobil qoidalari.
+  **N-8 yopildi**: repo bo'ylab bir martalik `pnpm format` alohida commit bilan,
+  va `.prettierignore` qo'shildi — `pnpm-lock.yaml` va `.dart` fayllari
+  Prettier bilan formatlanmasligi kerak edi. `format:check` **baseline'dan beri
+  birinchi marta yashil**. Yo'lakay TASK-5.3 dan qolib ketgan `agree.spec.ts`
+  (klient/server validatsiyasini solishtirish uchun vaqtinchalik fayl) o'chirildi. ·
+  `docs/FIX-REPORT.md` (yangi), `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`,
+  `CLAUDE.md`, `.prettierignore` (yangi), 20 faylda formatlash.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**PHASE 5 tugadi (5/5).**
+**PHASE 5 tugadi (5/5). BARCHA FAZALAR TUGADI.**
 
-**Keyingi qadam:** yakuniy hisobot — `docs/FIX-REPORT.md`, ROADMAP/ARCHITECTURE/
-CLAUDE.md yangilash, va N-8 (repo bo'ylab bir martalik `pnpm format`).
+Yakuniy hisobot: `docs/FIX-REPORT.md`.
+
+**Ochiq qolgani** (sabablari hisobotning NOT FIXED bo'limida):
+`gps_tracks` partitsiyasi (shart: 10M qator), 10 000 foydalanuvchili yuklama
+testi (prod-ga o'xshash muhit kerak), N-11 (jonli xaritadagi oxirgi hodisa
+qidiruvi).
 
 PHASE 3 qolgan bog'liqliklar:
 

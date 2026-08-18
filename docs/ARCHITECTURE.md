@@ -262,23 +262,31 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 ## 5. Asosiy qarorlar va sabablari
 
-| Qaror                                                                                     | Sabab                                                                                            |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Bitta baza + `company_id` + Prisma extension + RLS                                        | TZ §2/§9 talabi; uch qatlamli himoya bitta unutilgan filtr xatosini ham o'tkazmaydi.             |
-| Pul — BigInt tiyinda; valyuta kodi + kiritilgan kurs alohida saqlanadi                    | `float` yaxlitlash xatolari moliyada mumkin emas; TZ §5 da `currency` (UZS/USD/RUB/KZT) bor.     |
-| `finance` AI'dan to'liq ajratilgan                                                        | TZ §8.12.7: foyda/tannarx/farqni kod hisoblaydi, AI faqat izohlaydi.                             |
-| AI chat — 2 bosqichli function calling, SQL yo'q                                          | TZ §8.4: AI faqat «qaysi funksiya, qanday parametr»ni tanlaydi; SQL'ni tizim o'zi bajaradi.      |
-| AI natijasi — taklif + odam tasdig'i; `corrected_data` logi                               | TZ §8.0/§8.12; tuzatishlar prompt sifatini o'lchash uchun yig'iladi (OCR ≥95%, ovoz ≥90%).       |
-| AI xarajat nazorati: model tanlash (Haiku/Sonnet), foto siqish, 24 soat kesh, oylik limit | TZ §8.11: ~$32/oy budjet, limit oshsa sekin rejim + xabar.                                       |
-| Offline-first mobil: drift/sqlite navbat + idempotent batch API (klient UUID)             | TZ §3.1 «offline majburiy»; takroriy yuborish dublikat yaratmaydi.                               |
-| GPS: 2–5 daqiqa interval, paketli yuborish, fon servisi                                   | TZ §3.3 (batareya tejash); jonli xarita polling bilan boshlanadi, WebSocket — optimizatsiya.     |
-| `gps_tracks`: 90 kundan keyin arxivlash (partitsiya/TimescaleDB keyin)                    | TZ §5 eslatmasi — jadval juda tez o'sadi; MVP'da oddiy jadval + arxiv cron yetarli.              |
-| Redis: BullMQ (AI navbati, cron, eslatmalar) + kesh                                       | TZ §7 «AI navbat: Redis + worker»; foto/ovoz fonda qayta ishlanadi, foydalanuvchini bloklamaydi. |
-| Push — FCM, boshliq kanali — Telegram                                                     | TZ §7; boshliqlar Telegramni doim ochadi, kunlik xulosa (AI-8) shu yerga boradi.                 |
-| Xarita — OpenStreetMap + Leaflet / flutter_map                                            | Stek qat'iy; MDH hududini qoplaydi, litsenziya bepul.                                            |
-| pnpm workspaces + `packages/shared`                                                       | API kontrakt tiplari bir manbadan; backend va web hech qachon ajralib ketmaydi.                  |
-| i18n: uz-latn (default), uz-cyrl, ru; backend `error.code` → klient tarjima qiladi        | TZ §3.1 (3 til); kodga qattiq yozilgan matn taqiqlanadi.                                         |
-| Qorong'i rejim — web va mobilda boshidan                                                  | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                  |
+| Qaror                                                                                     | Sabab                                                                                                                                  |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Bitta baza + `company_id` + Prisma extension + RLS                                        | TZ §2/§9 talabi; uch qatlamli himoya bitta unutilgan filtr xatosini ham o'tkazmaydi.                                                   |
+| Pul — BigInt tiyinda; valyuta kodi + kiritilgan kurs alohida saqlanadi                    | `float` yaxlitlash xatolari moliyada mumkin emas; TZ §5 da `currency` (UZS/USD/RUB/KZT) bor.                                           |
+| `finance` AI'dan to'liq ajratilgan                                                        | TZ §8.12.7: foyda/tannarx/farqni kod hisoblaydi, AI faqat izohlaydi.                                                                   |
+| AI chat — 2 bosqichli function calling, SQL yo'q                                          | TZ §8.4: AI faqat «qaysi funksiya, qanday parametr»ni tanlaydi; SQL'ni tizim o'zi bajaradi.                                            |
+| AI natijasi — taklif + odam tasdig'i; `corrected_data` logi                               | TZ §8.0/§8.12; tuzatishlar prompt sifatini o'lchash uchun yig'iladi (OCR ≥95%, ovoz ≥90%).                                             |
+| AI xarajat nazorati: model tanlash (Haiku/Sonnet), foto siqish, 24 soat kesh, oylik limit | TZ §8.11: ~$32/oy budjet, limit oshsa sekin rejim + xabar.                                                                             |
+| Offline-first mobil: drift/sqlite navbat + idempotent batch API (klient UUID)             | TZ §3.1 «offline majburiy»; takroriy yuborish dublikat yaratmaydi.                                                                     |
+| GPS: 2–5 daqiqa interval, paketli yuborish, fon servisi                                   | TZ §3.3 (batareya tejash); jonli xarita polling bilan boshlanadi, WebSocket — optimizatsiya.                                           |
+| `gps_tracks`: 90 kundan keyin arxivlash (partitsiya/TimescaleDB keyin)                    | TZ §5 eslatmasi — jadval juda tez o'sadi; MVP'da oddiy jadval + arxiv cron yetarli.                                                    |
+| Redis: BullMQ (AI navbati, cron, eslatmalar) + kesh                                       | TZ §7 «AI navbat: Redis + worker»; foto/ovoz fonda qayta ishlanadi, foydalanuvchini bloklamaydi.                                       |
+| Push — FCM, boshliq kanali — Telegram                                                     | TZ §7; boshliqlar Telegramni doim ochadi, kunlik xulosa (AI-8) shu yerga boradi.                                                       |
+| Xarita — OpenStreetMap + Leaflet / flutter_map                                            | Stek qat'iy; MDH hududini qoplaydi, litsenziya bepul.                                                                                  |
+| pnpm workspaces + `packages/shared`                                                       | API kontrakt tiplari bir manbadan; backend va web hech qachon ajralib ketmaydi.                                                        |
+| i18n: uz-latn (default), uz-cyrl, ru; backend `error.code` → klient tarjima qiladi        | TZ §3.1 (3 til); kodga qattiq yozilgan matn taqiqlanadi.                                                                               |
+| **Idempotency-Key** — barcha pul va reys endpointlarida majburiy                          | Ikki marta bosilgan «Saqlash» ikkita xarajat yaratmasligi kerak; kalit klientda mint qilinadi, qayta urinishda o'zgarmaydi (TASK-3.2). |
+| **Ledger o'zgarmas** — tuzatish faqat `REVERSAL` yozuvi bilan                             | Oylar keyin himoya qilinadigan balans — bu tahrirlanmagan balans; DB darajasida UPDATE/DELETE taqiqlangan (TASK-3.1).                  |
+| **`amountBase` + `rateUsed`/`rateDate`** har pul yozuvida                                 | Kursni bugungisi bilan qayta hisoblash bo'lmagan foyda yoki zararni o'ylab topadi (TASK-3.1/3.3).                                      |
+| **Optimistik qulf** — `updateMany({ id, status, version })` + `count === 0` → 409         | Ikki logist bir reysni bir vaqtda o'zgartirsa, ikkinchisi yutqazganini **biladi**, jimgina ustiga yozmaydi (TASK-3.x).                 |
+| **Fon ishlari** — BullMQ, 3 urinish + eksponensial backoff + dead-letter                  | SMS va rasm siqish so'rov oqimida turmasligi kerak; hech kim ko'rmagan xato hech kim tuzatmagan xato (TASK-4.3).                       |
+| **Cron'lar distributed lock ostida** — Redis `SET NX PX`, qulf bo'shatilmaydi             | `@Cron` har protsessda otiladi; qulfni ish tugagach qaytarish soat farqi tufayli qayta ishga tushishga yo'l ochadi (TASK-4.4).         |
+| **GPS nuqtasi noyob**: `(company_id, vehicle_id, recorded_at)` + `skipDuplicates`         | Telefon paketni qayta yuborishi normal; «avval tekshir» ikkita flush orasidagi oynada poyga qiladi (TASK-4.5).                         |
+| **`readPage()`** — sahifadan bitta ortiq qator, `count()` esa opsional                    | `hasMore` count'siz ham to'g'ri; katta jadvalda `count()` har sahifada to'lanadigan to'liq skan (TASK-4.2).                            |
+| Qorong'i rejim — web va mobilda boshidan                                                  | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                                                        |
 
 ---
 

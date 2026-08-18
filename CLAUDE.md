@@ -97,3 +97,60 @@ pnpm lint && pnpm format:check
 - Multi-tenant izolyatsiya testi majburiy: har modul e2e'sida «B kompaniya foydalanuvchisi
   A kompaniya resursini ko'ra olmaydi» stsenariysi bo'lishi shart.
 - `finance` moduli — eng yuqori qamrov: P&L, norma, yaxlitlash chegara holatlari bilan.
+
+## Audit tuzatishlaridan kelib chiqqan konventsiyalar
+
+Bularning **nima uchun** shundayligi — `docs/BUSINESS-RULES.md`; nima
+o'zgargani — `docs/FIX-REPORT.md`.
+
+### Pul va yozuvlar
+
+- **`Idempotency-Key` majburiy** — barcha pul va reys endpointlarida
+  (`@Idempotent()`). Klient kalitni **bir marta** mint qiladi va qayta
+  urinishda **o'shani** yuboradi; har chaqiruvda yangi kalit — idempotency
+  yo'qligi bilan barobar.
+- **Ledger o'zgarmas.** Tuzatish faqat `REVERSAL` yozuvi bilan; UPDATE/DELETE
+  baza darajasida taqiqlangan. `Client.balance` — kesh, faqat atomik
+  `increment` bilan yangilanadi.
+- **`amountBase` + `rateUsed`/`rateDate`** — har pul yozuvida. Kursni bugungisi
+  bilan qayta hisoblash taqiqlanadi.
+- **Nol summa yaroqli emas** — `@IsPositiveTiyin()` (xarajat, kirim, reys
+  narxi). `@IsTiyin()` faqat nol ma'noli bo'lgan joyda (masalan avans).
+
+### Bir vaqtdalik
+
+- **Optimistik qulf**: `updateMany({ where: { id, status, version } })` va
+  `count === 0` → 409. Read-modify-write yozilmaydi.
+- **Cron'lar** `CronLockService.runExclusive()` ostida. Qulf ish tugagach
+  **bo'shatilmaydi** — TTL bilan tugaydi.
+- **Fon ishlari** `JobsService.enqueue()` orqali; hech qayerda to'g'ridan-to'g'ri
+  `Queue`/`Worker` ochilmaydi. `JOBS_INLINE=true` — testlar va lokal ishlash.
+
+### Ro'yxatlar
+
+- **`readPage(dto, find, count)`** — sahifadan bitta ortiq qator o'qiydi,
+  `hasMore` shundan keladi. `?withTotal=false` bo'lsa `count()` bajarilmaydi.
+- **`skip` — getter emas, `skipOf(dto)` funksiyasi.** `IntersectionType`
+  prototip getter'ini yo'qotadi (N-10).
+- Qo'lda yozilgan migratsiya **indeks yaratsa, u `schema.prisma`da ham e'lon
+  qilinishi shart** — aks holda keyingi `migrate dev` uni o'chirishni taklif
+  qiladi (N-12).
+
+### Web
+
+- **Rollar bitta jadvalda**: `app/routes.ts` — router ham, yon menyu ham
+  o'shani o'qiydi, va u backend `@Roles` bilan **aynan mos** bo'lishi kerak.
+- Rol **`/auth/me` dan** olinadi, `localStorage`dan emas.
+- **Klient validatsiyasi serverdan qattiqroq bo'lmasligi kerak.** API qabul
+  qiladigan narsani rad etadigan klient — umuman tekshirmaganidan yomonroq.
+- Pul kiritishda **`MoneyInput`** (guruhlash + «so'm»), `type="number"` emas.
+- Yorug' rejimda matn uchun **`-text` rang tokenlari**
+  (`text-accent-text dark:text-accent`) — brend ranglari oq fonda WCAG AA dan
+  o'tmaydi. Palitra `shared/ui/palette.json` da, kontrast testi bilan qotirilgan.
+
+### Mobil
+
+- **Foto — dalil.** Yuklanmagan foto bilan hodisa yuborilmaydi va `synced`
+  qilinmaydi (fayl diskda bo'lsa). Fayl o'chgan bo'lsa — fotosiz ketadi.
+- Barcha HTTP `ApiClient` orqali (refresh bilan); javob **`jsonDecode`** bilan
+  o'qiladi, regex bilan emas.

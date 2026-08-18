@@ -132,14 +132,42 @@
 
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
-- [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
+- [x] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari) — mobil
+      tomonda test har kalitni uchala tilda tekshiradi
 - [ ] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
 - [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
 - [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
-- [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
+- [x] Xavfsizlik auditi: tenant-izolyatsiya (uch qatlam: JWT → Prisma extension → RLS),
+      RBAC (web router ham backend `@Roles` bilan mos), audit-log (append-only), fayl
+      xavfsizligi — PHASE 1–2, `docs/FIX-REPORT.md`
 - [ ] Seed/demo ma'lumotlar, pilot firma onboarding qo'llanmasi (TZ §12.2 — 2 firma, 2 oy bepul)
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
       tasdiqlash → reys P&L → dashboard
+
+## Audit tuzatishlari (6 faza, 41 task) ✅
+
+Alohida ish: `docs/FIX-REPORT.md`, jurnal `FIX-PROGRESS.md`.
+
+- [x] PHASE 0 — Baseline o'lchandi
+- [x] PHASE 1 — Blockers (8): e2e infratuzilmasi (0 → 232 test), `shared` dist
+      kafolati, RLS, migratsiyalar (0 → 27), rate limiting
+- [x] PHASE 2 — Security (9): token oqimi va bekor qilish, httpOnly cookie,
+      parol siyosati va lockout, audit-log, fayl imzosi va virus skani
+- [x] PHASE 3 — Core business (12): o'zgarmas ledger va qarz, idempotency,
+      optimistik qulf, reys raqami hisoblagichi, soft delete, valyuta maydonlari
+- [x] PHASE 4 — Performance (6): jonli xarita (10+ daqiqa → 0.086 ms), `count()`
+      va N+1, BullMQ fon ishlari, cron distributed lock, GPS idempotency,
+      yuklama testi (`load-test/`, `docs/PERFORMANCE.md`)
+- [x] PHASE 5 — UX (5): rol-asosidagi router, pul o'zgarishlarida tasdiqlash va
+      bekor qilish, maydon-darajasidagi validatsiya, mobil foto yo'qolmasligi,
+      accessibility (WCAG AA, fokus tuzog'i, xaritaga matnli muqobil)
+
+**Ochiq qolgani (sabab bilan — `docs/FIX-REPORT.md` §NOT FIXED):**
+
+- [ ] `gps_tracks` oylik partitsiyasi — reja `docs/ARCHITECTURE.md` §6;
+      shart: pilotda 10M qatordan oshsa
+- [ ] 10 000 foydalanuvchili yuklama testi — prod-ga o'xshash muhitda
+- [ ] N-11: jonli xaritadagi oxirgi hodisa qidiruvi (klientdagi `distinct`)
 
 ## Pilotdan keyin (TZ §10 Bosqich 4 — bu rejaga kirmaydi)
 
