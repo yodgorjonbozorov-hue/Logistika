@@ -41,19 +41,31 @@ docs/              TZ, arxitektura, roadmap
 ## Ishga tushirish (dev)
 
 ```bash
-docker compose up -d      # postgres, redis, minio
+docker compose up -d      # postgres, redis, minio (Docker ochiq bo'lsin)
 cp .env.example .env      # qiymatlarni to'ldiring
-pnpm install              # `shared` ni yig'adi va Prisma Client'ni generatsiya qiladi
-pnpm --filter backend migrate              # migratsiyalarni qo'llaydi
-pnpm --filter backend seed                 # platforma SUPERADMIN hisobi
-pnpm --filter backend seed:demo            # ixtiyoriy: «TruckControl Demo» ma'lumotlari
-pnpm dev                                   # backend :3000 + web :5173
+pnpm setup                # install + migrate + seed + demo ma'lumot
+pnpm dev                  # backend :3000 + web :5173
+```
+
+So'ng oching: **http://localhost:5173**
+
+Biror narsa ishlamasa — `pnpm doctor`. U har bir shartni tekshiradi (`.env`,
+`shared` yig'ilganmi, Prisma Client generatsiya qilinganmi, baza ulanadimi,
+migratsiya va demo ma'lumot bormi, portlar band emasmi) va **aynan qaysi
+buyruq tuzatishini** yozib beradi.
+
+Alohida qadamlar kerak bo'lsa:
+
+```bash
+pnpm install                       # `shared` ni yig'adi + prisma generate
+pnpm --filter backend migrate      # migratsiyalar
+pnpm --filter backend seed         # platforma SUPERADMIN hisobi
+pnpm --filter backend seed:demo    # «TruckControl Demo» ma'lumotlari
 ```
 
 `pnpm install` ikkita `postinstall` qadamini bajaradi: `packages/shared` yig'iladi
 (backend va web uning `d.ts` fayllaridan foydalanadi) va `prisma generate` ishlaydi
-(`migrate deploy` klientni generatsiya qilmaydi). Ularni qo'lda ishga tushirish kerak
-bo'lsa: `pnpm --filter shared build` va `pnpm --filter backend prisma generate`.
+(`migrate deploy` klientni generatsiya qilmaydi).
 
 `seed` production uchun mo'ljallangan va faqat SUPERADMIN yaratadi
 (`SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD`; production'da bu o'zgaruvchilar

@@ -10,6 +10,8 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --parallel --filter backend --filter web dev",
+    "setup": "pnpm install && pnpm --filter backend migrate && pnpm --filter backend seed && pnpm --filter backend seed:demo",
+    "doctor": "node scripts/doctor.mjs",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "eslint .",

@@ -12,7 +12,7 @@ export default tseslint.config(
     // Plain Node scripts (build/env helpers) run outside the TS projects.
     files: ['**/*.mjs', '**/*.cjs'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly' },
+      globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
     },
   },
   {
