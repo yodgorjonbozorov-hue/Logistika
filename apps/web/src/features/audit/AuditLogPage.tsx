@@ -59,7 +59,7 @@ export function AuditLogPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-muted dark:border-white/10">
+              <tr className="border-b text-left text-muted-text dark:text-muted dark:border-white/10">
                 <th scope="col" className="py-2 pr-4">
                   {t('audit.when')}
                 </th>
@@ -77,12 +77,14 @@ export function AuditLogPage() {
             <tbody>
               {(data ?? []).map((row) => (
                 <tr key={row.id} className="border-b last:border-0 dark:border-white/5">
-                  <td className="whitespace-nowrap py-2 pr-4 text-muted">
+                  <td className="whitespace-nowrap py-2 pr-4 text-muted-text dark:text-muted">
                     {new Date(row.createdAt).toLocaleString(i18n.language)}
                   </td>
                   <td className="py-2 pr-4 font-medium">{row.action}</td>
                   <td className="py-2 pr-4">{row.entityType}</td>
-                  <td className="py-2 text-muted">{changedFields(row).join(', ') || '—'}</td>
+                  <td className="py-2 text-muted-text dark:text-muted">
+                    {changedFields(row).join(', ') || '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>

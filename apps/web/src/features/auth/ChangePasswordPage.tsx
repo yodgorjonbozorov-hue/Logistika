@@ -47,7 +47,7 @@ export function ChangePasswordPage() {
         {t('auth.changePasswordTitle')}
       </h1>
       <form onSubmit={onSubmit} className="max-w-sm space-y-4">
-        <p className="text-sm text-muted">{t('auth.changePasswordNote')}</p>
+        <p className="text-sm text-muted-text dark:text-muted">{t('auth.changePasswordNote')}</p>
         <Field label={t('auth.currentPassword')}>
           <Input
             type="password"
@@ -76,7 +76,9 @@ export function ChangePasswordPage() {
             required
           />
         </Field>
-        {mismatch && <p className="text-sm text-danger">{t('auth.passwordMismatch')}</p>}
+        {mismatch && (
+          <p className="text-sm text-danger-text dark:text-danger">{t('auth.passwordMismatch')}</p>
+        )}
         <ErrorMessage error={error} />
         <Button type="submit" disabled={busy || mismatch}>
           {busy ? t('common.loading') : t('auth.changePasswordSubmit')}

@@ -1174,3 +1174,64 @@ ular alohida.
 
 `purgeSynced` va `onUpgrade` **TASK-1.2 da** bajarilgan — bu yerda o'zgarish
 yo'q, tekshirib o'tildi.
+
+---
+
+## 22. Accessibility (TASK-5.5, L-10)
+
+### Rang kontrasti — ko'z bilan emas, o'lchov bilan
+
+Brend palitrasi **qorong'i interfeys uchun** qurilgan va o'sha yerda ishlaydi:
+navy fonda accent — **7.0:1**. Oq fonda esa **2.03:1** — bu WCAG AA ning oddiy
+matn uchun 4.5 chegarasidan ham, katta matn uchun 3.0 dan ham past. Ya'ni
+yorug' rejimdagi amber havola — hamma ko'zini qisib o'qiydigan havola.
+
+Yechim: brend ranglari **fon uchun** qoladi (navy-on-accent 7.0:1 — a'lo),
+matn uchun esa **qoraytirilgan variantlar**:
+
+| Token          | Oq fonda | Eslatma   |
+| -------------- | -------- | --------- |
+| `accent-text`  | **4.58** | `#9F6B16` |
+| `success-text` | **4.50** | `#248752` |
+| `danger-text`  | **4.52** | `#D14545` |
+| `muted-text`   | **4.51** | `#6F7786` |
+
+Ular faqat **yorug' rejimda matn** uchun ishlatiladi
+(`text-accent-text dark:text-accent`). Palitra **bitta JSON faylda** —
+`tailwind.config.js` ham, kontrast testi ham o'shani o'qiydi, ya'ni palitrani
+o'zgartirib qo'yish testni jimgina o'tkazib yubormaydi.
+
+`danger` navy fonda 3.60:1 — bu **katta matn chegarasi**, va u ishlatilgan
+joylar qalin/yirik matn. Bu ham testda yozib qo'yilgan: o'lchanmagan tasodif
+emas, ongli qaror.
+
+### Modal — klaviatura uchun
+
+Ilgari u sahifa ustidagi oddiy `div` edi:
+
+- **Tab undan chiqib ketardi** — foydalanuvchi orqadagi, ko'rinmayotgan formaga
+  yozib ketishi mumkin edi;
+- skrinrider unga nom ham, turini ham aytmasdi;
+- yopilganda fokus hujjat boshiga tushardi — klaviatura foydalanuvchisi sahifani
+  boshidan boshlashi kerak edi.
+
+Endi: `role="dialog"`, `aria-modal`, `aria-labelledby` (o'z sarlavhasi bilan),
+Tab **ichida aylanadi**, Esc yopadi, va yopilganda fokus **ochgan elementga**
+qaytadi.
+
+### Jadval va tugmalar
+
+- Har `<th>` da `scope="col"` — busiz jadval skrinriderga bog'lanmagan
+  qiymatlar to'ri bo'lib o'qiladi;
+- tab-tugmalarda `aria-pressed` — qaysi biri joriy ekani aks holda **faqat
+  rang**, buni skrinrider ko'rmaydi, rang ko'rmaydigan foydalanuvchi ham;
+- `focus-visible` uchun **`outline`** (rang emas) — qorong'i fonda kursor
+  butunlay yo'qolib qolmasligi uchun.
+
+### Xarita — matnli muqobil
+
+Xarita — bu rasm, rasm esa skrinriderga o'qilmaydi va klaviaturaga yetib
+bormaydi. Jonli xaritada endi **«Xarita / Ro'yxat»** almashtirgichi bor:
+ro'yxat o'sha ma'lumotni jadval qilib beradi (raqam, holat, haydovchi, reys,
+tezlik, oxirgi signal). Bu **kamsitilgan variant emas** — «hozir qaysi
+mashinalar to'xtagan?» degan savolga ko'pincha aynan u tezroq javob beradi.

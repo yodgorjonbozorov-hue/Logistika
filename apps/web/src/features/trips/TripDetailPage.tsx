@@ -98,8 +98,8 @@ export function TripDetailPage() {
             onClick={() => setTab(key)}
             className={
               tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent-text dark:text-accent'
+                : 'px-4 py-2 text-sm text-muted-text dark:text-muted hover:text-gray-700 dark:hover:text-gray-200'
             }
           >
             {t(`trips.tabs.${key}`)}
@@ -111,7 +111,7 @@ export function TripDetailPage() {
       {tab === 'finance' && <FinanceTab tripId={trip.id} agreedPrice={trip.agreedPrice} />}
       {tab === 'documents' && (
         <Card>
-          <p className="text-sm text-muted">{t('trips.documentsNote')}</p>
+          <p className="text-sm text-muted-text dark:text-muted">{t('trips.documentsNote')}</p>
         </Card>
       )}
 
@@ -141,7 +141,7 @@ export function TripDetailPage() {
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs uppercase text-muted">{label}</div>
+      <div className="text-xs uppercase text-muted-text dark:text-muted">{label}</div>
       <div className="mt-0.5">{children}</div>
     </div>
   );
@@ -204,7 +204,7 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
               <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
               <div>
                 <div className="font-semibold">{t(`event.${event.eventType}`)}</div>
-                <div className="text-xs text-muted">
+                <div className="text-xs text-muted-text dark:text-muted">
                   {formatDateTime(event.eventTime)}
                   {event.odometer != null && <> · {event.odometer} km</>}
                   {event.address && <> · {event.address}</>}
@@ -220,12 +220,12 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
             {fallbackPoints.map((point, index) => (
               <li key={index} className="flex items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-accent" />
-                <span className="w-32 text-muted">{point.label}</span>
+                <span className="w-32 text-muted-text dark:text-muted">{point.label}</span>
                 <span>{formatDateTime(point.at)}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-muted">{t('trips.timelineNote')}</p>
+          <p className="mt-4 text-xs text-muted-text dark:text-muted">{t('trips.timelineNote')}</p>
         </>
       )}
     </Card>
@@ -247,24 +247,30 @@ function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: stri
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeIncome')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-success">
+          <div className="text-xs uppercase text-muted-text dark:text-muted">
+            {t('trips.financeIncome')}
+          </div>
+          <div className="mt-1 text-lg font-bold tabular-nums text-success-text dark:text-success">
             {formatTiyin(income)}
           </div>
         </Card>
         <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeExpenses')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-danger">
+          <div className="text-xs uppercase text-muted-text dark:text-muted">
+            {t('trips.financeExpenses')}
+          </div>
+          <div className="mt-1 text-lg font-bold tabular-nums text-danger-text dark:text-danger">
             {formatTiyin(expenseTotal)}
           </div>
         </Card>
         <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeBalance')}</div>
+          <div className="text-xs uppercase text-muted-text dark:text-muted">
+            {t('trips.financeBalance')}
+          </div>
           <div
             className={
               balance >= 0n
-                ? 'mt-1 text-lg font-bold tabular-nums text-success'
-                : 'mt-1 text-lg font-bold tabular-nums text-danger'
+                ? 'mt-1 text-lg font-bold tabular-nums text-success-text dark:text-success'
+                : 'mt-1 text-lg font-bold tabular-nums text-danger-text dark:text-danger'
             }
           >
             {formatTiyin(balance)}

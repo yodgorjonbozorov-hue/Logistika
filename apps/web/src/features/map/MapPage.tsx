@@ -7,10 +7,18 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-le
 import { LiveStatus } from 'shared';
 import { api } from '../../shared/api/client';
 import type { Vehicle } from '../../shared/api/entities';
-import { Card, MapSkeleton, PageHeader, Select } from '../../shared/ui';
+import { Badge, Card, Cell, MapSkeleton, PageHeader, Row, Select, Table } from '../../shared/ui';
 import { formatDateTime } from '../../shared/utils/date';
 
 const TASHKENT: [number, number] = [41.3, 69.25];
+
+/** The list view's equivalent of the marker colours. */
+const BADGE_TONES: Record<LiveStatus, 'green' | 'blue' | 'red' | 'gray'> = {
+  [LiveStatus.MOVING]: 'green',
+  [LiveStatus.RESTING]: 'blue',
+  [LiveStatus.BREAKDOWN]: 'red',
+  [LiveStatus.IDLE]: 'gray',
+};
 
 const STATUS_COLORS: Record<LiveStatus, string> = {
   [LiveStatus.MOVING]: '#2FAE6A',
@@ -47,10 +55,11 @@ export function MapPage() {
               <button
                 key={m}
                 onClick={() => setMode(m)}
+                aria-pressed={mode === m}
                 className={
                   mode === m
                     ? 'rounded-md bg-accent px-3 py-1 text-sm font-semibold text-navy'
-                    : 'px-3 py-1 text-sm text-muted'
+                    : 'px-3 py-1 text-sm text-muted-text dark:text-muted'
                 }
               >
                 {t(`map.${m}`)}
@@ -82,11 +91,40 @@ function LiveMap() {
     return map;
   }, [vehicles]);
 
+  /**
+   * A map is a picture, and a picture is unreadable to a screen reader and
+   * unreachable from a keyboard (L-10, TASK-5.5). The same data as a table is
+   * not a lesser version — for "which trucks are stopped right now" it is
+   * often the faster answer.
+   */
+  const [asList, setAsList] = useState(false);
+
   if (isLoading) return <MapSkeleton />;
 
   return (
     <div className="flex min-h-0 flex-1 gap-3">
       <Card className="w-52 shrink-0 self-start">
+        <div className="mb-3 flex gap-1" role="group" aria-label={t('map.view')}>
+          {(
+            [
+              ['map', false],
+              ['list', true],
+            ] as const
+          ).map(([key, value]) => (
+            <button
+              key={key}
+              onClick={() => setAsList(value)}
+              aria-pressed={asList === value}
+              className={
+                asList === value
+                  ? 'flex-1 rounded-lg bg-accent px-2 py-1 text-xs font-semibold text-navy'
+                  : 'flex-1 rounded-lg px-2 py-1 text-xs text-muted-text hover:bg-gray-100 dark:text-muted dark:hover:bg-white/10'
+              }
+            >
+              {t(`map.${key}View`)}
+            </button>
+          ))}
+        </div>
         <ul className="space-y-2 text-sm">
           {Object.values(LiveStatus).map((status) => (
             <li key={status} className="flex items-center gap-2">
@@ -100,60 +138,92 @@ function LiveMap() {
           ))}
         </ul>
       </Card>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
-        <MapContainer
-          center={TASHKENT}
-          zoom={6}
-          className="h-full w-full"
-          style={{ minHeight: 480 }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {vehicles
-            .filter((v) => v.lastPosition)
-            .map((vehicle) => (
-              <CircleMarker
-                key={vehicle.vehicleId}
-                center={[vehicle.lastPosition!.lat, vehicle.lastPosition!.lng]}
-                radius={9}
-                pathOptions={{
-                  color: '#ffffff',
-                  weight: 2,
-                  fillColor: STATUS_COLORS[vehicle.status],
-                  fillOpacity: 1,
-                }}
-              >
-                <Popup>
-                  <div className="space-y-1 text-sm">
-                    <div className="font-bold">{vehicle.plateNumber}</div>
-                    <div>{t(`map.${vehicle.status}`)}</div>
-                    {vehicle.driverName && <div>{vehicle.driverName}</div>}
-                    {vehicle.trip && (
-                      <div>
-                        {vehicle.trip.tripNumber} · {vehicle.trip.cargoName ?? ''}
-                      </div>
-                    )}
-                    {vehicle.lastPosition?.speed != null && (
-                      <div>
-                        {t('map.speed')}: {Math.round(vehicle.lastPosition.speed)} km/h
-                      </div>
-                    )}
-                    {vehicle.deviationKm != null && vehicle.deviationKm > 20 && (
-                      <div className="font-semibold text-red-600">
-                        {t('map.deviation')}: {vehicle.deviationKm} km
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      {t('map.lastSignal')}: {formatDateTime(vehicle.lastPosition?.recordedAt)}
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
+      {asList ? (
+        <div className="min-w-0 flex-1">
+          <Table
+            headers={[
+              t('map.plate'),
+              t('map.status'),
+              t('map.driver'),
+              t('trips.title'),
+              t('map.speed'),
+              t('map.lastSignal'),
+            ]}
+          >
+            {vehicles.map((vehicle) => (
+              <Row key={vehicle.vehicleId}>
+                <Cell className="font-semibold">{vehicle.plateNumber}</Cell>
+                <Cell>
+                  <Badge tone={BADGE_TONES[vehicle.status]}>{t(`map.${vehicle.status}`)}</Badge>
+                </Cell>
+                <Cell>{vehicle.driverName ?? '—'}</Cell>
+                <Cell>{vehicle.trip?.tripNumber ?? '—'}</Cell>
+                <Cell className="tabular-nums">
+                  {vehicle.lastPosition?.speed != null
+                    ? `${Math.round(vehicle.lastPosition.speed)} km/h`
+                    : '—'}
+                </Cell>
+                <Cell>{formatDateTime(vehicle.lastPosition?.recordedAt)}</Cell>
+              </Row>
             ))}
-        </MapContainer>
-      </div>
+          </Table>
+        </div>
+      ) : (
+        <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
+          <MapContainer
+            center={TASHKENT}
+            zoom={6}
+            className="h-full w-full"
+            style={{ minHeight: 480 }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {vehicles
+              .filter((v) => v.lastPosition)
+              .map((vehicle) => (
+                <CircleMarker
+                  key={vehicle.vehicleId}
+                  center={[vehicle.lastPosition!.lat, vehicle.lastPosition!.lng]}
+                  radius={9}
+                  pathOptions={{
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: STATUS_COLORS[vehicle.status],
+                    fillOpacity: 1,
+                  }}
+                >
+                  <Popup>
+                    <div className="space-y-1 text-sm">
+                      <div className="font-bold">{vehicle.plateNumber}</div>
+                      <div>{t(`map.${vehicle.status}`)}</div>
+                      {vehicle.driverName && <div>{vehicle.driverName}</div>}
+                      {vehicle.trip && (
+                        <div>
+                          {vehicle.trip.tripNumber} · {vehicle.trip.cargoName ?? ''}
+                        </div>
+                      )}
+                      {vehicle.lastPosition?.speed != null && (
+                        <div>
+                          {t('map.speed')}: {Math.round(vehicle.lastPosition.speed)} km/h
+                        </div>
+                      )}
+                      {vehicle.deviationKm != null && vehicle.deviationKm > 20 && (
+                        <div className="font-semibold text-red-600">
+                          {t('map.deviation')}: {vehicle.deviationKm} km
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500">
+                        {t('map.lastSignal')}: {formatDateTime(vehicle.lastPosition?.recordedAt)}
+                      </div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              ))}
+          </MapContainer>
+        </div>
+      )}
     </div>
   );
 }
@@ -217,7 +287,9 @@ function HistoryMap({
           aria-label={t('map.selectDate')}
         />
         {vehicleId && !isLoading && track.length === 0 && (
-          <span className="self-center text-sm text-muted">{t('map.noTrack')}</span>
+          <span className="self-center text-sm text-muted-text dark:text-muted">
+            {t('map.noTrack')}
+          </span>
         )}
       </div>
       <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">

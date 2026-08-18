@@ -217,7 +217,13 @@
     "selectVehicle": "Mashinani tanlang",
     "selectDate": "Sana",
     "noTrack": "Bu kunda trek yo'q",
-    "noPosition": "Hali GPS signal yo'q"
+    "noPosition": "Hali GPS signal yo'q",
+    "view": "Ko'rinish",
+    "mapView": "Xarita",
+    "listView": "Ro'yxat",
+    "plate": "Raqami",
+    "status": "Holati",
+    "driver": "Haydovchi"
   },
   "track": {
     "title": "Yuk kuzatuvi",

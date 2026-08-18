@@ -35,9 +35,9 @@ export function LoginPage() {
       >
         <div className="text-center">
           <span className="text-2xl font-extrabold text-navy dark:text-white">
-            Truck<span className="text-accent">Control</span> AI
+            Truck<span className="text-accent-text dark:text-accent">Control</span> AI
           </span>
-          <p className="mt-1 text-sm text-muted">{t('auth.loginTitle')}</p>
+          <p className="mt-1 text-sm text-muted-text dark:text-muted">{t('auth.loginTitle')}</p>
         </div>
         <Field label={t('auth.identifier')}>
           <Input
@@ -62,7 +62,7 @@ export function LoginPage() {
         </Button>
         <Link
           to="/forgot-password"
-          className="block text-center text-sm text-muted hover:text-accent"
+          className="block text-center text-sm text-muted-text dark:text-muted hover:text-accent-text dark:hover:text-accent"
         >
           {t('auth.forgotPassword')}
         </Link>

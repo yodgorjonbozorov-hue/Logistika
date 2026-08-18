@@ -45,11 +45,11 @@ export function MoneyInput({
         value={group(value)}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
         className={cn(
-          'w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-3 pr-14 text-right text-sm tabular-nums text-gray-900 outline-none focus:border-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100',
+          'w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-3 pr-14 text-right text-sm tabular-nums text-gray-900 outline-none focus:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100',
           className,
         )}
       />
-      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted">
+      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-text dark:text-muted">
         {t('common.som')}
       </span>
     </div>

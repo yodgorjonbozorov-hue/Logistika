@@ -44,9 +44,9 @@ export function ResetPasswordPage() {
       >
         <div className="text-center">
           <span className="text-2xl font-extrabold text-navy dark:text-white">
-            Truck<span className="text-accent">Control</span> AI
+            Truck<span className="text-accent-text dark:text-accent">Control</span> AI
           </span>
-          <p className="mt-1 text-sm text-muted">{t('auth.resetTitle')}</p>
+          <p className="mt-1 text-sm text-muted-text dark:text-muted">{t('auth.resetTitle')}</p>
         </div>
 
         {params.get('token') ? null : (
@@ -73,13 +73,18 @@ export function ResetPasswordPage() {
             required
           />
         </Field>
-        {mismatch && <p className="text-sm text-danger">{t('auth.passwordMismatch')}</p>}
+        {mismatch && (
+          <p className="text-sm text-danger-text dark:text-danger">{t('auth.passwordMismatch')}</p>
+        )}
         <ErrorMessage error={error} />
         <Button type="submit" disabled={busy || mismatch} className="w-full py-2">
           {busy ? t('common.loading') : t('auth.resetSubmit')}
         </Button>
 
-        <Link to="/login" className="block text-center text-sm text-muted hover:text-accent">
+        <Link
+          to="/login"
+          className="block text-center text-sm text-muted-text dark:text-muted hover:text-accent-text dark:hover:text-accent"
+        >
           {t('auth.backToLogin')}
         </Link>
       </form>

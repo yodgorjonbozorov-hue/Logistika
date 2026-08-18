@@ -1,0 +1,12 @@
+{
+  "navy": "#1B2A4A",
+  "accent": "#F5A623",
+  "success": "#2FAE6A",
+  "danger": "#E14B4B",
+  "muted": "#8A94A6",
+
+  "accent-text": "#9F6B16",
+  "success-text": "#248752",
+  "danger-text": "#D14545",
+  "muted-text": "#6F7786"
+}

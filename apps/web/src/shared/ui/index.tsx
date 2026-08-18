@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../utils/cn';
 
@@ -23,7 +23,11 @@ export function Button({
     <button
       {...props}
       className={cn(
+        // A focus ring that survives dark mode: `outline` follows the element's
+        // own colour, so a keyboard user could otherwise lose the cursor
+        // entirely on the navy background.
         'rounded-lg px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         BUTTON_STYLES[variant],
         className,
       )}
@@ -52,18 +56,21 @@ export function Field({
       {/* The error replaces the hint rather than stacking under it: once
           something is wrong, telling the user how it normally works is noise. */}
       {error ? (
-        <span role="alert" className="mt-1 block text-xs font-medium text-danger">
+        <span
+          role="alert"
+          className="mt-1 block text-xs font-medium text-danger-text dark:text-danger"
+        >
           {error}
         </span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-muted">{hint}</span>
+        <span className="mt-1 block text-xs text-muted-text dark:text-muted">{hint}</span>
       ) : null}
     </label>
   );
 }
 
 const CONTROL =
-  'w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100';
+  'w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100';
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(CONTROL, props.className)} />;
@@ -106,9 +113,11 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
       <table className="w-full min-w-[640px] border-collapse bg-white text-sm dark:bg-white/5">
         <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase text-muted dark:border-white/10">
+          <tr className="border-b border-gray-200 text-left text-xs uppercase text-muted-text dark:text-muted dark:border-white/10">
             {headers.map((header, index) => (
-              <th key={index} className="px-3 py-2 font-semibold">
+              // `scope` is what tells a screen reader this cell heads a
+              // column; without it the table is read as a grid of loose values.
+              <th key={index} scope="col" className="px-3 py-2 font-semibold">
                 {header}
               </th>
             ))}
@@ -150,8 +159,8 @@ export function Badge({
   const tones = {
     gray: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300',
     blue: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
-    green: 'bg-success/15 text-success',
-    red: 'bg-danger/15 text-danger',
+    green: 'bg-success/15 text-success-text dark:text-success',
+    red: 'bg-danger/15 text-danger-text dark:text-danger',
     orange: 'bg-accent/20 text-amber-700 dark:text-accent',
   };
   return (
@@ -163,6 +172,20 @@ export function Badge({
 
 // ---------- Modal ----------
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * A dialog a keyboard can actually use (L-10, TASK-5.5).
+ *
+ * It was a `div` over the page: Tab walked straight out of it into the form
+ * behind, a screen reader announced nothing, and closing it left focus
+ * wherever the DOM happened to put it — usually the top of the document, so a
+ * keyboard user started the page again from scratch.
+ *
+ * `aria-modal` and `role="dialog"` say what it is, the trap keeps Tab inside,
+ * and focus returns to whatever opened it.
+ */
 export function Modal({
   title,
   open,
@@ -174,11 +197,37 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    // Remembered before focus moves, so it can be handed back on close.
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panel.current?.querySelector<HTMLElement>(FOCUSABLE);
+    (first ?? panel.current)?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !panel.current) return;
+      const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (items.length === 0) return;
+      const edge = event.shiftKey ? items[0] : items[items.length - 1];
+      if (document.activeElement === edge) {
+        // Wrap rather than escape: leaving the dialog with Tab is how a
+        // keyboard user ends up typing into the form they cannot see.
+        event.preventDefault();
+        (event.shiftKey ? items[items.length - 1] : items[0])?.focus();
+      }
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      opener?.focus();
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -188,10 +237,17 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl outline-none dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">{title}</h2>
+        <h2 id={titleId} className="mb-4 text-lg font-bold">
+          {title}
+        </h2>
         {children}
       </div>
     </div>
@@ -202,7 +258,11 @@ export function Modal({
 
 export function Spinner() {
   const { t } = useTranslation();
-  return <div className="py-8 text-center text-sm text-muted">{t('common.loading')}</div>;
+  return (
+    <div className="py-8 text-center text-sm text-muted-text dark:text-muted">
+      {t('common.loading')}
+    </div>
+  );
 }
 
 /**
@@ -247,7 +307,11 @@ export function MapSkeleton() {
 
 export function EmptyState() {
   const { t } = useTranslation();
-  return <div className="py-8 text-center text-sm text-muted">{t('common.empty')}</div>;
+  return (
+    <div className="py-8 text-center text-sm text-muted-text dark:text-muted">
+      {t('common.empty')}
+    </div>
+  );
 }
 
 /**
@@ -265,7 +329,10 @@ export function ErrorMessage({ error, only }: { error: unknown; only?: string[] 
   const message = error instanceof Error ? error.message : t('common.errorGeneric');
   const extra = only ?? [];
   return (
-    <div role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+    <div
+      role="alert"
+      className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger-text dark:text-danger"
+    >
       {message}
       {extra.length > 0 && (
         <ul className="mt-1 list-inside list-disc text-xs">
@@ -299,7 +366,7 @@ export function Pagination({
       <Button variant="ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>
         ← {t('common.prev')}
       </Button>
-      <span className="text-muted">
+      <span className="text-muted-text dark:text-muted">
         {t('common.page')} {page} / {pages}
       </span>
       <Button variant="ghost" disabled={page >= pages} onClick={() => onPage(page + 1)}>

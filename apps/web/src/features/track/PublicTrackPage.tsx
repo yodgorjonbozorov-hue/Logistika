@@ -34,10 +34,15 @@ export function PublicTrackPage() {
     <div className="min-h-screen bg-navy p-4 text-gray-100">
       <div className="mx-auto max-w-2xl space-y-4">
         <h1 className="text-center text-2xl font-extrabold">
-          Truck<span className="text-accent">Control</span> · {t('track.title')}
+          Truck<span className="text-accent-text dark:text-accent">Control</span> ·{' '}
+          {t('track.title')}
         </h1>
         {isLoading && <Spinner />}
-        {error != null && <Card className="text-center text-danger">{t('track.notFound')}</Card>}
+        {error != null && (
+          <Card className="text-center text-danger-text dark:text-danger">
+            {t('track.notFound')}
+          </Card>
+        )}
         {data && (
           <>
             <Card>
@@ -71,10 +76,12 @@ export function PublicTrackPage() {
                 </MapContainer>
               </div>
             ) : (
-              <Card className="text-center text-muted">{t('map.noPosition')}</Card>
+              <Card className="text-center text-muted-text dark:text-muted">
+                {t('map.noPosition')}
+              </Card>
             )}
             {data.lastPosition && (
-              <p className="text-center text-xs text-muted">
+              <p className="text-center text-xs text-muted-text dark:text-muted">
                 {t('track.updated')}: {formatDateTime(data.lastPosition.recordedAt)}
               </p>
             )}
@@ -88,7 +95,7 @@ export function PublicTrackPage() {
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs uppercase text-muted">{label}</div>
+      <div className="text-xs uppercase text-muted-text dark:text-muted">{label}</div>
       <div className="mt-0.5">{children}</div>
     </div>
   );

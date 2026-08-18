@@ -217,7 +217,13 @@
     "selectVehicle": "Выберите машину",
     "selectDate": "Дата",
     "noTrack": "Трека за этот день нет",
-    "noPosition": "GPS-сигнала ещё нет"
+    "noPosition": "GPS-сигнала ещё нет",
+    "view": "Вид",
+    "mapView": "Карта",
+    "listView": "Список",
+    "plate": "Номер",
+    "status": "Статус",
+    "driver": "Водитель"
   },
   "track": {
     "title": "Отслеживание груза",

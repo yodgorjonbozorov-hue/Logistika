@@ -72,7 +72,7 @@ export function VehiclesPage() {
                 <Cell>
                   {vehicle.isActive && (
                     <button
-                      className="text-xs text-danger hover:underline"
+                      className="text-xs text-danger-text dark:text-danger hover:underline"
                       onClick={() =>
                         window.confirm(t('common.confirmDeactivate')) &&
                         void remove.mutateAsync(vehicle.id)

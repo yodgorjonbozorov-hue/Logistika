@@ -217,7 +217,13 @@
     "selectVehicle": "Машинани танланг",
     "selectDate": "Сана",
     "noTrack": "Бу кунда трек йўқ",
-    "noPosition": "Ҳали GPS сигнал йўқ"
+    "noPosition": "Ҳали GPS сигнал йўқ",
+    "view": "Кўриниш",
+    "mapView": "Харита",
+    "listView": "Рўйхат",
+    "plate": "Рақами",
+    "status": "Ҳолати",
+    "driver": "Ҳайдовчи"
   },
   "track": {
     "title": "Юк кузатуви",

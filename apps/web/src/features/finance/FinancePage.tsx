@@ -41,10 +41,13 @@ export function FinancePage() {
           <button
             key={key}
             onClick={() => setTab(key)}
+            // Which tab is current is otherwise only a colour, which a screen
+            // reader cannot see and a colour-blind user may not either.
+            aria-pressed={tab === key}
             className={
               tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent-text dark:text-accent'
+                : 'px-4 py-2 text-sm text-muted-text dark:text-muted hover:text-gray-700 dark:hover:text-gray-200'
             }
           >
             {t(`finance.${key}`)}
@@ -123,7 +126,7 @@ function ExpensesTab() {
                 <Cell>
                   {canApprove && !expense.isApproved && !expense.reversalOfId && (
                     <button
-                      className="text-xs font-medium text-success hover:underline"
+                      className="text-xs font-medium text-success-text dark:text-success hover:underline"
                       onClick={() => setConfirming({ expense, verb: 'approve' })}
                     >
                       {t('finance.approve')}
@@ -136,7 +139,7 @@ function ExpensesTab() {
                     !expense.reversalOfId &&
                     !reversed.has(expense.id) && (
                       <button
-                        className="text-xs font-medium text-danger hover:underline"
+                        className="text-xs font-medium text-danger-text dark:text-danger hover:underline"
                         onClick={() => setConfirming({ expense, verb: 'reverse' })}
                       >
                         {t('finance.reverse')}

@@ -9,7 +9,7 @@ Boshlangan: 2026-08-17
 - [x] PHASE 2 — Security (9 ta task)
 - [x] PHASE 3 — Core business (12 ta task)
 - [x] PHASE 4 — Performance (6 ta task)
-- [ ] PHASE 5 — UX (5 ta task)
+- [x] PHASE 5 — UX (5 ta task)
 
 ## BEFORE (baseline, PHASE 0 / TASK-0.1)
 
@@ -946,11 +946,44 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `core/i18n/app_strings.dart` (uchta til), `test/offline_queue_test.dart` (+5) ·
   Flutter testlari 23 → 28, `flutter analyze` toza.
 
+- **TASK-5.5 (L-10)** · Accessibility va sayqal.
+  **Kontrast — ko'z bilan emas, o'lchov bilan**: brend palitrasi qorong'i
+  interfeys uchun qurilgan va o'sha yerda a'lo (navy fonda accent 7.0:1), oq
+  fonda esa **2.03:1** — AA ning oddiy matn uchun 4.5 sidan ham, katta matn
+  uchun 3.0 sidan ham past. Qoraytirilgan `-text` variantlari qo'shildi
+  (accent 4.58, success 4.50, danger 4.52, muted 4.51) va yorug' rejimdagi
+  **62 ta matn joyi** `text-X-text dark:text-X` ga o'tkazildi; brend ranglari
+  fon uchun qoldi. Palitra **bitta JSON faylda** — `tailwind.config.js` ham,
+  kontrast testi ham o'shani o'qiydi, ya'ni palitrani o'zgartirish testni
+  jimgina o'tkazib yubormaydi. `danger` navy fonda 3.60:1 — katta matn
+  chegarasi, testda **ataylab yozib qo'yilgan**.
+  **Modal**: ilgari sahifa ustidagi oddiy `div` — Tab undan chiqib ketardi
+  (foydalanuvchi orqadagi ko'rinmayotgan formaga yozishi mumkin edi), skrinrider
+  hech narsa aytmasdi, yopilganda fokus hujjat boshiga tushardi. Endi
+  `role="dialog"` + `aria-modal` + `aria-labelledby`, Tab ichida aylanadi, Esc
+  yopadi, fokus **ochgan elementga** qaytadi.
+  **Jadval/tugmalar**: `<th scope="col">`, tab-tugmalarda `aria-pressed`
+  (joriy tab aks holda faqat rang), `focus-visible` uchun `outline` — qorong'i
+  fonda kursor yo'qolmasligi uchun.
+  **Xarita — matnli muqobil**: xarita rasm, rasm esa skrinriderga o'qilmaydi.
+  «Xarita / Ro'yxat» almashtirgichi qo'shildi; ro'yxat o'sha ma'lumotni jadval
+  qilib beradi va «hozir qaysi mashinalar to'xtagan?» degan savolga ko'pincha
+  tezroq javob beradi.
+  **Isbot**: fokus tuzog'i olib tashlanganda 3 ta test qizil. ·
+  `shared/ui/palette.json` (yangi), `tailwind.config.js`,
+  `shared/ui/index.tsx` (Modal, Table, Button, Input),
+  `shared/ui/contrast.test.ts` (+11), `shared/ui/Modal.test.tsx` (+9),
+  `MapPage.tsx` (ro'yxat ko'rinishi), `FinancePage.tsx`, 15 ta faylda rang
+  tokenlari, uchta `locales/*.json` · web testlari 91 → 111.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**Keyingi qadam:** TASK-5.5 — accessibility va sayqal (L-10).
+**PHASE 5 tugadi (5/5).**
+
+**Keyingi qadam:** yakuniy hisobot — `docs/FIX-REPORT.md`, ROADMAP/ARCHITECTURE/
+CLAUDE.md yangilash, va N-8 (repo bo'ylab bir martalik `pnpm format`).
 
 PHASE 3 qolgan bog'liqliklar:
 

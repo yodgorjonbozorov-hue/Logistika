@@ -38,13 +38,16 @@ export function ForgotPasswordPage() {
       >
         <div className="text-center">
           <span className="text-2xl font-extrabold text-navy dark:text-white">
-            Truck<span className="text-accent">Control</span> AI
+            Truck<span className="text-accent-text dark:text-accent">Control</span> AI
           </span>
-          <p className="mt-1 text-sm text-muted">{t('auth.forgotTitle')}</p>
+          <p className="mt-1 text-sm text-muted-text dark:text-muted">{t('auth.forgotTitle')}</p>
         </div>
 
         {sent ? (
-          <p className="rounded-xl bg-success/10 p-3 text-sm text-success" role="status">
+          <p
+            className="rounded-xl bg-success/10 p-3 text-sm text-success-text dark:text-success"
+            role="status"
+          >
             {t('auth.forgotSent')}
           </p>
         ) : (
@@ -64,7 +67,10 @@ export function ForgotPasswordPage() {
           </>
         )}
 
-        <Link to="/login" className="block text-center text-sm text-muted hover:text-accent">
+        <Link
+          to="/login"
+          className="block text-center text-sm text-muted-text dark:text-muted hover:text-accent-text dark:hover:text-accent"
+        >
           {t('auth.backToLogin')}
         </Link>
       </form>

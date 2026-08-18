@@ -34,9 +34,11 @@ export function AppLayout() {
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-white/10 dark:bg-navy">
         <div className="border-b border-gray-200 px-4 py-4 dark:border-white/10">
           <span className="text-lg font-extrabold">
-            Truck<span className="text-accent">Control</span>
+            Truck<span className="text-accent-text dark:text-accent">Control</span>
           </span>
-          <span className="ml-1 rounded bg-accent/20 px-1 text-xs font-bold text-accent">AI</span>
+          <span className="ml-1 rounded bg-accent/20 px-1 text-xs font-bold text-accent-text dark:text-accent">
+            AI
+          </span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => (
@@ -47,7 +49,7 @@ export function AppLayout() {
                 cn(
                   'block rounded-lg px-3 py-2 text-sm font-medium transition',
                   isActive
-                    ? 'bg-accent/15 text-accent'
+                    ? 'bg-accent/15 text-accent-text dark:text-accent'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10',
                 )
               }
@@ -74,13 +76,18 @@ export function AppLayout() {
           </label>
           <NavLink
             to="/change-password"
-            className="block px-1 text-xs text-muted hover:text-accent"
+            className="block px-1 text-xs text-muted-text dark:text-muted hover:text-accent-text dark:hover:text-accent"
           >
             {t('auth.changePasswordTitle')}
           </NavLink>
           <div className="flex items-center justify-between gap-2 px-1">
-            <span className="truncate text-xs text-muted">{user?.fullName}</span>
-            <button className="text-xs text-danger hover:underline" onClick={() => void logout()}>
+            <span className="truncate text-xs text-muted-text dark:text-muted">
+              {user?.fullName}
+            </span>
+            <button
+              className="text-xs text-danger-text dark:text-danger hover:underline"
+              onClick={() => void logout()}
+            >
               {t('auth.logout')}
             </button>
           </div>
