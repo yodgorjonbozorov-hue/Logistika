@@ -51,6 +51,47 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DEFAULT_TIMEZONE = 'Asia/Tashkent';
+
+  // ---------- File storage (MinIO / S3) ----------
+  // Every key the app reads must be declared here: Nest replaces the whole
+  // config with this validated instance, so an undeclared variable is dropped
+  // and reaches the service as `undefined`.
+
+  @IsOptional()
+  @IsString()
+  MINIO_ENDPOINT = 'localhost';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  MINIO_PORT = 9000;
+
+  @IsOptional()
+  @IsString()
+  MINIO_ROOT_USER = 'truckcontrol';
+
+  @IsOptional()
+  @IsString()
+  MINIO_ROOT_PASSWORD = '';
+
+  @IsOptional()
+  @IsString()
+  MINIO_BUCKET = 'truckcontrol';
+
+  @IsOptional()
+  @IsString()
+  MINIO_USE_SSL = 'false';
+
+  // ---------- SMS (driver login codes) ----------
+
+  @IsOptional()
+  @IsString()
+  SMS_PROVIDER_URL = '';
+
+  @IsOptional()
+  @IsString()
+  SMS_PROVIDER_TOKEN = '';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
