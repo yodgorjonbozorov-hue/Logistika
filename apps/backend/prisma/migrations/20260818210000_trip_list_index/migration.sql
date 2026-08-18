@@ -1,0 +1,14 @@
+-- TASK-4.6: the trip list had no index for its own ordering.
+--
+-- Found by the load test, not by reading the code: `GET /trips` with no filter
+-- ran a Seq Scan over every trip in the company and sorted the lot to return
+-- twenty rows. At 18k trips that is 13.8 ms and 670 shared buffers; the cost
+-- grows linearly with the company's history, on the screen people open first.
+--
+-- Measured after: 0.13 ms, 23 buffers.
+--
+-- A `(company_id, status, created_at DESC)` index was measured as well, for the
+-- status-filtered list. The planner preferred this one in every case tried,
+-- including a selective status and a deep offset, so it is not created here —
+-- an index the planner ignores is write cost with no read benefit.
+CREATE INDEX "trips_company_id_created_at_idx" ON "trips" ("company_id", "created_at" DESC);

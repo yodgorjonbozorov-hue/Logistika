@@ -8,7 +8,7 @@ Boshlangan: 2026-08-17
 - [x] PHASE 1 — Blockers (8 ta task)
 - [x] PHASE 2 — Security (9 ta task)
 - [x] PHASE 3 — Core business (12 ta task)
-- [ ] PHASE 4 — Performance (6 ta task)
+- [x] PHASE 4 — Performance (6 ta task)
 - [ ] PHASE 5 — UX (5 ta task)
 
 ## BEFORE (baseline, PHASE 0 / TASK-0.1)
@@ -305,6 +305,14 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-13 (HIGH, tuzatildi — TASK-4.6)**: `GET /trips` — **ilovada eng ko'p
+  ochiladigan ekran** — o'z tartiblashi uchun indekssiz edi. Filtersiz ro'yxat
+  firmaning butun reys tarixini `Seq Scan` qilib, yigirmata qator qaytarish
+  uchun hammasini saralardi: 18k qatorda **13.8 ms va 670 bufer**, narx firma
+  tarixi bilan chiziqli o'sadi. Kodni o'qib emas, **o'lchab** topildi.
+  `(company_id, created_at DESC)` indeksi: **0.13 ms, 23 bufer**.
+  `(company_id, status, created_at DESC)` varianti ham o'lchandi — planner uni
+  hech qachon tanlamadi, shuning uchun qo'shilmadi.
 - **N-12 (HIGH, tuzatildi — TASK-4.3)**: qo'lda yozilgan migratsiyalarda
   yaratilgan uchta indeks `schema.prisma`da **e'lon qilinmagan** edi
   (`gps_tracks (vehicle_id, recorded_at DESC)`, `gps_tracks (trip_id)`,
@@ -808,10 +816,40 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `test/jobs.e2e-spec.ts` (har chaqiruvga yangi IP — Redis'dagi per-IP hisoblagich
   butun e2e to'plamiga umumiy) · unit 470 → 475, e2e 226 → 232.
 
+- **TASK-4.6** · Yuklama testi (k6, `load-test/`). Skriptlar: `read-heavy`
+  (logist brauzeri — ro'yxat, moliya, jonli xarita) va `write-heavy` (telefonlar —
+  GPS paketi va **o'sha paketning takrori**), `seed.mjs` (20k reys, 100k ledger,
+  267k GPS nuqta, 203 mashina, 2k login). Natijalar → **`docs/PERFORMANCE.md`**.
+  **Topildi (N-13)**: `GET /trips` o'z tartiblashi uchun indekssiz — `Seq Scan` +
+  to'liq sort, 13.8 ms / 670 bufer → indeks bilan **0.13 ms / 23 bufer**;
+  endpoint darajasida 32.0 → 22.8 ms.
+  **O'lchandi**: o'qishda to'yinish ~50 VU / ~110–120 req/s (bitta 4 yadroli
+  konteynerda API+baza+generator birga), 200 VU'gacha **xatolik 0%** — to'yinganda
+  tizim sekinlashadi, yiqilmaydi. Yozishda 40 telefon: p95 **74 ms**.
+  TASK-4.5 idempotency **yuklama ostida** tasdiqlandi: 364 iteratsiya × 10 nuqta =
+  aynan **+3 640 qator**, har takroriy paket `accepted: 0, duplicates: 10`.
+  **Testning o'zida ikkita xato topildi va tuzatildi** — ular hujjatda ham
+  yozilgan, chunki har ikkalasi ham «yashil, lekin ma'nosiz» natija berardi:
+  (1) 100 VU bitta login ostida → 97% so'rov 429; rate limiter ilovani emas,
+  testni o'lchayotgan edi. Endi har VU o'z logini va o'z IP'si bilan;
+  (2) har VU boshqa haydovchining reysiga post qilardi — bu 200 bilan javob
+  beriladi va **hamma nuqta jimgina tashlanadi**; tekshiruv faqat 2xx'ga
+  qaraganidan test yashil bo'lib, bazaga **hech narsa yozmasdi**. Endi tekshiruv
+  `accepted === 10` ni talab qiladi.
+  **Tekshirilmadi**: 10 000 foydalanuvchi — bu muhitda o'lchash mantiqsiz
+  (sabab `docs/PERFORMANCE.md` §6 da), o'rniga stateless arxitektura va
+  kengaytirish sharti yozildi. Ulanish puli bo'yicha ko'rsatma
+  `docs/DEPLOYMENT.md` §10 ga qo'shildi. ·
+  `load-test/**` (yangi), `schema.prisma`, migratsiya
+  `20260818210000_trip_list_index`, `docs/PERFORMANCE.md` (yangi),
+  `docs/DEPLOYMENT.md` §10, `eslint.config.mjs` (k6/Node global'lari) ·
+  unit 475 (o'zgarmadi — bu o'lchov taski), e2e 232.
+
 **PHASE 3 tugadi (12/12).**
 
-**Keyingi qadam:** TASK-4.6 — yuklama testi (k6/artillery, `load-test/`),
-natijalar `docs/PERFORMANCE.md` ga.
+**PHASE 4 tugadi (6/6).**
+
+**Keyingi qadam:** PHASE 5 — UX. TASK-5.1 (rol-asosidagi router, M-13).
 
 PHASE 3 qolgan bog'liqliklar:
 

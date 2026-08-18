@@ -464,6 +464,13 @@ model Trip {
 
   @@unique([companyId, tripNumber])
   @@index([companyId, status])
+  /// The trip list is the most-opened screen in the app and it orders by date.
+  /// Without this the default list was a Seq Scan plus a full sort of every
+  /// trip the company has ever had — 13.8 ms and 670 buffers at 18k rows,
+  /// growing linearly for ever (TASK-4.6). With it: 0.13 ms, 23 buffers.
+  /// A `(company_id, status, created_at)` variant was measured too and the
+  /// planner never chose it, so it is not here.
+  @@index([companyId, createdAt(sort: Desc)])
   @@map("trips")
 }
 
