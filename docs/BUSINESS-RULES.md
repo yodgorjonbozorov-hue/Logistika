@@ -1032,3 +1032,51 @@ qotirib qo'yadi.
 
 Haydovchi uchun yon menyu **butunlay bo'sh** — bu to'g'ri javob: haydovchi
 mobil ilovada ishlaydi.
+
+---
+
+## 19. Pul o'zgarishlarida xavfsiz UX (TASK-5.2, M-14)
+
+### To'lov statusi allaqachon qo'lda o'zgarmaydi
+
+Audit «`<Select>` bilan to'lov statusini darhol o'zgartiradi» deb yozgan edi —
+bu **TASK-3.1 da** yopilgan: status ledger'dan hisoblanadi va ekranda faqat
+`Badge` sifatida ko'rinadi. Bu yerda qolgan qismi bajarildi.
+
+### Tasdiqlash oynasi — nima va qancha
+
+Xarajatni tasdiqlash bitta bosishda, hech narsa ko'rsatmasdan bajarilardi.
+Endi tasdiqlash oynasi chiqadi va u **summa va kategoriyani takrorlaydi**.
+Bu bezak emas: faqat «ishonchingiz komilmi?» deb so'raydigan oyna — bu odamlar
+o'qimasdan yopishni o'rganadigan oyna.
+
+### Tasdiqlangan xarajatni endi orqaga qaytarish mumkin
+
+`POST /expenses/:id/reverse` TASK-3.12 dan beri bor edi, lekin **interfeysda
+uni chaqiradigan hech narsa yo'q edi** — ya'ni tasdiqlangan xarajatni tuzatish
+yo'li amalda yo'q edi. Endi OWNER/ACCOUNTANT uchun «Bekor qilish» tugmasi bor
+va u **sababni majburiy** so'raydi: hech kim izohlamagan tuzatish — bu sababsiz
+o'zgargan raqam.
+
+Bekor qilingan qatorda tugma ko'rinmaydi. Bu shunchaki qulaylik — haqiqiy
+kafolat bazadagi unique indeks, u ikkinchi bekor qilishni rad etadi.
+
+### Ikki marta bosish
+
+Tasdiqlash/bekor qilish tugmasi so'rov ketayotganda **o'chiriladi**, va
+`onConfirm` ichida ham qorovul bor: ikki marta tez bosish React birinchi
+holatni qayta chizishga ulgurmasidan ikkinchi submit'ni yuborishi mumkin.
+Barcha pul so'rovlari `Idempotency-Key` bilan ketadi (TASK-3.2), ya'ni
+o'tib ketgan takror ham ikkinchi yozuv yaratmaydi.
+
+### Summa kiritish
+
+`MoneyInput` — raqamlar **yozilayotganda guruhlanadi** (`1 000 000`) va
+o'ng tomonda **«so'm»** yozuvi turadi. Sabab oddiy: `1000000` va `10000000`
+bir belgiga farq qiladi, pulda esa o'n million so'mga, va bu xato ledger'ga
+tushmaguncha ko'rinmaydi.
+
+`type="number"` **ataylab ishlatilmaydi**: u `1e9` ni jimgina qabul qiladi va
+spinner'i bilan sichqoncha g'ildiragi orqali pulni o'zgartirish yo'lini ochadi.
+`type="text"` + `inputMode="numeric"`, va tashqariga har doim **toza raqamlar**
+beriladi — `somToTiyin` avvalgidek ishlaydi.

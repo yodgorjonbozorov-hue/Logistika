@@ -865,11 +865,36 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `app/ForbiddenPage.tsx`, `app/HomeRedirect.tsx`, `app/App.tsx`,
   `app/AppLayout.tsx`, uchta `locales/*.json` · web testlari 22 → 51.
 
+- **TASK-5.2 (M-14)** · Pul o'zgarishlarida xavfsiz UX. Audit yozgan
+  «`<Select>` bilan to'lov statusi» qismi **TASK-3.1 da allaqachon** yopilgan
+  (status ledger'dan hisoblanadi, ekranda faqat `Badge`); qolgani shu yerda.
+  **Tasdiqlash oynasi**: xarajatni tasdiqlash bitta bosishda, hech narsa
+  ko'rsatmasdan bo'lardi. Endi oyna **summa va kategoriyani takrorlaydi** —
+  faqat «ishonchingiz komilmi?» deydigan oyna odamlar o'qimasdan yopishni
+  o'rganadigan oyna.
+  **Bekor qilish oqimi**: `POST /expenses/:id/reverse` TASK-3.12 dan beri bor
+  edi, lekin **interfeysda uni chaqiradigan hech narsa yo'q edi** — ya'ni
+  tasdiqlangan xarajatni tuzatish yo'li amalda yo'q edi. Endi OWNER/ACCOUNTANT
+  uchun tugma bor va u **sababni majburiy** so'raydi.
+  **Ikki marta bosish**: tugma so'rov ketayotganda o'chiriladi va `onConfirm`
+  ichida ham qorovul bor (tez ikki bosish React qayta chizishga ulgurmasidan
+  ikkinchi submit yuborishi mumkin); ustiga `Idempotency-Key` (TASK-3.2).
+  **`MoneyInput`**: raqamlar yozilayotganda guruhlanadi (`1 000 000`) va «so'm»
+  yozuvi turadi — `1000000` va `10000000` bir belgiga, pulda esa o'n million
+  so'mga farq qiladi. `type="number"` ataylab ishlatilmaydi: u `1e9` ni jimgina
+  qabul qiladi va spinner'i sichqoncha g'ildiragi bilan pulni o'zgartirish
+  yo'lini ochadi. Barcha pul formalarida ishlatildi (xarajat, kirim, reys
+  narxi va avansi, haydovchi oyligi). Matnlar uchta tilda. ·
+  `shared/ui/ConfirmDialog.tsx` (+8 test), `shared/ui/MoneyInput.tsx` (+8 test),
+  `FinancePage.tsx`, `TripForm.tsx`, `DriversPage.tsx`, `shared/api/crud.ts`
+  (`post` endi `body` oladi), `shared/api/entities.ts` (`reversalOfId`),
+  uchta `locales/*.json` · web testlari 51 → 67.
+
 **PHASE 3 tugadi (12/12).**
 
 **PHASE 4 tugadi (6/6).**
 
-**Keyingi qadam:** TASK-5.2 — pul o'zgarishlarida xavfsiz UX (M-14).
+**Keyingi qadam:** TASK-5.3 — forma validatsiyasi va xato holatlari.
 
 PHASE 3 qolgan bog'liqliklar:
 

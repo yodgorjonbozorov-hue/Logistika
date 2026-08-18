@@ -20,6 +20,8 @@ import {
   Spinner,
   Table,
 } from '../../shared/ui';
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog';
+import { MoneyInput } from '../../shared/ui/MoneyInput';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
@@ -70,6 +72,18 @@ function ExpensesTab() {
   const canApprove = user?.role === UserRole.OWNER || user?.role === UserRole.ACCOUNTANT;
   const expenses = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
+  /**
+   * Which rows on this page have already been cancelled.
+   *
+   * The server is still the authority — a unique index refuses a second
+   * reversal — but hiding the button for what is visibly done beats offering
+   * an action that will only produce an error.
+   */
+  const reversed = new Set(expenses.map((e) => e.reversalOfId).filter(Boolean));
+  const [confirming, setConfirming] = useState<{
+    expense: Expense;
+    verb: 'approve' | 'reverse';
+  } | null>(null);
 
   return (
     <div>
@@ -105,14 +119,27 @@ function ExpensesTab() {
                   </Badge>
                 </Cell>
                 <Cell>
-                  {canApprove && !expense.isApproved && (
+                  {canApprove && !expense.isApproved && !expense.reversalOfId && (
                     <button
                       className="text-xs font-medium text-success hover:underline"
-                      onClick={() => void post.mutateAsync({ id: expense.id, verb: 'approve' })}
+                      onClick={() => setConfirming({ expense, verb: 'approve' })}
                     >
                       {t('finance.approve')}
                     </button>
                   )}
+                  {/* An approved cost used to have no way back at all: the API
+                      could reverse it, nothing in the interface could. */}
+                  {canApprove &&
+                    expense.isApproved &&
+                    !expense.reversalOfId &&
+                    !reversed.has(expense.id) && (
+                      <button
+                        className="text-xs font-medium text-danger hover:underline"
+                        onClick={() => setConfirming({ expense, verb: 'reverse' })}
+                      >
+                        {t('finance.reverse')}
+                      </button>
+                    )}
                 </Cell>
               </Row>
             ))}
@@ -121,6 +148,39 @@ function ExpensesTab() {
         </>
       )}
       <ExpenseFormModal open={showForm} onClose={() => setShowForm(false)} />
+      <ConfirmDialog
+        open={confirming !== null}
+        title={t(confirming?.verb === 'reverse' ? 'finance.reverseTitle' : 'finance.approveTitle')}
+        // The amount and the category are repeated on purpose: "are you sure?"
+        // alone is a dialog people learn to dismiss without reading.
+        summary={
+          confirming && (
+            <>
+              <span className="font-semibold tabular-nums">
+                {formatTiyin(confirming.expense.amount)} {t('common.som')}
+              </span>
+              {' · '}
+              {t(`finance.categories.${confirming.expense.category}`)}
+              {confirming.expense.description ? ` · ${confirming.expense.description}` : ''}
+            </>
+          )
+        }
+        confirmLabel={t(confirming?.verb === 'reverse' ? 'finance.reverse' : 'finance.approve')}
+        tone={confirming?.verb === 'reverse' ? 'danger' : 'primary'}
+        reasonLabel={confirming?.verb === 'reverse' ? t('finance.reverseReason') : undefined}
+        pending={post.isPending}
+        error={post.error}
+        onClose={() => setConfirming(null)}
+        onConfirm={async (reason) => {
+          if (!confirming) return;
+          await post.mutateAsync({
+            id: confirming.expense.id,
+            verb: confirming.verb,
+            body: confirming.verb === 'reverse' ? { reason } : {},
+          });
+          setConfirming(null);
+        }}
+      />
     </div>
   );
 }
@@ -161,8 +221,12 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
               ))}
             </Select>
           </Field>
-          <Field label={t('finance.amount')}>
-            <Input inputMode="numeric" value={form.amount} onChange={set('amount')} required />
+          <Field label={t('finance.amount')} hint={t('finance.amountHint')}>
+            <MoneyInput
+              value={form.amount}
+              onChange={(digits) => setForm((f) => ({ ...f, amount: digits }))}
+              required
+            />
           </Field>
           <Field label={t('finance.date')}>
             <Input type="date" value={form.expenseDate} onChange={set('expenseDate')} required />
@@ -262,8 +326,12 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
     <Modal title={t('finance.newIncome')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('finance.amount')}>
-            <Input inputMode="numeric" value={form.amount} onChange={set('amount')} required />
+          <Field label={t('finance.amount')} hint={t('finance.amountHint')}>
+            <MoneyInput
+              value={form.amount}
+              onChange={(digits) => setForm((f) => ({ ...f, amount: digits }))}
+              required
+            />
           </Field>
           <Field label={t('finance.invoiceNumber')}>
             <Input value={form.invoiceNumber} onChange={set('invoiceNumber')} />

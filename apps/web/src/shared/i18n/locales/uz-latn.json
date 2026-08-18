@@ -196,7 +196,12 @@
       "INSURANCE": "Sug'urta",
       "TAX": "Soliq",
       "OTHER": "Boshqa"
-    }
+    },
+    "reverse": "Bekor qilish",
+    "reverseTitle": "Xarajatni bekor qilish",
+    "reverseReason": "Sababi (majburiy)",
+    "approveTitle": "Xarajatni tasdiqlash",
+    "amountHint": "So'mda kiriting — bo'shliqlar avtomatik qo'yiladi"
   },
   "map": {
     "title": "Jonli xarita",

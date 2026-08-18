@@ -64,10 +64,13 @@ export function useCrudMutations(resource: string) {
     onError,
   });
   const post = useMutation({
-    mutationFn: (variables: { id: string; verb: string }) =>
+    // `body` carries what the verb needs — a reversal's reason, for instance.
+    // Still keyed off the variables object, so a retry replays the same key
+    // and a fresh click gets a new one.
+    mutationFn: (variables: { id: string; verb: string; body?: Record<string, unknown> }) =>
       api(`/${resource}/${variables.id}/${variables.verb}`, {
         method: 'POST',
-        body: {},
+        body: variables.body ?? {},
         idempotencyKey: keyFor(variables),
       }),
     onSuccess: invalidate,

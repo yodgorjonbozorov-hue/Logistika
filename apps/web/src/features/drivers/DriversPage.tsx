@@ -21,6 +21,7 @@ import {
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
+import { MoneyInput } from '../../shared/ui/MoneyInput';
 
 export function DriversPage() {
   const { t } = useTranslation();
@@ -164,7 +165,10 @@ function DriverFormModal({ open, onClose }: { open: boolean; onClose: () => void
             </Select>
           </Field>
           <Field label={t('drivers.salaryValue')} hint={t('drivers.salaryHint')}>
-            <Input inputMode="numeric" value={form.salaryValue} onChange={set('salaryValue')} />
+            <MoneyInput
+              value={form.salaryValue}
+              onChange={(digits) => setForm((f) => ({ ...f, salaryValue: digits }))}
+            />
           </Field>
         </div>
         <ErrorMessage error={create.error} />

@@ -4,6 +4,7 @@ import { Button, ErrorMessage, Field, Input, Modal, Select } from '../../shared/
 import { dateInputToIso } from '../../shared/utils/date';
 import { somToTiyin } from '../../shared/utils/money';
 import { useRefLists, useTripMutations } from './api';
+import { MoneyInput } from '../../shared/ui/MoneyInput';
 
 export function TripFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
@@ -140,10 +141,16 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
             />
           </Field>
           <Field label={t('trips.price')}>
-            <Input inputMode="numeric" value={form.agreedPrice} onChange={set('agreedPrice')} />
+            <MoneyInput
+              value={form.agreedPrice}
+              onChange={(digits) => setForm((f) => ({ ...f, agreedPrice: digits }))}
+            />
           </Field>
           <Field label={t('trips.advance')}>
-            <Input inputMode="numeric" value={form.driverAdvance} onChange={set('driverAdvance')} />
+            <MoneyInput
+              value={form.driverAdvance}
+              onChange={(digits) => setForm((f) => ({ ...f, driverAdvance: digits }))}
+            />
           </Field>
         </div>
         <ErrorMessage error={create.error} />

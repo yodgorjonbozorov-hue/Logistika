@@ -111,6 +111,8 @@ export interface Expense {
   paymentMethod: string | null;
   expenseDate: string;
   isApproved: boolean;
+  /** Set on the mirrored row that cancels another expense (L-8, TASK-5.2). */
+  reversalOfId: string | null;
 }
 
 export interface Income {
