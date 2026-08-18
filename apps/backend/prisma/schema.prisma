@@ -173,8 +173,32 @@ model Company {
   storedFiles   StoredFile[]
   trackingLinks TrackingLink[]
   ledgerEntries LedgerEntry[]
+  tripCounters  TripCounter[]
 
   @@map("companies")
+}
+
+/// Per-company, per-year trip number sequence (TASK-3.7).
+///
+/// The number used to be `count() + 1`. That repeats a number the moment a trip
+/// is removed, and hands the same number to two trips created in the same
+/// second — the retry loop around it only papered over three collisions before
+/// giving up. A counter row that is incremented, never counted, cannot do
+/// either: the row is locked for the length of the transaction that took a
+/// number, so a second creator waits and gets the next one.
+///
+/// The year is part of the key so the sequence restarts each January rather
+/// than growing forever.
+model TripCounter {
+  companyId  String   @map("company_id")
+  year       Int
+  lastNumber Int      @default(0) @map("last_number")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@id([companyId, year])
+  @@map("trip_counters")
 }
 
 // ---------- Users & auth ----------

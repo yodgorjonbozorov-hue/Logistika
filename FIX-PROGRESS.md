@@ -462,12 +462,38 @@ data: { …, version: { increment: 1 } } })` — kutilgan status **WHERE ichida*
 **PHASE 2 tugadi (9/9).** Keyingi: PHASE 3 — CORE BUSINESS, TASK-3.1 (qarz/balans ledger'i).
 Tasdiq kutilmoqda.
 
-**Keyingi qadam:** TASK-3.7 (reys raqamlash — `TripCounter`).
-Hozir `trips.create()` reys raqamini `count() + 1` bilan beradi: ikki parallel yaratish
-bir xil raqamni oladi, o'chirilgan reysdan keyin esa raqam takrorlanadi. Kompaniya
-bo'yicha alohida hisoblagich jadvali (`(company_id, year)` unique) va atomik
-`increment` kerak; format `TR-<yil>-<ketma-ket>`. Test (majburiy): `Promise.all` bilan
-10 parallel yaratish → 10 xil raqam.
+- **TASK-3.7 (M-13)** · Reys raqamlash. `count() + 1` ikki xil buzilardi: reys
+  o'chirilsa bo'shagan raqamni keyingisi olardi (ikki reys hujjatda bir xil raqam bilan),
+  va bir soniyadagi ikki yaratish bir xil `count()`ni o'qib bir xil raqamni so'rardi —
+  atrofidagi retry sikli uch marta urinib, keyin xom unique-constraint xatosini
+  foydalanuvchiga uzatardi.
+  `trip_counters` jadvali (`(company_id, year)` kalit) — **sanalmaydi, oshiriladi**:
+  `ON CONFLICT … DO UPDATE SET last_number = last_number + 1`. Oshirish qatorni
+  tranzaksiya oxirigacha qulflaydi, ikkinchi yaratuvchi navbatda kutadi. Raqam va
+  reysning o'zi bitta tranzaksiyada. Bo'shliq qabul qilinadi (raqam olib yiqilgan
+  tranzaksiya bittasini ishlatmay qoldiradi) — bo'shliq hech kim ishlatmagan raqam,
+  takror esa o'zini bitta deb da'vo qilayotgan ikki reys.
+  Format `TR-2026-0042`: yil kalitning bir qismi, ketma-ketlik har yanvarda qaytadan
+  boshlanadi; 4 xonaga to'ldiriladi (matn sifatida ham to'g'ri saralanadi), oshsa
+  kesilmaydi. Yil **UTC** bo'yicha. Migratsiya mavjud reyslar sonidan hisoblagichni
+  to'ldiradi — birinchi yangi raqam ketma-ketlikni davom ettiradi. `trip_counters`
+  `TENANT_MODELS`ga qo'shildi va `tenant_isolation` RLS siyosatini oldi (hisoblagich
+  kompaniya qancha reys qilishini aytadi). Web'da ortiqcha `№` prefiksi olib tashlandi —
+  raqam endi o'zini o'zi tanitadi. ·
+  migratsiya `20260818061308_trip_counter`, `schema.prisma`, `trip-numbering.ts`
+  (+spec 6 test), `trips.service.ts`, `tenant.extension.ts`, `tenant-db.mock.ts`,
+  web `TripsPage/TripDetailPage/MapPage`, `test/trip-numbering.e2e-spec.ts` (+6 e2e) ·
+  unit 250 → 256, e2e 136 → 142. `trip-numbering.ts` 100%, `trips.service` 76% → 77%.
+  Tekshirildi: atomik `increment` o'rniga read-then-write qo'yilsa, 10 parallel
+  yaratish testi **qizil** bo'ladi (takroriy raqamlar).
+
+**Keyingi qadam:** TASK-3.8 (paket idempotency poygasi + `@@unique([companyId, clientEventId])`).
+`ingestBatch` avval `findMany` bilan mavjud `clientEventId`larni o'qiydi, keyin yozadi —
+ikki qurilma (yoki bitta qurilmaning ikki sync urinishi) bir vaqtda kelsa ikkalasi ham
+«yo'q» deb topadi va bir hodisa ikki marta yoziladi. Bazada `clientEventId` faqat
+indeks, **unique emas**. Unique cheklov + `P2002`ni `duplicates`ga aylantirish kerak.
+Test (majburiy): bir xil `clientEventId` bilan 2 parallel paket → bitta qator,
+ikkinchisi `duplicates` ro'yxatida.
 
 PHASE 3 qolgan bog'liqliklar:
 

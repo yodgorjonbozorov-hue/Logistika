@@ -19,7 +19,15 @@ describe('TripsService', () => {
   const audit = { log: jest.fn() } as unknown as AuditService;
 
   function setup() {
-    const { prisma, db } = createTenantDbMock(['trip', 'vehicle', 'driver', 'client']);
+    const { prisma, db } = createTenantDbMock([
+      'trip',
+      'vehicle',
+      'driver',
+      'client',
+      'tripCounter',
+    ]);
+    // The counter hands out 42 unless a test says otherwise.
+    db.tripCounter!.upsert!.mockResolvedValue({ lastNumber: 42 });
     const service = new TripsService(prisma, audit, ledgerStub, currencyStub);
     return { service, db };
   }
@@ -27,7 +35,6 @@ describe('TripsService', () => {
   describe('create', () => {
     it('assigns a per-company sequential number and converts money to BigInt', async () => {
       const { service, db } = setup();
-      db.trip!.count!.mockResolvedValue(41);
       db.trip!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
         Promise.resolve({ id: 't1', ...data }),
       );
@@ -35,7 +42,8 @@ describe('TripsService', () => {
       await service.create(ACTOR, { agreedPrice: '1250000000' });
 
       const data = db.trip!.create!.mock.calls[0][0].data;
-      expect(data.tripNumber).toBe('42');
+      // Taken from the counter, never from count() — see trip-numbering.ts.
+      expect(data.tripNumber).toMatch(/^TR-\d{4}-0042$/);
       expect(data.status).toBe('DRAFT');
       expect(data.agreedPrice).toBe(1_250_000_000n);
       expect(data.createdById).toBe('user-1');
@@ -45,7 +53,6 @@ describe('TripsService', () => {
       const { service, db } = setup();
       db.vehicle!.findUnique!.mockResolvedValue({ id: 'v1' });
       db.driver!.findUnique!.mockResolvedValue({ id: 'd1' });
-      db.trip!.count!.mockResolvedValue(0);
       db.trip!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
         Promise.resolve({ id: 't1', ...data }),
       );

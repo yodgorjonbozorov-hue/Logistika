@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
+import { nextTripNumber } from './trip-numbering';
 import {
   AssignTripDto,
   CompleteTripDto,
@@ -87,14 +88,13 @@ export class TripsService {
     await this.assertRefsExist(actor, dto);
     const status: TripStatus = dto.vehicleId && dto.driverId ? 'ASSIGNED' : 'DRAFT';
 
-    // Per-company sequential number; retry on the (companyId, tripNumber)
-    // unique constraint in case two trips are opened at the same moment.
-    for (let attempt = 0; ; attempt++) {
-      const tripNumber = String(
-        (await this.prisma.forCompany(actor.companyId).trip.count()) + 1 + attempt,
-      );
-      try {
-        const trip = await this.prisma.forCompany(actor.companyId).trip.create({
+    try {
+      // The number and the trip are taken in one transaction: the counter row
+      // stays locked until the trip is written, so a second creator waits and
+      // gets the next number rather than reading the same one.
+      const trip = await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
+        const tripNumber = await nextTripNumber(tx, actor.companyId as string);
+        return tx.trip.create({
           data: {
             ...toData(dto),
             companyId: actor.companyId as string,
@@ -103,20 +103,18 @@ export class TripsService {
             createdById: actor.userId,
           },
         });
-        this.audit.log({
-          companyId: actor.companyId,
-          userId: actor.userId,
-          action: 'CREATE',
-          entityType: 'Trip',
-          entityId: trip.id,
-          after: { tripNumber: trip.tripNumber, status: trip.status },
-        });
-        return trip;
-      } catch (error) {
-        const isUniqueClash =
-          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
-        if (!isUniqueClash || attempt >= 3) rethrowPrismaError(error);
-      }
+      });
+      this.audit.log({
+        companyId: actor.companyId,
+        userId: actor.userId,
+        action: 'CREATE',
+        entityType: 'Trip',
+        entityId: trip.id,
+        after: { tripNumber: trip.tripNumber, status: trip.status },
+      });
+      return trip;
+    } catch (error) {
+      rethrowPrismaError(error);
     }
   }
 

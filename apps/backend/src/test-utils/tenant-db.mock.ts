@@ -8,6 +8,7 @@ export function createTenantDbMock(models: string[]) {
       findFirst: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn(),
+      upsert: jest.fn(),
       update: jest.fn(),
       // A guarded write lands by default; a test that cares about losing the
       // race overrides this with { count: 0 }.

@@ -75,7 +75,7 @@ export function TripsPage() {
           >
             {trips.map((trip) => (
               <Row key={trip.id} onClick={() => navigate(`/trips/${trip.id}`)}>
-                <Cell className="font-semibold">№{trip.tripNumber}</Cell>
+                <Cell className="font-semibold">{trip.tripNumber}</Cell>
                 <Cell>
                   {trip.loadingAddress ?? '—'} → {trip.unloadingAddress ?? '—'}
                 </Cell>

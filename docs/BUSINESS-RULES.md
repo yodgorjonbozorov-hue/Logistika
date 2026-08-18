@@ -330,3 +330,56 @@ mavjud qatorlar tekshirildi — hech biri buzmaydi.
 Test ikkala qatlamni ham tekshiradi: API rad etishini va **Prisma orqali
 to'g'ridan-to'g'ri yozishni** (`test/value-constraints.e2e-spec.ts`) — ya'ni
 ilova chetlab o'tilganda ham baza rad etadi.
+
+## 7. Reys raqami (TASK-3.7)
+
+### Muammo
+
+`trip_number` `count() + 1` edi. Ikki xil buziladi:
+
+- **takrorlanadi** — reys o'chirilsa bo'shagan raqamni keyingisi oladi, ya'ni
+  ikki xil reys hujjatda bir xil raqam bilan yuradi (raqam aynan shuning
+  uchun bor);
+- **poyga qiladi** — bir soniyada ikki yaratish bir xil `count()`ni o'qiydi va
+  bir xil raqamni so'raydi. Atrofidagi retry sikli uch marta urinib, keyin
+  xom unique-constraint xatosini foydalanuvchiga uzatardi.
+
+### Yechim
+
+`trip_counters` — `(company_id, year)` kalitli hisoblagich. Sanalmaydi,
+**oshiriladi**:
+
+```sql
+INSERT INTO trip_counters … ON CONFLICT (company_id, year)
+DO UPDATE SET last_number = trip_counters.last_number + 1
+```
+
+Oshirish qatorni tranzaksiya oxirigacha qulflaydi, shuning uchun ikkinchi
+yaratuvchi navbatda kutadi va keyingi raqamni oladi. Raqam va reysning o'zi
+**bitta tranzaksiyada** olinadi.
+
+**Bo'shliq (gap) qabul qilinadi.** Raqam olib, keyin yiqilgan tranzaksiya
+bitta raqamni ishlatilmagan qoldiradi. Bo'shliq — hech kim ishlatmagan raqam;
+takror — o'zini bitta deb da'vo qilayotgan ikki reys. Faqat ikkinchisi muammo.
+
+### Format
+
+`TR-2026-0042` — yil kalitning bir qismi, shuning uchun ketma-ketlik har
+yanvarda qaytadan boshlanadi va abadiy o'smaydi. Ketma-ketlik 4 xonagacha
+to'ldiriladi (`0009` `0010` dan oldin turadi — matn sifatida ham to'g'ri
+saralanadi), undan oshsa kesilmaydi (`TR-2026-12345`).
+
+Yil **UTC** bo'yicha olinadi: reys qaysi yilga tegishli ekani server qaysi
+timezone'da ishlayotganiga bog'liq bo'lmasligi kerak.
+
+Raqam endi o'zini o'zi tanitadi, shuning uchun web'dagi qo'shimcha `№`
+prefiksi olib tashlandi (`№TR-2026-0001` emas, `TR-2026-0001`).
+
+### Mavjud ma'lumot
+
+Migratsiya har kompaniya va yil uchun hisoblagichni mavjud reyslar soni bilan
+to'ldiradi, shuning uchun birinchi yangi raqam ketma-ketlikni **davom
+ettiradi**, allaqachon ishlatilgan raqam bilan to'qnashmaydi.
+`trip_counters` ham `tenant_isolation` RLS siyosatini oladi: hisoblagich
+kompaniya qancha reys qilishini aytadi — bu raqobatchi ko'rmoqchi bo'lgan aynan
+o'sha raqam.

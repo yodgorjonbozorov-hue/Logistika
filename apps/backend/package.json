@@ -100,10 +100,16 @@
         "functions": 91
       },
       "./src/modules/trips/trips.service.ts": {
-        "statements": 75,
-        "lines": 76,
-        "branches": 50,
-        "functions": 81
+        "statements": 76,
+        "lines": 77,
+        "branches": 56,
+        "functions": 82
+      },
+      "./src/modules/trips/trip-numbering.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 100,
+        "functions": 100
       },
       "./src/common/odometer.ts": {
         "statements": 100,

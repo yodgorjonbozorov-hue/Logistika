@@ -45,7 +45,7 @@ export function TripDetailPage() {
   return (
     <div>
       <PageHeader
-        title={`${t('trips.title')} №${trip.tripNumber}`}
+        title={`${t('trips.title')} ${trip.tripNumber}`}
         actions={
           <>
             <ShareLinkButton tripId={id} />

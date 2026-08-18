@@ -132,7 +132,7 @@ function LiveMap() {
                     {vehicle.driverName && <div>{vehicle.driverName}</div>}
                     {vehicle.trip && (
                       <div>
-                        №{vehicle.trip.tripNumber} · {vehicle.trip.cargoName ?? ''}
+                        {vehicle.trip.tripNumber} · {vehicle.trip.cargoName ?? ''}
                       </div>
                     )}
                     {vehicle.lastPosition?.speed != null && (

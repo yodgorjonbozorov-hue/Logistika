@@ -24,6 +24,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'StoredFile',
   'GpsTrackArchive',
   'LedgerEntry',
+  'TripCounter',
 ]);
 
 type AnyArgs = Record<string, unknown>;
