@@ -71,12 +71,15 @@ describe('Audit trail (e2e)', () => {
   });
 
   it('records vehicle deactivation', async () => {
-    await api()
-      .delete(`/api/v1/vehicles/${tenant.vehicle.id}`)
-      .set(as(tenant.tokens.owner))
-      .expect(200);
+    // A spare truck: the fixture's own is booked on the fixture trip, and
+    // TASK-3.10 refuses to retire anything that is still committed to a trip.
+    const spare = await prisma.vehicle.create({
+      data: { companyId: tenant.company.id, plateNumber: `01SPARE${randomUUID().slice(0, 4)}` },
+    });
 
-    const [entry] = await entriesFor('Vehicle', tenant.vehicle.id);
+    await api().delete(`/api/v1/vehicles/${spare.id}`).set(as(tenant.tokens.owner)).expect(200);
+
+    const [entry] = await entriesFor('Vehicle', spare.id);
     expect(entry?.action).toBe('DEACTIVATE');
     expect((entry?.after as Record<string, unknown>).isActive).toBe(false);
   });
@@ -203,15 +206,19 @@ describe('Audit trail (e2e)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data.every((row: { entityType: string }) => row.entityType === 'Driver')).toBe(
-        true,
-      );
+      expect(
+        res.body.data.every((row: { entityType: string }) => row.entityType === 'Driver'),
+      ).toBe(true);
       expect(res.body.meta.pagination.total).toBeGreaterThan(0);
     });
 
     it('is not open to the rest of the office', async () => {
-      expect((await api().get('/api/v1/audit-logs').set(as(tenant.tokens.logist))).status).toBe(403);
-      expect((await api().get('/api/v1/audit-logs').set(as(tenant.tokens.driver))).status).toBe(403);
+      expect((await api().get('/api/v1/audit-logs').set(as(tenant.tokens.logist))).status).toBe(
+        403,
+      );
+      expect((await api().get('/api/v1/audit-logs').set(as(tenant.tokens.driver))).status).toBe(
+        403,
+      );
     });
 
     it('never shows another company trail', async () => {

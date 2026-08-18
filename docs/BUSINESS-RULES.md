@@ -496,3 +496,62 @@ keshlanadi — to'lov holati ikki bosish orasida o'zgarmaydi. Ikki muhim nuqta:
 
 Mavjud bo'lmagan kompaniya `isActive: false` deb hisoblanadi — bu yerda
 «ochiq» yiqilish o'chirilgan tenantni eng imtiyozli qilib qo'yardi.
+
+## 10. Bir vaqtda bitta reys, va band resursni o'chirmaslik (TASK-3.10)
+
+### Ikki marta band qilish
+
+Allaqachon Buxoroga yarim yo'lda ketayotgan mashinada ikkinchi reysni
+boshlashga hech narsa to'sqinlik qilmasdi. Keyin **ikkala reys ham** bir xil
+GPS trekni, bir xil yoqilg'ini va bir xil kilometrni yig'ardi — ikkalasining
+foydasi ham hech bir hisobot ko'rsata olmaydigan tarzda noto'g'ri chiqardi.
+
+**Chegara `IN_PROGRESS`da, ataylab:**
+
+| Holat                                                 | Ruxsat                                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| bir necha reysga **biriktirilgan** (`ASSIGNED`)       | ✅ oddiy rejalashtirish — bugun ketayotgan mashinaga ertangi reys yoziladi |
+| bir vaqtda ikki reysda **ketayotgan** (`IN_PROGRESS`) | ❌ jismonan mumkin emas                                                    |
+
+Bu haydovchi, mashina **va tirkama** uchun amal qiladi — tirkama ham bir vaqtda
+ikki joyda bo'lolmaydi.
+
+Kafolatni **qisman unique indekslar** beradi:
+
+```sql
+CREATE UNIQUE INDEX trips_one_active_per_driver_key ON trips (company_id, driver_id)
+  WHERE status = 'IN_PROGRESS' AND driver_id IS NOT NULL;
+```
+
+Kodda yozilgan tekshiruvdan ikki parallel `start` **ikkalasi ham** o'tadi;
+indeks esa o'tkazmaydi. Koddagi tekshiruv shunchaki **to'sqinlik qilayotgan
+reysni nomlaydi** — «TR-2026-0041 reysida» foydali, «unique constraint
+violated» esa yo'q. Poygada yutqazgan so'rov `DRIVER_BUSY` / `VEHICLE_BUSY`
+(409) oladi, 500 emas.
+
+Prisma bu indekslarni **bilmaydi** (qisman indeks sxemada ifodalanmaydi),
+shuning uchun `P2002` xatosida indeks nomi emas, **ustun nomlari** keladi:
+`["company_id","driver_id"]`. Moslashtirish aynan shu to'plam bo'yicha —
+kelajakda o'sha jadvalga qo'shiladigan boshqa unique indeks «band» deb
+o'qilmasligi uchun.
+
+### Band resursni o'chirib bo'lmaydi
+
+Haydovchini yo'l o'rtasida `isActive = false` qilish mumkin edi. `listMine` va
+`requireDriverProfile` ikkalasi ham `isActive` bo'yicha filtrlaydi, ya'ni:
+
+- telefonda reys **yo'qoladi**;
+- har bir hodisa **rad etiladi**.
+
+Ya'ni o'sha reysning qolgan qismidagi cheklar va yetkazish isboti umuman
+yozilmaydi. Endi `ASSIGNED` yoki `IN_PROGRESS` reysi bor haydovchi/texnikani
+o'chirishga urinish `RESOURCE_IN_USE` (409) beradi, `details`da to'sqinlik
+qilayotgan reys raqami bilan.
+
+Rejalashtirilgan reys ham hisobga olinadi: haydovchisi o'chirilgan `ASSIGNED`
+reys — hech qachon boshlanmaydigan reys, va buni hech kim reys kuni ertalabgacha
+bilmasdi.
+
+Tugagan reyslar to'sqinlik qilmaydi — yuzta yakunlangan reysi bor haydovchi
+aynan nafaqaga chiqariladigan odam. O'chirish avvalgidek **yumshoq**: tarix
+joyida qoladi.

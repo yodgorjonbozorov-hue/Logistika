@@ -136,10 +136,16 @@
         "functions": 100
       },
       "./src/modules/events/events.service.ts": {
-        "statements": 96,
+        "statements": 97,
         "lines": 97,
         "branches": 100,
         "functions": 91
+      },
+      "./src/common/trip-availability.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 93,
+        "functions": 100
       },
       "./src/modules/ledger/ledger.service.ts": {
         "statements": 91,

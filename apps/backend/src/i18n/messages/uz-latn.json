@@ -13,6 +13,8 @@
   "RESOURCE_IN_USE": "Bu yozuv boshqa ma'lumotlarda ishlatilgan, o'chirib bo'lmaydi",
   "TRIP_INVALID_STATUS": "Reys holatini bu tartibda o'zgartirib bo'lmaydi",
   "ODOMETER_INVALID": "Yakuniy spidometr ko'rsatkichi ({end} km) boshlang'ichdan ({start} km) kichik bo'lishi mumkin emas",
+  "DRIVER_BUSY": "Haydovchining tugallanmagan reysi bor ({tripNumber}). Avval o'sha reysni yakunlang",
+  "VEHICLE_BUSY": "Texnikaning tugallanmagan reysi bor ({tripNumber}). Avval o'sha reysni yakunlang",
   "SMS_CODE_INVALID": "Tasdiqlash kodi noto'g'ri yoki muddati tugagan",
   "FILE_TYPE_NOT_ALLOWED": "Bu turdagi faylni yuklash mumkin emas",
   "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang",

@@ -327,6 +327,38 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     ).rejects.toMatchObject({ code: 'P2002' });
   });
 
+  it('refuses to start a trip on a truck that is already out (TASK-3.10)', async () => {
+    const { service, db } = setup();
+    db.trip!.findFirst!.mockResolvedValue({ id: 't9', tripNumber: 'TR-2026-0041' });
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [tripEvent(TripEventType.START)],
+    });
+
+    // Two trips on one truck collect the same fuel and the same kilometres,
+    // and the profit of both comes out wrong.
+    expect(result.rejected).toEqual([{ clientEventId: 'c-1', code: 'DRIVER_BUSY' }]);
+    expect(db.tripEvent!.create).not.toHaveBeenCalled();
+  });
+
+  it('reports a lost start race as a rejection, not a failed batch', async () => {
+    const { service, db } = setup();
+    // Both devices passed the check above; the partial unique index decides.
+    db.trip!.updateMany!.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['company_id', 'vehicle_id'] },
+      }),
+    );
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [tripEvent(TripEventType.START)],
+    });
+
+    expect(result.rejected).toEqual([{ clientEventId: 'c-1', code: 'VEHICLE_BUSY' }]);
+  });
+
   it('requires an active driver profile', async () => {
     const { service, db } = setup();
     db.driver!.findFirst!.mockResolvedValue(null);

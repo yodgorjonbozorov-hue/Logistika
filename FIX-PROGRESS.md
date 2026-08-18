@@ -539,14 +539,44 @@ Tasdiq kutilmoqda.
   `packages/shared`, i18n × 3, `test/subscription.e2e-spec.ts` (+11 e2e) ·
   unit 261 → 288, e2e 147 → 158. Uch yangi fayl 100% statement/line qamrov.
 
-**Keyingi qadam:** TASK-3.10 (deaktivatsiya guard'lari + ikki marta band qilish).
-Haydovchi yoki texnika `isActive = false` qilinsa, uning **faol reysi** bilan nima
-bo'lishi tekshirilmaydi — o'chirilgan haydovchi IN_PROGRESS reysda qolaveradi va
-mobil ilova ishlashda davom etadi. Shuningdek bitta texnika (yoki haydovchi) bir
-vaqtning o'zida bir nechta faol reysga biriktirilishi mumkin — hech kim tekshirmaydi.
-Kerak: deaktivatsiyada faol reys bo'lsa `RESOURCE_IN_USE`, `assign`da esa
-`DRIVER_BUSY`/`VEHICLE_BUSY` (yangi kodlar, i18n × 3). Test: faol reysli haydovchini
-o'chirib bo'lmaydi; band texnikani ikkinchi reysga biriktirib bo'lmaydi.
+- **TASK-3.10 (M-7, M-8)** · Ikki marta band qilish va band resursni o'chirish.
+  **(a)** Buxoroga yarim yo'lda ketayotgan mashinada ikkinchi reysni boshlashga hech narsa
+  to'sqinlik qilmasdi — keyin ikkala reys ham bir xil GPS trek, yoqilg'i va kilometrni
+  yig'ardi, ikkalasining foydasi ham hech bir hisobot ko'rsata olmaydigan tarzda noto'g'ri
+  chiqardi. Chegara `IN_PROGRESS`da, **ataylab**: bir necha reysga _biriktirilgan_ bo'lish
+  oddiy rejalashtirish (bugun ketayotgan mashinaga ertangi reys yoziladi), ikki reysda
+  _ketayotgan_ bo'lish esa jismonan mumkin emas. Haydovchi, mashina **va tirkama** uchun.
+  Kafolat — uchta **qisman unique indeks** (`WHERE status = 'IN_PROGRESS'`), chunki koddagi
+  tekshiruvdan ikki parallel `start` ikkalasi ham o'tadi. Koddagi tekshiruv esa
+  to'sqinlik qilayotgan reysni **nomlaydi** («TR-2026-0041 reysida» foydali, «unique
+  constraint violated» yo'q). Yutqazgan so'rov `DRIVER_BUSY`/`VEHICLE_BUSY` (409, yangi
+  kodlar, i18n × 3) oladi, 500 emas; haydovchi paketida esa `rejected` bo'ladi, butun paket
+  yiqilmaydi.
+  Diqqat: Prisma qisman indeksni **bilmaydi**, shuning uchun `P2002`da indeks nomi emas,
+  ustun nomlari keladi (`["company_id","driver_id"]`) — buni haqiqiy insert bilan
+  tekshirdim va moslashtirish aynan shu to'plam bo'yicha yozildi.
+  **(b)** Haydovchini yo'l o'rtasida o'chirish mumkin edi. `listMine` va
+  `requireDriverProfile` ikkalasi ham `isActive` bo'yicha filtrlaydi — telefonda reys
+  yo'qoladi va har bir hodisa rad etiladi, ya'ni reysning qolgan qismidagi cheklar va
+  yetkazish isboti umuman yozilmaydi. Endi `ASSIGNED` yoki `IN_PROGRESS` reysi bor
+  haydovchi/texnikani o'chirish `RESOURCE_IN_USE` (409) beradi, `details`da reys raqami
+  bilan. Rejalashtirilgan reys ham hisobga olinadi: haydovchisi o'chirilgan `ASSIGNED`
+  reys — hech qachon boshlanmaydigan reys. ·
+  migratsiya `20260818080000_one_trip_at_a_time`, `common/trip-availability.ts`
+  (+spec 11 test), `trip-transitions.ts` (`ACTIVE_TRIP_STATUSES`), `trips.service.ts`
+  (`transition` → `runTransition` ga ajratildi), `events.service.ts`,
+  `drivers.service.ts` (+spec 5), `vehicles.service.ts` (+spec 4), `packages/shared`,
+  i18n × 3, `test/availability.e2e-spec.ts` (+9 e2e), `test/audit.e2e-spec.ts` (fixture) ·
+  unit 288 → 310, e2e 158 → 167. `trip-availability.ts` 100%, `events.service` 97%.
+
+**Keyingi qadam:** TASK-3.11 (mijozni yumshoq o'chirish).
+`clients.remove()` — qattiq `DELETE`. FK tufayli reysi/kirimi bor mijozni o'chirib
+bo'lmaydi (`RESOURCE_IN_USE`), lekin hech qanday bog'lanishi yo'q mijoz **butunlay
+yo'qoladi**, audit'da esa faqat `before` qoladi. Boshqa hamma katalog (`Driver`,
+`Vehicle`) yumshoq o'chiriladi — mijoz ham shunday bo'lishi kerak: `Client.isActive`
+maydoni + `deactivate()`, ro'yxatda default faqat aktivlar, reysga biriktirishda
+o'chirilgan mijoz tanlab bo'lmaydi. Test: o'chirilgan mijoz ro'yxatda yo'q, lekin
+eski reyslari va ledger yozuvlari joyida.
 
 PHASE 3 qolgan bog'liqliklar:
 

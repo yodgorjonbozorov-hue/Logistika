@@ -7,6 +7,7 @@ import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
+import { ACTIVE_TRIP_STATUSES } from '../../common/trip-transitions';
 
 function toData<T extends UpdateDriverDto>(dto: T) {
   const { salaryValue, birthDate, licenseExpiry, hireDate, ...rest } = dto;
@@ -100,6 +101,7 @@ export class DriversService {
   /** Soft delete — drivers keep their trip history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Driver> {
     const before = await this.getById(actor, id);
+    await this.assertNotOnDuty(actor, id);
     try {
       return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
         const driver = await tx.driver.update({ where: { id }, data: { isActive: false } });
@@ -117,5 +119,30 @@ export class DriversService {
     } catch (error) {
       rethrowPrismaError(error);
     }
+  }
+
+  /**
+   * Refuses to retire something that is still out on a trip (TASK-3.10).
+   *
+   * A driver halfway to Bukhara stops being able to send anything at all:
+   * `listMine` and `requireDriverProfile` both filter on `isActive`, so the
+   * phone shows no trip and every event is refused. The receipts and the
+   * delivery proof for the rest of that run are simply never recorded.
+   *
+   * Planned trips count too: an ASSIGNED trip whose driver has been
+   * deactivated is a trip that can never start, and nothing would have said so
+   * until the morning it was due.
+   */
+  private async assertNotOnDuty(actor: CurrentUserPayload, id: string): Promise<void> {
+    const active = await this.prisma.forCompany(actor.companyId).trip.findFirst({
+      where: { driverId: id, status: { in: ACTIVE_TRIP_STATUSES } },
+      select: { id: true, tripNumber: true, status: true },
+    });
+    if (!active) return;
+    throw new AppException('RESOURCE_IN_USE', HttpStatus.CONFLICT, undefined, {
+      tripId: active.id,
+      tripNumber: active.tripNumber,
+      status: active.status,
+    });
   }
 }

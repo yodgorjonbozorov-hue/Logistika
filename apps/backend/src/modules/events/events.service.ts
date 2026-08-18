@@ -4,6 +4,7 @@ import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { isOdometerOrderValid, odometerDistanceKm } from '../../common/odometer';
 import { requireTenantActor } from '../../common/tenant-actor';
+import { busyIndexError, inProgressElsewhere } from '../../common/trip-availability';
 import { canTransition } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -123,6 +124,16 @@ export class EventsService {
         continue;
       }
 
+      // The truck cannot be on two trips at once. Named here so the driver is
+      // told which trip is in the way instead of getting a failed batch.
+      if (movesTrip && target === 'IN_PROGRESS') {
+        const busy = await inProgressElsewhere(db, trip);
+        if (busy) {
+          result.rejected.push({ clientEventId: event.clientEventId, code: busy.code });
+          continue;
+        }
+      }
+
       const photoUrls = await this.resolvePhotoKeys(actor, event);
       try {
         // Event row and status change land together, or neither lands.
@@ -200,6 +211,13 @@ export class EventsService {
         // send the app around the same retry forever.
         if (isDuplicateEventId(error)) {
           result.duplicates.push(event.clientEventId);
+          continue;
+        }
+        // Two devices starting the same driver's trips together: the partial
+        // unique index decides, and the loser is a rejection, not a 500.
+        const busy = busyIndexError(error);
+        if (busy) {
+          result.rejected.push({ clientEventId: event.clientEventId, code: busy.code });
           continue;
         }
         throw error;

@@ -7,6 +7,7 @@ import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
+import { ACTIVE_TRIP_STATUSES } from '../../common/trip-transitions';
 
 function toData<T extends UpdateVehicleDto>(dto: T) {
   const { insuranceExpiry, techInspectionExpiry, ...rest } = dto;
@@ -95,6 +96,7 @@ export class VehiclesService {
   /** Soft delete — vehicles keep their trip/fuel history. */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<Vehicle> {
     const before = await this.getById(actor, id);
+    await this.assertNotOnDuty(actor, id);
     try {
       return await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
         const vehicle = await tx.vehicle.update({ where: { id }, data: { isActive: false } });
@@ -112,5 +114,28 @@ export class VehiclesService {
     } catch (error) {
       rethrowPrismaError(error);
     }
+  }
+
+  /**
+   * Refuses to retire something that is still out on a trip (TASK-3.10).
+   *
+   * A truck that is out on a run is not something that can be retired today:
+   * the trip still has to collect its fuel, its kilometres and its costs.
+   *
+   * Planned trips count too: an ASSIGNED trip whose vehicle has been
+   * deactivated is a trip that can never start, and nothing would have said so
+   * until the morning it was due.
+   */
+  private async assertNotOnDuty(actor: CurrentUserPayload, id: string): Promise<void> {
+    const active = await this.prisma.forCompany(actor.companyId).trip.findFirst({
+      where: { vehicleId: id, status: { in: ACTIVE_TRIP_STATUSES } },
+      select: { id: true, tripNumber: true, status: true },
+    });
+    if (!active) return;
+    throw new AppException('RESOURCE_IN_USE', HttpStatus.CONFLICT, undefined, {
+      tripId: active.id,
+      tripNumber: active.tripNumber,
+      status: active.status,
+    });
   }
 }

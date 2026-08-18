@@ -4,6 +4,7 @@ import { UserRole, type CurrentUserPayload, type TenantActor } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { assertOdometerOrder, odometerDistanceKm } from '../../common/odometer';
 import { rethrowPrismaError } from '../../common/prisma-errors';
+import { assertNothingElseInProgress, busyIndexError } from '../../common/trip-availability';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { assertTenantRefs } from '../../common/tenant-refs';
 import { assertTripTransition, REASON_REQUIRED_STATUSES } from '../../common/trip-transitions';
@@ -252,32 +253,13 @@ export class TripsService {
       ]);
     }
 
-    const updated = await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
-      // The expected status is part of the WHERE clause, so of two parallel
-      // completes exactly one matches a row. Checking first and updating after
-      // let both through: finishedAt was overwritten, the distance
-      // recalculated, and the client invoiced twice.
-      const { count } = await tx.trip.updateMany({
-        where: { id: trip.id, status: trip.status },
-        data: {
-          ...data,
-          status,
-          statusReason: reason ?? trip.statusReason,
-          statusChangedAt: new Date(),
-          version: { increment: 1 },
-        },
-      });
-      if (count === 0) {
-        throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT, undefined, {
-          from: trip.status,
-          to: status,
-        });
-      }
+    if (status === 'IN_PROGRESS') {
+      // Named here so the logist reads "truck is on trip TR-2026-0041" rather
+      // than the unique-index error that would otherwise reach them.
+      await assertNothingElseInProgress(this.prisma.forCompany(tenant.companyId), trip);
+    }
 
-      const result = await tx.trip.findUniqueOrThrow({ where: { id: trip.id } });
-      await this.applyFinancialOutcome(tx, tenant, result, status);
-      return result;
-    });
+    const updated = await this.runTransition(tenant, trip, status, data, reason);
     this.audit.log({
       companyId: actor.companyId,
       userId: actor.userId,
@@ -336,6 +318,56 @@ export class TripsService {
   }
 
   /** Referenced vehicle/trailer/driver/client must exist within this tenant. */
+  /**
+   * The guarded write itself, separated so the availability check above reads
+   * as a precondition rather than as part of the transaction.
+   */
+  private async runTransition(
+    tenant: TenantActor,
+    trip: Trip,
+    status: TripStatus,
+    data: Prisma.TripUncheckedUpdateInput,
+    reason?: string,
+  ): Promise<Trip> {
+    try {
+      // `await` inside the try on purpose: without it the rejection escapes the
+      // catch below and the index error reaches the logist as a 500.
+      return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
+        // The expected status is part of the WHERE clause, so of two parallel
+        // completes exactly one matches a row. Checking first and updating after
+        // let both through: finishedAt was overwritten, the distance
+        // recalculated, and the client invoiced twice.
+        const { count } = await tx.trip.updateMany({
+          where: { id: trip.id, status: trip.status },
+          data: {
+            ...data,
+            status,
+            statusReason: reason ?? trip.statusReason,
+            statusChangedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+        if (count === 0) {
+          throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT, undefined, {
+            from: trip.status,
+            to: status,
+          });
+        }
+
+        const result = await tx.trip.findUniqueOrThrow({ where: { id: trip.id } });
+        await this.applyFinancialOutcome(tx, tenant, result, status);
+        return result;
+      });
+    } catch (error) {
+      // Two starts arriving together both passed the check above; the partial
+      // unique index is what actually decides, and its error has to arrive as
+      // a sentence rather than as a 500.
+      const busy = busyIndexError(error);
+      if (busy) throw busy;
+      throw error;
+    }
+  }
+
   private async assertRefsExist(
     actor: CurrentUserPayload,
     refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },

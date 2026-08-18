@@ -44,3 +44,10 @@ export function assertTripTransition(from: TripStatus, to: TripStatus, allowNoop
     throw new AppException('TRIP_INVALID_STATUS', HttpStatus.CONFLICT, undefined, { from, to });
   }
 }
+
+/**
+ * A trip that is planned or under way. Something referenced by one of these
+ * cannot be retired: an ASSIGNED trip whose driver was deactivated is a trip
+ * that can never start, and an IN_PROGRESS one loses the rest of its record.
+ */
+export const ACTIVE_TRIP_STATUSES: TripStatus[] = ['ASSIGNED', 'IN_PROGRESS'];
