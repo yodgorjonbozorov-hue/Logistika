@@ -487,13 +487,38 @@ Tasdiq kutilmoqda.
   Tekshirildi: atomik `increment` o'rniga read-then-write qo'yilsa, 10 parallel
   yaratish testi **qizil** bo'ladi (takroriy raqamlar).
 
-**Keyingi qadam:** TASK-3.8 (paket idempotency poygasi + `@@unique([companyId, clientEventId])`).
-`ingestBatch` avval `findMany` bilan mavjud `clientEventId`larni o'qiydi, keyin yozadi —
-ikki qurilma (yoki bitta qurilmaning ikki sync urinishi) bir vaqtda kelsa ikkalasi ham
-«yo'q» deb topadi va bir hodisa ikki marta yoziladi. Bazada `clientEventId` faqat
-indeks, **unique emas**. Unique cheklov + `P2002`ni `duplicates`ga aylantirish kerak.
-Test (majburiy): bir xil `clientEventId` bilan 2 parallel paket → bitta qator,
-ikkinchisi `duplicates` ro'yxatida.
+- **TASK-3.8 (H-6)** · Offline sinxronizatsiya idempotentligi. `ingestBatch` avval
+  `findMany` bilan mavjud `clientEventId`larni o'qib, keyin yozardi — ikki paket birga
+  kelsa (ilova navbatni tozalaydi, ayni paytda ulanish kuzatuvchisi ham ishga tushadi)
+  ikkalasi ham «yo'q» deb topib ikkalasi ham yozishga urinardi. Unique indeks ikkinchisini
+  to'xtatardi, lekin xatosini **hech kim ushlamasdi**: butun paket 500 bilan yiqilardi va
+  ilova aynan kerakli ishni qilib o'sha paketni cheksiz qayta yuborardi.
+  Endi dublikat — yozuvning o'zi rad etgan narsa: `P2002` (`client_event_id` bo'yicha) →
+  `duplicates`. Tekshiruv ataylab tor — boshqa unique buzilishi haqiqiy bug va ko'tariladi;
+  tarmoq uzilishi ham dublikat emas (uni shunday hisoblash telefonni server saqlamagan
+  hodisani o'chirishga majbur qilardi). `findMany` qoldi, lekin faqat arzon birinchi filtr.
+  Kalitning o'zida ikki xato bor edi: **`NULL` bo'lishi mumkin edi** (bo'lishi shart
+  bo'lmagan kalit hech narsani deduplikatsiya qilmaydi, PostgreSQL har `NULL`ni alohida
+  deb biladi — bunday qatorlar umuman himoyasiz edi; DTO uni har doim talab qilgan) va
+  **global unique edi** (bir tenant id'lari boshqasi nima saqlashini hal qilardi — boshqa
+  kompaniya id'sini bilgan haydovchi o'z hodisasini «allaqachon ko'rilgan» deb rad
+  ettirishi mumkin edi). Endi `@@unique([companyId, clientEventId])` + `NOT NULL`.
+  Migratsiya `NULL` kalitlarni generatsiya qilingan UUID bilan to'ldiradi (hech bir telefon
+  navbatiga mos kelmaydi — ular allaqachon qanday bo'lsa shunday qoladi). ·
+  migratsiya `20260818070000_event_idempotency_key`, `schema.prisma`, `events.service.ts`,
+  `prisma/seed.ts`, `test/query-validation.e2e-spec.ts`,
+  `test/event-idempotency.e2e-spec.ts` (+5 e2e, `Promise.all` bilan) ·
+  unit 256 → 261, e2e 142 → 147. `events.service` qamrovi 96% → 97% (branch 100%).
+  Tuzatishdan **oldin** yozilgan e2e 5 tadan 4 tasi qizil edi — ya'ni testlar aynan shu
+  xatoni ushlaydi.
+
+**Keyingi qadam:** TASK-3.9 (`SubscriptionGuard` — obuna muddati tekshiruvi).
+`Company.subscriptionUntil` va `isActive` maydonlari bor, lekin **hech qayerda
+tekshirilmaydi**: to'lamagan yoki o'chirilgan kompaniya foydalanuvchilari hamma
+endpoint'dan bemalol foydalanaveradi. Global guard kerak (JWT'dan keyin), o'qish
+uchun ogohlantirish, yozish uchun 402 `SUBSCRIPTION_EXPIRED` (yangi kod, i18n × 3);
+SUPERADMIN va `/auth/*` chetda qoladi. Test: muddati o'tgan kompaniya yozolmaydi,
+o'qiy oladi; `isActive = false` — umuman kira olmaydi.
 
 PHASE 3 qolgan bog'liqliklar:
 

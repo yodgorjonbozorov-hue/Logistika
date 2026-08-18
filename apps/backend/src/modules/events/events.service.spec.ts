@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { TripEventType } from 'shared';
 import type { AuditService } from '../audit/audit.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
@@ -244,6 +245,86 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
       events: [tripEvent(TripEventType.REFUEL), tripEvent(TripEventType.REST)],
     });
     expect(db.trip!.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('reports a lost insert race as a duplicate, not as a failed batch (TASK-3.8)', async () => {
+    const { service, db } = setup();
+    // Another batch stored this id between the findMany above and this insert.
+    db.tripEvent!.create!.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['company_id', 'client_event_id'] },
+      }),
+    );
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] });
+
+    // The unhandled error used to fail the whole batch, and the app — doing
+    // exactly what it should — resent it forever.
+    expect(result.duplicates).toEqual(['c-1']);
+    expect(result.accepted).toEqual([]);
+    expect(result.rejected).toEqual([]);
+  });
+
+  it('still surfaces a unique violation that is not the event id', async () => {
+    const { service, db } = setup();
+    db.tripEvent!.create!.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['some_other_column'] },
+      }),
+    );
+
+    // Swallowing this as "already sent" would hide a real bug behind a
+    // reassuring word.
+    await expect(
+      service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
+  it('recognises the duplicate whether the driver names one column or several', async () => {
+    // Prisma reports meta.target as a string on some engines and an array on
+    // others; a batch must not fail because of which one it got.
+    for (const target of ['trip_events_company_id_client_event_id_key', ['client_event_id']]) {
+      const { service, db } = setup();
+      db.tripEvent!.create!.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+          meta: { target },
+        }),
+      );
+
+      const result = await service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] });
+      expect(result.duplicates).toEqual(['c-1']);
+    }
+  });
+
+  it('never mistakes an ordinary failure for a duplicate', async () => {
+    const { service, db } = setup();
+    // A dropped connection is not "already sent"; reporting it as one would
+    // make the phone delete an event the server never stored.
+    db.tripEvent!.create!.mockRejectedValue(new Error('connection reset'));
+
+    await expect(service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] })).rejects.toThrow(
+      'connection reset',
+    );
+  });
+
+  it('rethrows a P2002 that carries no target at all', async () => {
+    const { service, db } = setup();
+    db.tripEvent!.create!.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+
+    await expect(
+      service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] }),
+    ).rejects.toMatchObject({ code: 'P2002' });
   });
 
   it('requires an active driver profile', async () => {

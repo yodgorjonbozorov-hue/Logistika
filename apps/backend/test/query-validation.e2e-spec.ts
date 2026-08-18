@@ -38,6 +38,7 @@ describe('Query validation (e2e)', () => {
         driverId: tenant.driver.id,
         eventType: 'START',
         eventTime: new Date(),
+        clientEventId: randomUUID(),
       },
     });
   });
@@ -83,6 +84,7 @@ describe('Query validation (e2e)', () => {
           driverId: colleague.id,
           eventType: 'REFUEL',
           eventTime: new Date(),
+          clientEventId: randomUUID(),
         },
       });
 

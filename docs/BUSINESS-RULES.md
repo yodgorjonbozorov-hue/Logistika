@@ -383,3 +383,62 @@ ettiradi**, allaqachon ishlatilgan raqam bilan to'qnashmaydi.
 `trip_counters` ham `tenant_isolation` RLS siyosatini oladi: hisoblagich
 kompaniya qancha reys qilishini aytadi — bu raqobatchi ko'rmoqchi bo'lgan aynan
 o'sha raqam.
+
+## 8. Offline sinxronizatsiya idempotentligi (TASK-3.8)
+
+### Muammo
+
+Har haydovchi hodisasi klient yaratgan UUID (`clientEventId`) bilan keladi —
+tunnelda tarmoqni yo'qotgan telefon xuddi shu paketni qayta yuborishi va
+hodisa **ikki marta yozilmasligi** uchun. Tekshiruv esa `findMany` → keyin
+`create` edi:
+
+```ts
+const existing = await db.tripEvent.findMany({ where: { clientEventId: { in: ids } } });
+// ← ikkita paket shu yerda ikkalasi ham «yo'q» deb topadi
+await tx.tripEvent.create({ … });
+```
+
+Ikki paket birga kelsa (ilova navbatni tozalaydi, ayni paytda ulanish
+kuzatuvchisi ham ishga tushadi) ikkalasi ham yozishga urinadi.
+
+Unique indeks ikkinchi yozuvni to'xtatardi, lekin uning xatosini **hech kim
+ushlamasdi** — butun paket 500 bilan yiqilardi. Ilova esa aynan kerakli ishni
+qilib, o'sha paketni cheksiz qayta yuborardi.
+
+### Qoida
+
+**Dublikat — bu yozuvning o'zi rad etgan narsa, oldindan o'qilgan emas.**
+`findMany` qoldi, lekin u faqat arzon birinchi filtr: oldingi paket saqlagan
+id'lar uchun ishni o'tkazib yuboradi. Kafolatni unique indeks beradi:
+
+| Natija                      | Ma'nosi                                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| yozildi                     | `accepted`                                                                                          |
+| `P2002` (`client_event_id`) | `duplicates` — poygada yutqazdi, hodisa allaqachon bor                                              |
+| boshqa har qanday xato      | ko'tariladi — «allaqachon yuborilgan» degan tinchlantiruvchi so'z ostida haqiqiy xatoni yashirmaydi |
+
+`P2002` tekshiruvi ataylab **tor**: faqat `client_event_id` bo'yicha. Boshqa
+unique buzilishi haqiqiy bug va ko'rinishda qolishi kerak. Tarmoq uzilishi ham
+dublikat emas — uni dublikat deb hisoblash telefonni server saqlamagan
+hodisani o'chirishga majbur qilardi.
+
+### Kalitning o'zi
+
+Ikki narsa noto'g'ri edi:
+
+- **`NULL` bo'lishi mumkin edi.** Bo'lishi shart bo'lmagan kalit hech narsani
+  deduplikatsiya qilmaydi, PostgreSQL esa har `NULL`ni alohida deb biladi —
+  ya'ni bunday qatorlar umuman himoyasiz edi. DTO uni har doim talab qilgan,
+  shuning uchun bu faqat API qabul qiladigan narsa bilan jadval ruxsat
+  beradigan narsa orasidagi bo'shliqni yopadi.
+- **Global unique edi.** Bir tenant'ning id'lari boshqasi nima saqlashi
+  mumkinligini hal qilardi: boshqa kompaniyaga tegishli id'ni bilib olgan
+  haydovchi o'z hodisasini «allaqachon ko'rilgan» deb rad ettirishi mumkin
+  edi. Endi `@@unique([companyId, clientEventId])` — har boshqa tenant kaliti
+  kabi.
+
+Migratsiya `20260818070000_event_idempotency_key`: `NULL` kalitlar generatsiya
+qilingan UUID bilan to'ldiriladi (hech bir telefon navbatiga mos kelmaydi,
+ya'ni ular allaqachon qanday bo'lsa shunday qoladi), kompaniyalar orasidagi
+takroriy kalitlar ham qayta yoziladi, keyin `NOT NULL` va yangi indeks.

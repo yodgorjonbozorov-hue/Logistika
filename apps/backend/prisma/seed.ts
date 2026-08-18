@@ -79,8 +79,18 @@ async function seedDemoTenant(): Promise<void> {
       });
 
   const staff = [
-    { email: 'owner@demo.uz', fullName: 'Alisher Karimov', role: UserRole.OWNER, phone: '+998901112233' },
-    { email: 'logist@demo.uz', fullName: 'Dilnoza Rahimova', role: UserRole.LOGIST, phone: '+998901112234' },
+    {
+      email: 'owner@demo.uz',
+      fullName: 'Alisher Karimov',
+      role: UserRole.OWNER,
+      phone: '+998901112233',
+    },
+    {
+      email: 'logist@demo.uz',
+      fullName: 'Dilnoza Rahimova',
+      role: UserRole.LOGIST,
+      phone: '+998901112234',
+    },
     {
       email: 'buxgalter@demo.uz',
       fullName: 'Sardor Tursunov',
@@ -368,11 +378,7 @@ async function upsertClient(companyId: string, data: { name: string } & Record<s
   return prisma.client.create({ data: { ...data, companyId } as never });
 }
 
-async function upsertTrip(
-  companyId: string,
-  tripNumber: string,
-  data: Record<string, unknown>,
-) {
+async function upsertTrip(companyId: string, tripNumber: string, data: Record<string, unknown>) {
   return prisma.trip.upsert({
     where: { companyId_tripNumber: { companyId, tripNumber } },
     update: data as never,
@@ -386,7 +392,9 @@ async function upsertEvent(
   data: Record<string, unknown>,
 ) {
   return prisma.tripEvent.upsert({
-    where: { clientEventId },
+    // The key is unique per company now, so the seed has to say which company
+    // it means — a bare id is no longer a unique row.
+    where: { companyId_clientEventId: { companyId, clientEventId } },
     update: data as never,
     create: { companyId, clientEventId, ...data } as never,
   });

@@ -438,8 +438,12 @@ model TripEvent {
   odometer      Int?
   comment       String?
   photoUrls     Json?         @map("photo_urls")
-  // Client-generated UUID for idempotent offline batch sync (TZ §3.1).
-  clientEventId String?       @unique @map("client_event_id")
+  /// Client-generated UUID for idempotent offline batch sync (TZ §3.1).
+  ///
+  /// Required, and unique **per company** rather than globally: an id one
+  /// tenant has used must never decide what another tenant is allowed to
+  /// store, and a nullable key cannot deduplicate anything.
+  clientEventId String        @map("client_event_id")
   isSynced      Boolean       @default(true) @map("is_synced")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
@@ -448,6 +452,7 @@ model TripEvent {
   trip    Trip    @relation(fields: [tripId], references: [id])
   driver  Driver? @relation(fields: [driverId], references: [id])
 
+  @@unique([companyId, clientEventId])
   @@index([companyId, tripId, eventTime])
   @@map("trip_events")
 }

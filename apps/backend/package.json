@@ -118,10 +118,10 @@
         "functions": 100
       },
       "./src/modules/events/events.service.ts": {
-        "statements": 95,
-        "lines": 96,
+        "statements": 96,
+        "lines": 97,
         "branches": 100,
-        "functions": 90
+        "functions": 91
       },
       "./src/modules/ledger/ledger.service.ts": {
         "statements": 91,

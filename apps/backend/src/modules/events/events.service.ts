@@ -32,6 +32,21 @@ const STATUS_BY_EVENT: Partial<Record<DriverEventDto['eventType'], TripStatus>> 
 /** Thrown inside the per-event transaction so the event and the status move together. */
 class TransitionConflict extends Error {}
 
+/**
+ * True when the insert lost the race for a client event id.
+ *
+ * Narrow on purpose: any other unique violation is a real bug and must keep
+ * surfacing rather than being quietly reported to the driver as "already sent".
+ */
+function isDuplicateEventId(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+    return false;
+  }
+  const target = (error.meta as { target?: string[] | string } | undefined)?.target;
+  const fields = Array.isArray(target) ? target : [target ?? ''];
+  return fields.some((field) => field.includes('client_event_id'));
+}
+
 @Injectable()
 export class EventsService {
   constructor(
@@ -61,6 +76,9 @@ export class EventsService {
 
     const result: BatchResult = { accepted: [], duplicates: [], rejected: [] };
 
+    // A cheap first pass, not the guarantee. It skips the work for ids already
+    // stored by an earlier batch; the unique index below is what actually
+    // decides, because two batches arriving together both read "not seen".
     const ids = dto.events.map((e) => e.clientEventId);
     const existing = await db.tripEvent.findMany({
       where: { clientEventId: { in: ids } },
@@ -174,6 +192,14 @@ export class EventsService {
             clientEventId: event.clientEventId,
             code: 'TRIP_INVALID_STATUS',
           });
+          continue;
+        }
+        // The other batch won the race and stored this id first. That is what
+        // a duplicate *is* — reporting it as one lets the phone mark the event
+        // sent, where the unhandled error used to fail the whole batch and
+        // send the app around the same retry forever.
+        if (isDuplicateEventId(error)) {
+          result.duplicates.push(event.clientEventId);
           continue;
         }
         throw error;
