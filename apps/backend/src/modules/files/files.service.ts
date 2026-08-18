@@ -15,6 +15,7 @@ import {
 import { requireTenantActor } from '../../common/tenant-actor';
 import { publicStorageEndpoint } from '../../config/env.validation';
 import { FileScanner } from './file-scanner';
+import { CronLockService } from '../../common/jobs/cron-lock.service';
 import { JobsService } from '../../common/jobs/jobs.service';
 import { QUEUES, type CompressImageJob } from '../../common/jobs/job-queues';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -62,6 +63,7 @@ export class FilesService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly scanner: FileScanner,
     private readonly jobs: JobsService,
+    private readonly cronLock: CronLockService,
     config: ConfigService,
   ) {
     // getOrThrow, not `?? ''`: an app that boots without storage credentials
@@ -313,6 +315,12 @@ export class FilesService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async purgeOrphanFiles(): Promise<void> {
+    // One instance, not all of them (TASK-4.4): two processes deleting the same
+    // objects means one of them gets NoSuchKey for every single file.
+    await this.cronLock.runExclusive('orphan-file-purge', () => this.runOrphanPurge());
+  }
+
+  private async runOrphanPurge(): Promise<void> {
     const cutoff = new Date(Date.now() - ORPHAN_GRACE_MS);
     try {
       const candidates = await this.prisma.storedFile.findMany({

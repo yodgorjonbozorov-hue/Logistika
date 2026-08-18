@@ -900,3 +900,45 @@ o'zida bajariladi. Bu qulaylik uchun emas: test «foto siqildimi?» degan savolg
 `docker compose up`siz ishlayotgan dasturchi PROCESSING'da abadiy qotib qolgan
 fotolar emas, ishlaydigan ilova olishi kerak. Handler kodi ikkala rejimda ham
 bir xil — farq faqat **qachon** ishlashida.
+
+---
+
+## 16. Cron'lar: bitta instansiya, va arxivning oxiri bor (TASK-4.4)
+
+### `@Cron` har jarayonda ishlaydi (A-2, M-8)
+
+`@Cron` ilovani ishlatayotgan **har bir** protsessda otiladi. Bitta serverda bu
+ko'rinmaydi — audit ham shuning uchun uni «xavf» deb belgilagan, «xato» deb
+emas. API ikkinchi instansiyaga kengaytirilgan zahoti kechasi:
+
+- GPS arxivlash **o'sha qatorlarni ikki marta** ko'chiradi;
+- token va idempotency tozalash bir-biri bilan poyga qiladi;
+- orphan fayl tozalash — ikkinchi protsess har fayl uchun `NoSuchKey` oladi.
+
+Yechim — Redis'dagi **oddiy `SET key token NX PX ttl`**. To'rtala cron ham shu
+orqali o'tadi: `gps-archive`, `refresh-token-purge`, `idempotency-purge`,
+`orphan-file-purge`.
+
+**Qulf ish tugagach ataylab bo'shatilmaydi.** Instansiyalarning soati kamdan-kam
+soniyagacha mos keladi; to'rt soniyadan keyin qaytarilgan qulf — bu keyingi
+instansiyaning cron'i to'rt soniyadan keyin ilib oladigan qulf. TTL bilan o'zi
+tugashi shu farqni qoplaydi, kunlik ishlarning esa keyingi safargacha butun kuni
+bor.
+
+**Redis'ga ulanib bo'lmasa — ish baribir bajariladi.** Bu qulf ortidagi har bir
+job idempotent (muddati o'tgan qatorni ikkinchi marta o'chirish hech narsani
+o'chirmaydi), ya'ni ikki marta ishlash bir oz protsessor, bir marta ham
+ishlamaslik esa **jimgina bajarilmagan tozalash** demakdir.
+
+### Arxivning oxiri (M-9)
+
+`gps_tracks_archive` kechasi to'ldirilardi va **hech qachon tozalanmasdi** —
+jadval faqat o'sardi. Endi o'sha job arxivlashdan keyin retention gorizontidan
+o'tgan qatorlarni ham o'chiradi.
+
+`GPS_ARCHIVE_RETENTION_DAYS` — standart **730 kun (~2 yil)**: soliq yoki
+sug'urta bahsi taxminan shuncha orqaga cho'ziladi. `0` — tozalash o'chirilgan
+(hammasini saqlaydigan deploy uchun; u holda eksport o'z zimmasida).
+
+`gps_tracks` ni oylik partitsiyaga o'tkazish rejasi — `docs/ARCHITECTURE.md`
+§6 da yozilgan va **ataylab keyinga qoldirilgan** (sabablari o'sha yerda).

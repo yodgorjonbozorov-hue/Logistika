@@ -106,10 +106,10 @@
         "functions": 92
       },
       "./src/modules/tracking/tracking.service.ts": {
-        "statements": 90,
-        "lines": 91,
-        "branches": 72,
-        "functions": 76
+        "statements": 94,
+        "lines": 96,
+        "branches": 75,
+        "functions": 85
       },
       "./src/common/phone.ts": {
         "statements": 100,
@@ -208,10 +208,16 @@
         "functions": 42
       },
       "./src/modules/files/files.service.ts": {
-        "statements": 76,
-        "lines": 80,
-        "branches": 56,
-        "functions": 66
+        "statements": 95,
+        "lines": 97,
+        "branches": 67,
+        "functions": 100
+      },
+      "./src/common/jobs/cron-lock.service.ts": {
+        "statements": 77,
+        "lines": 79,
+        "branches": 60,
+        "functions": 42
       }
     }
   }

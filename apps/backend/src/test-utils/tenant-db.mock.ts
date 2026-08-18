@@ -47,3 +47,34 @@ export const ACTOR = {
   companyId: 'company-a',
   role: 'OWNER',
 } as import('shared').CurrentUserPayload;
+
+/**
+ * A cron lock that always lets the work through, for tests about what a job
+ * *does*. A test about the lock itself passes `{ acquired: false }`.
+ */
+export function createCronLockMock(options: { acquired?: boolean } = {}) {
+  const acquired = options.acquired ?? true;
+  const runExclusive = jest.fn(async (_name: string, work: () => Promise<void>) => {
+    if (!acquired) return false;
+    await work();
+    return true;
+  });
+  return {
+    cronLock: {
+      runExclusive,
+    } as unknown as import('../common/jobs/cron-lock.service').CronLockService,
+    runExclusive,
+  };
+}
+
+/** A ConfigService double backed by a plain object. */
+export function createConfigMock(values: Record<string, string> = {}) {
+  return {
+    get: (key: string) => values[key],
+    getOrThrow: (key: string) => {
+      const value = values[key];
+      if (value === undefined) throw new Error(`Missing configuration: ${key}`);
+      return value;
+    },
+  } as unknown as import('@nestjs/config').ConfigService;
+}

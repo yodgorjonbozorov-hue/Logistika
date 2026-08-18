@@ -1,5 +1,15 @@
-import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
+import {
+  ACTOR,
+  createConfigMock,
+  createCronLockMock,
+  createTenantDbMock,
+} from '../../test-utils/tenant-db.mock';
 import type { EventsService } from '../events/events.service';
+
+// Crons run behind a distributed lock (TASK-4.4); these tests are about what
+// the jobs do, so the lock always lets them through.
+const { cronLock } = createCronLockMock();
+const config = createConfigMock();
 import {
   MAX_HISTORY_DAYS,
   MAX_HISTORY_POINTS,
@@ -18,7 +28,7 @@ describe('TrackingService.ingestPositions', () => {
     const eventsService = {
       requireDriverProfile: jest.fn().mockResolvedValue({ id: 'd1' }),
     } as unknown as EventsService;
-    const service = new TrackingService(prisma, eventsService);
+    const service = new TrackingService(prisma, eventsService, cronLock, config);
     return { service, db };
   }
 
@@ -69,7 +79,7 @@ describe('TrackingService.ingestPositions — last known position (TASK-4.1)', (
     const eventsService = {
       requireDriverProfile: jest.fn().mockResolvedValue({ id: 'd1' }),
     } as unknown as EventsService;
-    return { service: new TrackingService(prisma, eventsService), db };
+    return { service: new TrackingService(prisma, eventsService, cronLock, config), db };
   }
 
   const at = (tripId: string, recordedAt: string, lat = 40.1) => ({
@@ -156,7 +166,7 @@ describe('TrackingService.live (TASK-4.1)', () => {
     db.trip!.findMany!.mockResolvedValue([]);
     db.tripEvent!.findMany!.mockResolvedValue([]);
     const eventsService = {} as unknown as EventsService;
-    return { service: new TrackingService(prisma, eventsService), db };
+    return { service: new TrackingService(prisma, eventsService, cronLock, config), db };
   }
 
   it('never touches the GPS table', async () => {
@@ -197,7 +207,10 @@ describe('TrackingService.history (TASK-4.1)', () => {
   function setup(rows: HistoryPoint[]) {
     const { prisma, db } = createTenantDbMock(['gpsTrack']);
     db.gpsTrack!.findMany!.mockResolvedValue(rows);
-    return { service: new TrackingService(prisma, {} as unknown as EventsService), db };
+    return {
+      service: new TrackingService(prisma, {} as unknown as EventsService, cronLock, config),
+      db,
+    };
   }
 
   const day = (n: number) => new Date(2026, 0, 1 + n);
@@ -305,5 +318,82 @@ describe('downsample', () => {
     const points = Array.from({ length: 500 }, (_, i) => point(i));
     const kept = downsample(points, 50);
     expect(kept.map((p) => p.lat)).toEqual([...kept.map((p) => p.lat)].sort((a, b) => a - b));
+  });
+});
+
+describe('TrackingService.archiveOldTracks (TASK-4.4)', () => {
+  function setup(options: { acquired?: boolean; retentionDays?: string } = {}) {
+    const { prisma } = createTenantDbMock([]);
+    const executeRaw = jest.fn().mockResolvedValue(0);
+    (prisma as unknown as { $executeRaw: jest.Mock }).$executeRaw = executeRaw;
+    const lock = createCronLockMock({ acquired: options.acquired });
+    const service = new TrackingService(
+      prisma,
+      {} as unknown as EventsService,
+      lock.cronLock,
+      createConfigMock(
+        options.retentionDays === undefined
+          ? {}
+          : { GPS_ARCHIVE_RETENTION_DAYS: options.retentionDays },
+      ),
+    );
+    return { service, executeRaw, lock };
+  }
+
+  it('runs behind the distributed lock', async () => {
+    const { service, lock } = setup();
+
+    await service.archiveOldTracks();
+
+    // @Cron fires in every process; on two API boxes this used to move the
+    // same rows twice a night.
+    expect(lock.runExclusive).toHaveBeenCalledWith('gps-archive', expect.any(Function));
+  });
+
+  it('does nothing on an instance that lost the claim', async () => {
+    const { service, executeRaw } = setup({ acquired: false });
+
+    await service.archiveOldTracks();
+
+    expect(executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('archives, then sweeps cold storage past the retention horizon (M-9)', async () => {
+    const { service, executeRaw } = setup();
+
+    await service.archiveOldTracks();
+
+    // gps_tracks_archive was written to nightly and never cleaned: the table
+    // only ever grew.
+    expect(executeRaw).toHaveBeenCalledTimes(2);
+    const sweep = executeRaw.mock.calls[1]![0] as string[];
+    expect(sweep.join('?')).toContain('DELETE FROM gps_tracks_archive');
+  });
+
+  it('keeps everything when retention is switched off', async () => {
+    const { service, executeRaw } = setup({ retentionDays: '0' });
+
+    await service.archiveOldTracks();
+
+    // A deployment that keeps a permanent record sets 0 and does its own
+    // exports; the archival half still runs.
+    expect(executeRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the configured horizon', async () => {
+    const { service, executeRaw } = setup({ retentionDays: '365' });
+
+    await service.archiveOldTracks();
+
+    expect(executeRaw.mock.calls[1]![1]).toBe(365);
+  });
+
+  it('does not let a failing archive take the process down', async () => {
+    const { service, executeRaw } = setup();
+    executeRaw.mockRejectedValueOnce(new Error('deadlock detected'));
+
+    // Housekeeping that crashes the API at 3am is worse than housekeeping that
+    // is skipped and logged.
+    await expect(service.archiveOldTracks()).resolves.toBeUndefined();
   });
 });

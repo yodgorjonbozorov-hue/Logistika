@@ -54,6 +54,16 @@ export class EnvironmentVariables {
   @IsBooleanString()
   JOBS_INLINE = 'false';
 
+  /**
+   * How long a GPS point survives in cold storage before it is dropped (M-9).
+   * `0` switches the sweep off for a deployment that keeps everything.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  GPS_ARCHIVE_RETENTION_DAYS = 730;
+
   @IsString()
   @MinLength(16)
   JWT_ACCESS_SECRET!: string;

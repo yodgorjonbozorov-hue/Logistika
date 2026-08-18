@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { CronLockService } from '../jobs/cron-lock.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** Keys are only useful while a client might still retry. */
@@ -9,10 +10,18 @@ const KEY_TTL_MS = 24 * 60 * 60 * 1000;
 export class IdempotencyCleanup {
   private readonly logger = new Logger(IdempotencyCleanup.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cronLock: CronLockService,
+  ) {}
 
+  /** Behind the distributed lock: one instance, not every one (TASK-4.4). */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async purgeExpiredKeys(): Promise<void> {
+    await this.cronLock.runExclusive('idempotency-purge', () => this.runPurge());
+  }
+
+  private async runPurge(): Promise<void> {
     try {
       const { count } = await this.prisma.idempotencyKey.deleteMany({
         where: { createdAt: { lt: new Date(Date.now() - KEY_TTL_MS) } },

@@ -279,3 +279,54 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 | pnpm workspaces + `packages/shared`                                                       | API kontrakt tiplari bir manbadan; backend va web hech qachon ajralib ketmaydi.                  |
 | i18n: uz-latn (default), uz-cyrl, ru; backend `error.code` → klient tarjima qiladi        | TZ §3.1 (3 til); kodga qattiq yozilgan matn taqiqlanadi.                                         |
 | Qorong'i rejim — web va mobilda boshidan                                                  | TZ §11 «qorong'i rejim majburiy — haydovchilar tunda ishlaydi».                                  |
+
+---
+
+## 6. Rejalashtirilgan, lekin hali bajarilmagan: `gps_tracks` partitsiyalash
+
+**Holat: rejalashtirilgan, ataylab keyinga qoldirilgan (TASK-4.4, M-9).**
+
+### Muammo
+
+`gps_tracks` — tizimning eng tez o'sadigan jadvali. 40 mashina × 30 soniyalik
+interval × yiliga 300 ish kuni ≈ **35 million qator/yil**. TASK-4.1 dan keyin
+jonli xarita bu jadvalga umuman tegmaydi va tarix indeks bo'yicha o'qiladi,
+ya'ni **o'qish tezligi hozircha muammo emas**. Muammo boshqa joyda:
+
+- 90 kunlik arxivlash `DELETE ... RETURNING` bilan ishlaydi — bu **millionlab
+  o'lik qator** qoldiradi, `VACUUM` esa ularni bo'shatadi, lekin diskni
+  operatsion tizimga qaytarmaydi;
+- retention sweep (`DELETE FROM gps_tracks_archive`) ham xuddi shunday.
+
+Partitsiya bularning ikkalasini ham `DROP TABLE` ga aylantiradi: bir oylik
+partitsiyani tashlash — bu bir necha millisekund va **darhol bo'shaydigan disk**.
+
+### Reja (bajarilganda)
+
+1. `gps_tracks` `recorded_at` bo'yicha **native RANGE partitsiya**, oylik
+   partitsiyalar (`gps_tracks_2026_08` ...);
+2. birlamchi kalit `(id, recorded_at)` bo'lishi shart — Postgres partitsiya
+   kalitini har bir unique constraint'ga kiritishni talab qiladi. Bu
+   **TASK-4.5 dagi `@@unique([company_id, vehicle_id, recorded_at])` bilan mos**,
+   chunki unda `recorded_at` allaqachon bor;
+3. keyingi 12 oy uchun partitsiyalarni oldindan yaratadigan va eskisini
+   `DETACH` + `DROP` qiladigan oylik cron (TASK-4.4 dagi lock ostida);
+4. mavjud ma'lumotni ko'chirish: yangi partitsiyalangan jadval → `INSERT SELECT`
+   partiyalar bilan → `ALTER TABLE ... RENAME` almashtirish.
+
+### Nega hozir emas
+
+- **Prisma partitsiyalangan jadvalni ifodalay olmaydi** — u faqat migratsiya
+  SQL'ida yashaydi, ya'ni har `migrate dev` uni «yo'q» deb hisoblab
+  o'zgartirishga urinadi. Bu N-12 da endigina topilgan tuzoqning aynan o'zi,
+  faqat indeks emas, butun jadval miqyosida;
+- almashtirish **downtime yoki ehtiyotkor ikki bosqichli deploy** talab qiladi,
+  bunday o'zgarishni esa **haqiqiy ma'lumot hajmisiz** sinab bo'lmaydi — hozir
+  pilot mijoz yo'q, ya'ni o'lchov ham yo'q;
+- foyda bugun **nazariy**: 35M qatorda ham indeksli o'qish tez, disk esa
+  arzon. Partitsiya kerak bo'ladigan payt — bu birinchi mijozda 2–3 yillik
+  ma'lumot yig'ilgan va `VACUUM` ulgurmay qolgan payt.
+
+**Shart:** birinchi pilot mijozda `gps_tracks` **10 million qatordan** oshsa yoki
+kunlik `VACUUM` oynasiga sig'masa — shu reja bo'yicha bajariladi. Shungacha
+90 kunlik arxivlash + retention sweep yetarli, va ular endi ishlaydi.

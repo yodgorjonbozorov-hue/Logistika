@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { CronLockService } from './cron-lock.service';
 import { JobsService } from './jobs.service';
 
 /**
@@ -8,7 +9,7 @@ import { JobsService } from './jobs.service';
  */
 @Global()
 @Module({
-  providers: [JobsService],
-  exports: [JobsService],
+  providers: [JobsService, CronLockService],
+  exports: [JobsService, CronLockService],
 })
 export class JobsModule {}

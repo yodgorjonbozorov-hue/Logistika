@@ -8,6 +8,7 @@ import type { AuditService } from '../audit/audit.service';
 import type { UsersService } from '../users/users.service';
 import { AuthService, ttlToSeconds } from './auth.service';
 import type { TokenVersionService } from '../../common/auth/token-version.service';
+import { createCronLockMock } from '../../test-utils/tenant-db.mock';
 
 const ENV: Record<string, string> = {
   JWT_ACCESS_SECRET: 'test-access-secret-1234567890',
@@ -91,6 +92,7 @@ describe('AuthService', () => {
         invalidate: jest.fn(),
         clear: jest.fn(),
       } as unknown as TokenVersionService,
+      createCronLockMock().cronLock,
     );
   });
 

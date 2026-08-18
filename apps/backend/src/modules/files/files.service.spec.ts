@@ -1,10 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
-import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
+import { ACTOR, createCronLockMock, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { FilesService } from './files.service';
 
 const putObject = jest.fn();
 const presignedGetObject = jest.fn();
 const bucketExists = jest.fn().mockResolvedValue(true);
+const removeObjects = jest.fn().mockResolvedValue(undefined);
 /** The compression job reads the stored original back before shrinking it. */
 const getObject = jest.fn(async () =>
   (async function* () {
@@ -18,6 +19,7 @@ jest.mock('minio', () => ({
     presignedGetObject,
     bucketExists,
     getObject,
+    removeObjects,
     makeBucket: jest.fn(),
   })),
 }));
@@ -84,14 +86,18 @@ describe('FilesService', () => {
     };
   }
 
-  function setup(scan: { clean: boolean; threat?: string } = { clean: true }) {
+  function setup(
+    scan: { clean: boolean; threat?: string } = { clean: true },
+    lockOptions: { acquired?: boolean } = {},
+  ) {
     const { prisma, db } = createTenantDbMock(['storedFile']);
     db.storedFile!.aggregate = jest.fn().mockResolvedValue({ _sum: { size: 0 } });
     const scanner = { scan: jest.fn().mockResolvedValue(scan) };
     const jobs = fakeJobs();
-    const service = new FilesService(prisma, scanner, jobs.service as never, config);
+    const lock = createCronLockMock(lockOptions);
+    const service = new FilesService(prisma, scanner, jobs.service as never, lock.cronLock, config);
     void service.onModuleInit();
-    return { service, db, scanner, jobs };
+    return { service, db, scanner, jobs, lock };
   }
 
   beforeEach(() => jest.clearAllMocks());
@@ -285,5 +291,94 @@ describe('FilesService', () => {
       code: 'NOT_FOUND',
     });
     expect(presignedGetObject).not.toHaveBeenCalled();
+  });
+});
+
+describe('FilesService.purgeOrphanFiles (M-17, TASK-4.4)', () => {
+  const OLD = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+  function setup(lockOptions: { acquired?: boolean } = {}) {
+    const { prisma, db } = createTenantDbMock(['storedFile']);
+    const queryRaw = jest.fn().mockResolvedValue([]);
+    (prisma as unknown as { $queryRaw: jest.Mock }).$queryRaw = queryRaw;
+    (prisma as unknown as { storedFile: unknown }).storedFile = db.storedFile;
+    const lock = createCronLockMock(lockOptions);
+    const service = new FilesService(
+      prisma,
+      { scan: jest.fn() } as never,
+      { register: jest.fn(), enqueue: jest.fn() } as never,
+      lock.cronLock,
+      config,
+    );
+    return { service, db, queryRaw, lock };
+  }
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('runs behind the distributed lock', async () => {
+    const { service, lock } = setup();
+
+    await service.purgeOrphanFiles();
+
+    // Two processes deleting the same objects means one of them gets
+    // NoSuchKey for every single file.
+    expect(lock.runExclusive).toHaveBeenCalledWith('orphan-file-purge', expect.any(Function));
+  });
+
+  it('does nothing on an instance that lost the claim', async () => {
+    const { service, db } = setup({ acquired: false });
+
+    await service.purgeOrphanFiles();
+
+    expect(db.storedFile!.findMany).not.toHaveBeenCalled();
+  });
+
+  it('removes an upload nothing points at, from the bucket and the table', async () => {
+    const { service, db } = setup();
+    db.storedFile!.findMany!.mockResolvedValue([
+      { id: 'f1', key: 'company-a/one.jpg', companyId: 'company-a' },
+    ]);
+
+    await service.purgeOrphanFiles();
+
+    expect(removeObjects).toHaveBeenCalledWith('test-bucket', ['company-a/one.jpg']);
+    expect(db.storedFile!.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['f1'] } } });
+  });
+
+  it('keeps a file a trip event still references', async () => {
+    const { service, db, queryRaw } = setup();
+    db.storedFile!.findMany!.mockResolvedValue([
+      { id: 'f1', key: 'company-a/one.jpg', companyId: 'company-a' },
+    ]);
+    queryRaw.mockResolvedValue([{ photo_file_ids: ['f1'] }]);
+
+    await service.purgeOrphanFiles();
+
+    expect(removeObjects).not.toHaveBeenCalled();
+    expect(db.storedFile!.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('only considers uploads past the grace period', async () => {
+    const { service, db } = setup();
+
+    await service.purgeOrphanFiles();
+
+    // Uploads land before the event that references them; a driver filling in
+    // a form must not have their photo swept out from under them.
+    const where = db.storedFile!.findMany!.mock.calls[0][0].where as {
+      createdAt: { lt: Date };
+    };
+    expect(where.createdAt.lt.getTime()).toBeLessThanOrEqual(OLD.getTime() + 48 * 3600_000);
+    expect(where.createdAt.lt.getTime()).toBeGreaterThan(OLD.getTime());
+  });
+
+  it('does not take the process down when storage is unreachable', async () => {
+    const { service, db } = setup();
+    db.storedFile!.findMany!.mockResolvedValue([{ id: 'f1', key: 'k', companyId: 'company-a' }]);
+    removeObjects.mockRejectedValueOnce(new Error('connection reset'));
+
+    // Housekeeping that crashes the API at 2am is worse than housekeeping that
+    // is skipped and logged.
+    await expect(service.purgeOrphanFiles()).resolves.toBeUndefined();
   });
 });

@@ -11,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { UsersService } from '../users/users.service';
 import { TokenVersionService } from '../../common/auth/token-version.service';
+import { CronLockService } from '../../common/jobs/cron-lock.service';
 
 interface RefreshTokenPayload {
   sub: string;
@@ -40,6 +41,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
     private readonly tokenVersions: TokenVersionService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   async login(identifier: string, password: string): Promise<AuthTokens> {
@@ -138,12 +140,16 @@ export class AuthService {
   }
 
   /**
-   * Expired rows serve no purpose and the table only grows. Daily is often
-   * enough; TASK-4.4 moves every cron onto a distributed lock so this does not
-   * run once per instance.
+   * Expired rows serve no purpose and the table only grows. Behind the
+   * distributed lock (TASK-4.4), so a second API instance does not run the
+   * same delete at the same minute.
    */
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async purgeExpiredRefreshTokens(): Promise<void> {
+    await this.cronLock.runExclusive('refresh-token-purge', () => this.runPurge());
+  }
+
+  private async runPurge(): Promise<void> {
     try {
       const { count } = await this.prisma.refreshToken.deleteMany({
         where: { expiresAt: { lt: new Date() } },

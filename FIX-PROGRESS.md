@@ -755,10 +755,36 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   migratsiya `20260818190449_jobs_sms_and_file_status`,
   `test/jobs.e2e-spec.ts` (+7 e2e) · unit 428 → 450, e2e 214 → 221.
 
+- **TASK-4.4 (A-2, M-8, M-9)** · Cron'lar uchun distributed lock va GPS retention.
+  `@Cron` ilovani ishlatayotgan **har bir** protsessda otiladi — bitta serverda
+  ko'rinmaydi, ikkinchisi qo'shilgan zahoti kechasi arxivlash o'sha qatorlarni
+  ikki marta ko'chiradi, orphan tozalash esa har fayl uchun `NoSuchKey` oladi.
+  `CronLockService`: Redis'da `SET key token NX PX ttl`. To'rtala cron shu orqali
+  o'tadi (`gps-archive`, `refresh-token-purge`, `idempotency-purge`,
+  `orphan-file-purge`). **Qulf ish tugagach ataylab bo'shatilmaydi** — soatlari
+  bir necha soniyaga farq qiladigan instansiyalarda qaytarilgan qulf darhol
+  qayta ilinadi; TTL bilan o'zi tugashi shu farqni qoplaydi. Redis yo'q bo'lsa
+  ish **baribir bajariladi**: har bir job idempotent, ya'ni ikki marta ishlash
+  arzon, umuman ishlamaslik esa jimgina bajarilmagan tozalash.
+  **M-9**: `gps_tracks_archive` kechasi to'ldirilib hech qachon tozalanmasdi —
+  endi o'sha job retention gorizontidan o'tganini o'chiradi,
+  `GPS_ARCHIVE_RETENTION_DAYS` (standart 730 kun, `0` — o'chirilgan).
+  Partitsiyalash rejasi `docs/ARCHITECTURE.md` §6 ga yozildi va **asoslangan
+  holda keyinga qoldirildi**: Prisma partitsiyalangan jadvalni ifodalay olmaydi
+  (N-12 tuzog'ining jadval miqyosidagi nusxasi), almashtirish downtime talab
+  qiladi va uni **haqiqiy ma'lumot hajmisiz** sinab bo'lmaydi. Shart: birinchi
+  pilotda `gps_tracks` 10M qatordan oshsa. Yo'l-yo'lakay orphan fayl tozalash
+  (M-17) **umuman testsiz** ekani ma'lum bo'ldi — 6 ta test qo'shildi. ·
+  `common/jobs/cron-lock.service.ts` (yangi, +8 test), `tracking.service.ts`
+  (+6 test), `files.service.ts` (+6 test), `auth.service.ts`,
+  `idempotency.cleanup.ts`, `env.validation.ts`, `.env.example`,
+  `docs/ARCHITECTURE.md` §6, `test/cron-lock.e2e-spec.ts` (+5 e2e) ·
+  unit 450 → 470, e2e 221 → 226.
+
 **PHASE 3 tugadi (12/12).**
 
-**Keyingi qadam:** TASK-4.4 — cron'lar uchun distributed lock (A-2, M-8) va GPS
-arxiv retention (M-9). `gps-archive` navbati TASK-4.3 da tayyorlab qo'yilgan.
+**Keyingi qadam:** TASK-4.5 — GPS nuqtalarida idempotency (M-7). Telefon
+so'rovdan keyin o'lsa nuqtalar takrorlanadi; `GpsTrack`da unique constraint yo'q.
 
 PHASE 3 qolgan bog'liqliklar:
 

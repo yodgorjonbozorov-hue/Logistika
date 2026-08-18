@@ -1,6 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AppException } from '../../common/exceptions/app.exception';
 import { Cron } from '@nestjs/schedule';
+import { CronLockService } from '../../common/jobs/cron-lock.service';
 import type { TripEventType } from '@prisma/client';
 import { LiveStatus, type CurrentUserPayload } from 'shared';
 import { distanceToSegmentKm } from '../../common/geo';
@@ -9,6 +11,16 @@ import { EventsService } from '../events/events.service';
 import { PositionBatchDto } from './dto/position.dto';
 
 const GPS_RETENTION_DAYS = 90;
+/**
+ * How long cold storage keeps a point before it is dropped for good (M-9).
+ *
+ * `gps_tracks_archive` was written to nightly and never read from or cleaned:
+ * the table only ever grew. Two years is the default because that is roughly
+ * how far back a tax or insurance dispute reaches; a company that needs longer
+ * raises GPS_ARCHIVE_RETENTION_DAYS, and one that needs a permanent record
+ * exports to cold files rather than paying for hot disk for ever.
+ */
+const DEFAULT_ARCHIVE_RETENTION_DAYS = 730;
 
 /**
  * The widest history window a single request may ask for.
@@ -108,6 +120,8 @@ export class TrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventsService: EventsService,
+    private readonly cronLock: CronLockService,
+    private readonly config: ConfigService,
   ) {}
 
   async ingestPositions(
@@ -305,9 +319,19 @@ export class TrackingService {
     };
   }
 
-  /** TZ §5 note: gps_tracks grows fast — nightly move of >90-day rows to cold storage. */
+  /**
+   * TZ §5 note: gps_tracks grows fast — nightly move of >90-day rows to cold
+   * storage, then a sweep of cold rows past the retention horizon (M-9).
+   *
+   * Guarded by a distributed lock (TASK-4.4): `@Cron` fires in every process,
+   * so on two API instances this moved the same rows twice a night.
+   */
   @Cron('0 3 * * *')
   async archiveOldTracks(): Promise<void> {
+    await this.cronLock.runExclusive('gps-archive', () => this.runArchive());
+  }
+
+  private async runArchive(): Promise<void> {
     try {
       const moved = await this.prisma.$executeRaw`
         WITH moved AS (
@@ -322,10 +346,31 @@ export class TrackingService {
       `;
       if (moved > 0)
         this.logger.log(`Archived ${moved} GPS points older than ${GPS_RETENTION_DAYS}d`);
+
+      const purged = await this.purgeArchive();
+      if (purged > 0) this.logger.log(`Purged ${purged} archived GPS points past retention`);
     } catch (error) {
       this.logger.error(
         `GPS archive job failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  /** Drops cold rows older than the retention horizon (M-9). */
+  private async purgeArchive(): Promise<number> {
+    const days = this.archiveRetentionDays();
+    if (days <= 0) return 0;
+    return this.prisma.$executeRaw`
+      DELETE FROM gps_tracks_archive
+      WHERE recorded_at < now() - make_interval(days => ${days})
+    `;
+  }
+
+  /** `0` switches the sweep off, for a deployment that keeps everything. */
+  private archiveRetentionDays(): number {
+    const configured = Number(this.config.get<string>('GPS_ARCHIVE_RETENTION_DAYS'));
+    return Number.isFinite(configured) && configured >= 0
+      ? configured
+      : DEFAULT_ARCHIVE_RETENTION_DAYS;
   }
 }
