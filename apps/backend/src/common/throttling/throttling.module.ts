@@ -49,7 +49,12 @@ const userOf = (req: Request): string =>
         storage: new ThrottlerStorageRedisService(config.getOrThrow<string>('REDIS_URL')),
         throttlers: [
           // A wide default: endpoints that need something tighter declare it.
-          { name: THROTTLERS.ip, ttl: seconds(60), limit: 120, getTracker: (req) => ipOf(req as Request) },
+          {
+            name: THROTTLERS.ip,
+            ttl: seconds(60),
+            limit: 120,
+            getTracker: (req) => ipOf(req as Request),
+          },
           {
             name: THROTTLERS.identifier,
             ttl: seconds(3600),

@@ -5,8 +5,8 @@ PITR yo'q — **RPO = ∞, RTO = ∞** (ya'ni baza o'chsa hammasi yo'qoladi).
 
 ## Maqsadlar
 
-| Ko'rsatkich                       | Maqsad     | Hozirgi holat (TASK-2.8 dan keyin) |
-| --------------------------------- | ---------- | ---------------------------------- |
+| Ko'rsatkich                         | Maqsad    | Hozirgi holat (TASK-2.8 dan keyin) |
+| ----------------------------------- | --------- | ---------------------------------- |
 | **RPO** (qancha ma'lumot yo'qoladi) | ≤ 24 soat | 24 soat — kunlik `pg_dump`         |
 | **RTO** (qancha vaqtda tiklanadi)   | ≤ 2 soat  | ~30–60 daqiqa (quyidagi qadamlar)  |
 

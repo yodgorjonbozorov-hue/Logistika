@@ -114,9 +114,7 @@ describe('validateEnv', () => {
     });
 
     it('refuses plaintext storage and a non-https web url in production', () => {
-      expect(() => validateEnv({ ...PRODUCTION, MINIO_USE_SSL: 'false' })).toThrow(
-        /MINIO_USE_SSL/,
-      );
+      expect(() => validateEnv({ ...PRODUCTION, MINIO_USE_SSL: 'false' })).toThrow(/MINIO_USE_SSL/);
       expect(() => validateEnv({ ...PRODUCTION, WEB_URL: 'http://app.truckcontrol.uz' })).toThrow(
         /https/,
       );

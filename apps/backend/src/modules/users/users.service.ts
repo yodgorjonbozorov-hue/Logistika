@@ -58,10 +58,7 @@ export class UsersService {
 
   // ---------- Tenant-scoped CRUD ----------
 
-  async list(
-    actor: CurrentUserPayload,
-    pagination: PaginationDto,
-  ): Promise<Page<SafeUser>> {
+  async list(actor: CurrentUserPayload, pagination: PaginationDto): Promise<Page<SafeUser>> {
     const db = this.prisma.forCompany(actor.companyId);
     const page = await readPage(
       pagination,

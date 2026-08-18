@@ -1,0 +1,11 @@
+# Generated — reformatting these produces noise at best and breaks the tool at
+# worst (a rewritten lockfile is a lockfile pnpm did not write).
+pnpm-lock.yaml
+*.tsbuildinfo
+dist/
+build/
+coverage/
+
+# Dart/Flutter has its own formatter (`dart format`); Prettier does not
+# understand the language and would mangle it.
+mobile/**/*.dart

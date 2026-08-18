@@ -145,9 +145,9 @@ describe('Password flows (e2e)', () => {
     });
 
     it('rejects an unknown or expired token', async () => {
-      expect((await post('/auth/reset-password', { token: 'nope', newPassword: NEW_PASSWORD })).status).toBe(
-        400,
-      );
+      expect(
+        (await post('/auth/reset-password', { token: 'nope', newPassword: NEW_PASSWORD })).status,
+      ).toBe(400);
 
       await requestReset();
       await prisma.passwordResetToken.updateMany({

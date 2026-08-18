@@ -18,9 +18,9 @@ release build'da `API_URL` `https://` bo'lishi shart — aks holda ilova start'd
 
 ## Platforma holati
 
-| Platforma | Holat                                                                     |
-| --------- | ------------------------------------------------------------------------- |
-| Android   | Ishlaydi; fon GPS — geolocator foreground-service + bildirishnoma          |
+| Platforma | Holat                                                                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android   | Ishlaydi; fon GPS — geolocator foreground-service + bildirishnoma                                                                                                           |
 | iOS       | Konfiguratsiya to'liq (`Info.plist` ruxsatlari, `UIBackgroundModes`, `AppleSettings`), lekin **real qurilmada/simulyatorda hali sinalmagan** — 9-bosqich qurilma testlarida |
 
 ## Tuzilish

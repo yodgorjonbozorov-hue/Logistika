@@ -148,10 +148,10 @@ brute-force'ga qarshi). Nginx `X-Forwarded-For`ni to'g'ri uzatayotganini tekshir
 
 Quyidagilar uchun alert qo'yish tavsiya etiladi (Sentry + oddiy uptime monitor yetarli):
 
-| Alert                    | Shart                                   |
-| ------------------------ | --------------------------------------- |
-| API o'chdi               | `/api/v1/health` 2 daqiqa javob bermadi  |
-| Bog'liqlik yiqildi       | `/api/v1/health/ready` 503               |
-| 5xx portlashi            | 5 daqiqada > 1% so'rov                   |
-| Disk                     | > 80%                                    |
-| Zaxira                   | 26 soat ichida yangi fayl yo'q           |
+| Alert              | Shart                                   |
+| ------------------ | --------------------------------------- |
+| API o'chdi         | `/api/v1/health` 2 daqiqa javob bermadi |
+| Bog'liqlik yiqildi | `/api/v1/health/ready` 503              |
+| 5xx portlashi      | 5 daqiqada > 1% so'rov                  |
+| Disk               | > 80%                                   |
+| Zaxira             | 26 soat ichida yangi fayl yo'q          |

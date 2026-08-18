@@ -54,9 +54,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
    */
   forCompany(companyId: string | null | undefined) {
     const id = this.requireCompany(companyId);
-    return this.tenantClient.$extends(rlsExtension(this.tenantClient, id)).$extends(
-      tenantExtension(id),
-    );
+    return this.tenantClient
+      .$extends(rlsExtension(this.tenantClient, id))
+      .$extends(tenantExtension(id));
   }
 
   /**

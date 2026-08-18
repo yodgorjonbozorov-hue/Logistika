@@ -28,21 +28,19 @@ export class DriversService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(
-    actor: CurrentUserPayload,
-    pagination: CatalogueListDto,
-  ): Promise<Page<Driver>> {
+  async list(actor: CurrentUserPayload, pagination: CatalogueListDto): Promise<Page<Driver>> {
     const db = this.prisma.forCompany(actor.companyId);
     // Retired records leave the working list but stay reachable with
     // ?includeInactive=true — the history is the reason they were kept.
     const where = { isActive: pagination.activeFilter };
     return readPage(
       pagination,
-      (page) => db.driver.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        ...page,
-      }),
+      (page) =>
+        db.driver.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
       () => db.driver.count({ where }),
     );
   }

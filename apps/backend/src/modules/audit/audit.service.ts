@@ -96,10 +96,7 @@ export class AuditService {
   }
 
   /** Tenant-scoped read of the trail (OWNER only — see AuditController). */
-  async list(
-    actor: CurrentUserPayload,
-    filter: ListAuditLogsDto,
-  ): Promise<Page<AuditLog>> {
+  async list(actor: CurrentUserPayload, filter: ListAuditLogsDto): Promise<Page<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = {
       // SUPERADMIN has no tenant of its own and reads the platform-wide trail.
       companyId: actor.companyId ?? undefined,
@@ -111,11 +108,12 @@ export class AuditService {
     };
     return readPage(
       filter,
-      (page) => this.prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        ...page,
-      }),
+      (page) =>
+        this.prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
       () => this.prisma.auditLog.count({ where }),
     );
   }

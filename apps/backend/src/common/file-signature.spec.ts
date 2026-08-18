@@ -1,8 +1,7 @@
 import { detectFileType, looksLikeCompletePdf } from './file-signature';
 
 const header = (...bytes: number[]) => Buffer.from(bytes);
-const withBody = (head: Buffer, body = 'body-bytes') =>
-  Buffer.concat([head, Buffer.from(body)]);
+const withBody = (head: Buffer, body = 'body-bytes') => Buffer.concat([head, Buffer.from(body)]);
 
 describe('detectFileType', () => {
   it('recognises the formats the system accepts', () => {

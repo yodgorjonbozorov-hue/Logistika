@@ -205,9 +205,7 @@ describe('Client ledger (e2e)', () => {
     ).rejects.toThrow(/append-only/);
 
     await expect(
-      prisma.$executeRawUnsafe(
-        `UPDATE ledger_entries SET amount = 1 WHERE id = '${entry!.id}'`,
-      ),
+      prisma.$executeRawUnsafe(`UPDATE ledger_entries SET amount = 1 WHERE id = '${entry!.id}'`),
     ).rejects.toThrow(/append-only/);
   });
 });

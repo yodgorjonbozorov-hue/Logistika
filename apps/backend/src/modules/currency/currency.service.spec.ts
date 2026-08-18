@@ -86,9 +86,9 @@ describe('CurrencyService.toBase', () => {
 
 describe('CurrencyService.upsertRate', () => {
   function setup() {
-    const upsert = jest.fn().mockImplementation(({ create }: { create: unknown }) =>
-      Promise.resolve(create),
-    );
+    const upsert = jest
+      .fn()
+      .mockImplementation(({ create }: { create: unknown }) => Promise.resolve(create));
     const prisma = { exchangeRate: { upsert } } as unknown as PrismaService;
     return { service: new CurrencyService(prisma), upsert };
   }
@@ -100,9 +100,9 @@ describe('CurrencyService.upsertRate', () => {
 
     const day = (upsert.mock.calls[0][0].create as { date: Date }).date;
     expect(day.toISOString()).toBe('2026-08-17T00:00:00.000Z');
-    expect(String((upsert.mock.calls[0][0].create as { rateToUzs: Prisma.Decimal }).rateToUzs)).toBe(
-      '12500.25',
-    );
+    expect(
+      String((upsert.mock.calls[0][0].create as { rateToUzs: Prisma.Decimal }).rateToUzs),
+    ).toBe('12500.25');
   });
 
   it('refuses a zero or negative rate', async () => {

@@ -90,11 +90,14 @@ describe('AuditService', () => {
     const { service } = setup();
     const txCreate = jest.fn().mockResolvedValue({ id: 'a1' });
 
-    await service.logInTx({ auditLog: { create: txCreate } }, {
-      action: 'CREATE',
-      entityType: 'Expense',
-      entityId: 'e1',
-    });
+    await service.logInTx(
+      { auditLog: { create: txCreate } },
+      {
+        action: 'CREATE',
+        entityType: 'Expense',
+        entityId: 'e1',
+      },
+    );
 
     expect(txCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({ action: 'CREATE', entityType: 'Expense' }),

@@ -69,9 +69,11 @@ describe('Trip outcomes (e2e)', () => {
   });
 
   it('a failed trip is not invoiced either', async () => {
-    await finish({ status: 'FAILED', reason: 'Yo\'lda avariya, yuk shikastlandi' }).expect(200);
+    await finish({ status: 'FAILED', reason: "Yo'lda avariya, yuk shikastlandi" }).expect(200);
 
-    expect((await prisma.trip.findUnique({ where: { id: tenant.trip.id } }))?.status).toBe('FAILED');
+    expect((await prisma.trip.findUnique({ where: { id: tenant.trip.id } }))?.status).toBe(
+      'FAILED',
+    );
     expect(await invoiced()).toBe(0n);
   });
 
@@ -92,7 +94,7 @@ describe('Trip outcomes (e2e)', () => {
   it('refuses a partial delivery worth more than the agreed price', async () => {
     const res = await finish({
       status: 'PARTIALLY_DELIVERED',
-      reason: 'Kelishuvdan ko\'p yuk yetkazildi',
+      reason: "Kelishuvdan ko'p yuk yetkazildi",
       deliveredAmount: (tenant.trip.agreedPrice + 1n).toString(),
     });
 
@@ -138,7 +140,7 @@ describe('Trip outcomes (e2e)', () => {
   it('a finished trip is terminal', async () => {
     await finish({ status: 'RETURNED', reason: REASON }).expect(200);
 
-    const again = await finish({ status: 'FAILED', reason: 'Fikrimizni o\'zgartirdik' });
+    const again = await finish({ status: 'FAILED', reason: "Fikrimizni o'zgartirdik" });
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('TRIP_INVALID_STATUS');
   });

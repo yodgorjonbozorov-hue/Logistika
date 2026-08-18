@@ -26,7 +26,9 @@ describe('ApiResponseInterceptor', () => {
   });
 
   it('unpacks ApiPayload with meta (pagination)', async () => {
-    const payload = new ApiPayload([1, 2], { pagination: { page: 1, limit: 10, total: 2, hasMore: false } });
+    const payload = new ApiPayload([1, 2], {
+      pagination: { page: 1, limit: 10, total: 2, hasMore: false },
+    });
     const response = await firstValueFrom(interceptor.intercept(context(), next(payload)));
     expect(response).toEqual({
       success: true,
@@ -51,7 +53,9 @@ describe('ApiResponseInterceptor', () => {
     });
 
     it('keeps pagination alongside the warning', async () => {
-      const payload = new ApiPayload([1], { pagination: { page: 1, limit: 10, total: 1, hasMore: false } });
+      const payload = new ApiPayload([1], {
+        pagination: { page: 1, limit: 10, total: 1, hasMore: false },
+      });
       const response = await firstValueFrom(interceptor.intercept(context(expired), next(payload)));
 
       expect(response.meta).toEqual({
