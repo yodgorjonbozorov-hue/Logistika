@@ -136,6 +136,13 @@ export class CompleteTripDto {
   endOdometer?: number;
 }
 
+export class CancelTripDto {
+  /** Mandatory — the cancellation reason is kept on the audit trail. */
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}
+
 export class ListTripsDto extends PaginationDto {
   @IsOptional()
   @IsEnum(TripStatus)

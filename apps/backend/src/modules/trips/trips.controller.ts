@@ -16,6 +16,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { paginated } from '../../common/dto/pagination.dto';
 import {
   AssignTripDto,
+  CancelTripDto,
   CompleteTripDto,
   CreateTripDto,
   ListTripsDto,
@@ -98,7 +99,11 @@ export class TripsController {
   @Post(':id/cancel')
   @Roles(UserRole.OWNER, UserRole.LOGIST)
   @HttpCode(HttpStatus.OK)
-  cancel(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
-    return this.tripsService.cancel(user, id);
+  cancel(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelTripDto,
+  ) {
+    return this.tripsService.cancel(user, id, dto);
   }
 }

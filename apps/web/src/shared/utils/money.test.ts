@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatTiyin, somToTiyin, sumTiyin, tiyinToSom } from './money';
+import {
+  formatMillionsTiyin,
+  formatTiyin,
+  percentOf,
+  somToTiyin,
+  sumTiyin,
+  tiyinToSom,
+} from './money';
 
 const NBSP = ' '; // formatter groups digits with non-breaking spaces
 
@@ -36,5 +43,38 @@ describe('money utils (tiyin ↔ som, BigInt only)', () => {
 
   it('sums lists in BigInt', () => {
     expect(sumTiyin(['100', '250', null, undefined, '50'])).toBe(400n);
+  });
+});
+
+describe('formatMillionsTiyin', () => {
+  it('renders millions of som with one decimal and a comma', () => {
+    expect(formatMillionsTiyin('81240000000')).toBe('812,4');
+    expect(formatMillionsTiyin('100000000')).toBe('1,0');
+    expect(formatMillionsTiyin(0n)).toBe('0,0');
+  });
+
+  it('groups the whole part and keeps the sign', () => {
+    expect(formatMillionsTiyin('123456700000000')).toBe(`1${NBSP}234${NBSP}567,0`);
+    expect(formatMillionsTiyin(-81240000000n)).toBe('-812,4');
+  });
+
+  it('truncates rather than rounding up, so a total never overstates', () => {
+    expect(formatMillionsTiyin('19900000')).toBe('0,1');
+  });
+
+  it('returns a dash for missing values', () => {
+    expect(formatMillionsTiyin(null)).toBe('—');
+    expect(formatMillionsTiyin('')).toBe('—');
+  });
+});
+
+describe('percentOf', () => {
+  it('computes a rounded share', () => {
+    expect(percentOf(600n, 1000n)).toBe(60);
+    expect(percentOf(1n, 3n)).toBeCloseTo(33.3, 1);
+  });
+
+  it('guards a zero total instead of dividing by it', () => {
+    expect(percentOf(5n, 0n)).toBe(0);
   });
 });

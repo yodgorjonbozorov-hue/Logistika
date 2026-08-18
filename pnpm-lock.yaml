@@ -122,6 +122,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@phosphor-icons/web':
+        specifier: ^2.1.1
+        version: 2.1.2
       '@tanstack/react-query':
         specifier: ^5.62.8
         version: 5.101.4(react@18.3.1)
@@ -1789,6 +1792,12 @@ packages:
         integrity: sha512-m7X9U6BG2+J+R1lSOdCiITLLrxm+cWlNI3HUFA92oLO77ObGNzaKdh8pMLqdZcshtkKuV84olNNXDfMc4FezBQ==,
       }
     engines: { node: '>=10' }
+
+  '@phosphor-icons/web@2.1.2':
+    resolution:
+      {
+        integrity: sha512-rPAR9o/bEcp4Cw4DEeZHXf+nlGCMNGkNDRizYHM47NLxz9vvEHp/Tt6FMK1NcWadzw/pFDPnRBGi/ofRya958A==,
+      }
 
   '@pkgjs/parseargs@0.11.0':
     resolution:
@@ -8661,6 +8670,8 @@ snapshots:
       - encoding
 
   '@phc/format@1.0.0': {}
+
+  '@phosphor-icons/web@2.1.2': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

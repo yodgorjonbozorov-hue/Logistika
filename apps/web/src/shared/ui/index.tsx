@@ -1,33 +1,68 @@
-import { useEffect, type ReactNode } from 'react';
+/**
+ * Nocturne UI kit — the component layer of the design system, as React.
+ *
+ * Every visual value comes from the tokens in `shared/theme/nocturne.css`;
+ * components never hard-code a hex or a font. User-facing strings live in i18n,
+ * so nothing here ships literal copy.
+ */
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../utils/cn';
 
+// ---------- Icon ----------
+
+/** A Phosphor glyph. `name` is the icon slug without the `ph-` prefix. */
+export function Icon({
+  name,
+  size = 16,
+  className,
+  style,
+}: {
+  name: string;
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <i
+      aria-hidden="true"
+      className={cn('ph', `ph-${name}`, className)}
+      style={{ fontSize: size, ...style }}
+    />
+  );
+}
+
 // ---------- Button ----------
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
-
-const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-navy hover:brightness-95 font-semibold',
-  secondary:
-    'bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-gray-100 dark:border-white/20 dark:hover:bg-white/20',
-  danger: 'bg-danger text-white hover:brightness-95',
-  ghost: 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10',
-};
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 export function Button({
   variant = 'primary',
+  icon,
+  className,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  icon?: string;
+}) {
+  return (
+    <button {...props} className={cn('btn', `btn-${variant}`, className)}>
+      {icon ? <Icon name={icon} size={14} /> : null}
+      {children}
+    </button>
+  );
+}
+
+export function IconButton({
+  icon,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: string }) {
   return (
-    <button
-      {...props}
-      className={cn(
-        'rounded-lg px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50',
-        BUTTON_STYLES[variant],
-        className,
-      )}
-    />
+    <button {...props} className={cn('btn btn-secondary btn-icon', className)}>
+      <Icon name={icon} size={16} />
+    </button>
   );
 }
 
@@ -37,131 +72,342 @@ export function Field({
   label,
   children,
   hint,
+  className,
 }: {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   hint?: string;
+  className?: string;
 }) {
   return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-gray-700 dark:text-gray-300">{label}</span>
+    <label className={cn('field block', className)}>
+      <span className="mb-[5px] block text-xs text-neutral-400">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-muted">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[11.5px] text-neutral-600">{hint}</span> : null}
     </label>
   );
 }
 
-const CONTROL =
-  'w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100';
-
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cn(CONTROL, props.className)} />;
+  return <input {...props} className={cn('input', props.className)} />;
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select {...props} className={cn('input', props.className)} />;
+}
+
+export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...props} className={cn('input', props.className)} />;
+}
+
+// ---------- Segmented control ----------
+
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  className,
+}: {
+  options: ReadonlyArray<{ value: T; label: string }>;
+  value: T;
+  onChange: (value: T) => void;
+  className?: string;
+}) {
   return (
-    <select {...props} className={cn(CONTROL, 'dark:[&>option]:text-gray-900', props.className)} />
+    <div className={cn('seg', className)}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className="seg-opt"
+          aria-pressed={option.value === value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
 // ---------- Layout ----------
 
-export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  className,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <h1 className="text-xl font-bold">{title}</h1>
-      <div className="flex items-center gap-2">{actions}</div>
+    <div className={cn('mb-4 flex flex-wrap items-end gap-4', className)}>
+      <div>
+        <h3 className="m-0 mb-[3px] text-[22px]">{title}</h3>
+        {subtitle ? <div className="text-[13px] text-neutral-500">{subtitle}</div> : null}
+      </div>
+      <div className="flex-1" />
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className,
+  style,
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  onClick?: () => void;
+}) {
   return (
-    <div
-      className={cn(
-        'rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5',
-        className,
-      )}
-    >
+    <div className={cn('card', className)} style={style} onClick={onClick}>
       {children}
+    </div>
+  );
+}
+
+/** The small uppercase kicker that labels a card's metric. */
+export function CardLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-2 text-[11.5px] font-medium uppercase tracking-[0.04em] text-neutral-500">
+      {children}
+    </div>
+  );
+}
+
+/** A dashboard metric: big number, optional unit and delta line. */
+export function StatCard({
+  label,
+  value,
+  unit,
+  delta,
+  deltaTone = 'neutral',
+  children,
+}: {
+  label: string;
+  value: ReactNode;
+  unit?: ReactNode;
+  delta?: ReactNode;
+  deltaTone?: 'neutral' | 'positive' | 'warning' | 'danger' | 'accent';
+  children?: ReactNode;
+}) {
+  const deltaColor = {
+    neutral: 'var(--color-neutral-500)',
+    positive: 'var(--color-positive-text)',
+    warning: 'var(--color-warning-text)',
+    danger: 'var(--color-danger-text)',
+    accent: 'var(--color-accent-300)',
+  }[deltaTone];
+
+  return (
+    <Card className="px-4 py-[14px]">
+      <CardLabel>{label}</CardLabel>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{value}</span>
+        {unit ? <span className="text-xs text-neutral-500">{unit}</span> : null}
+      </div>
+      {delta ? (
+        <div className="mt-1 text-xs" style={{ color: deltaColor }}>
+          {delta}
+        </div>
+      ) : null}
+      {children}
+    </Card>
+  );
+}
+
+/** A labelled proportion bar — used by the reports and dashboard breakdowns. */
+export function MeterRow({
+  label,
+  value,
+  percent,
+  color = 'var(--color-accent)',
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  percent: number;
+  color?: string;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-[12.5px]">
+        <span>{label}</span>
+        <b>{value}</b>
+      </div>
+      <div className="h-1.5 rounded-[3px] bg-neutral-900">
+        <div
+          className="h-full rounded-[3px]"
+          style={{ width: `${Math.max(0, Math.min(100, percent))}%`, background: color }}
+        />
+      </div>
     </div>
   );
 }
 
 // ---------- Table ----------
 
-export function Table({ headers, children }: { headers: string[]; children: ReactNode }) {
+export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
-      <table className="w-full min-w-[640px] border-collapse bg-white text-sm dark:bg-white/5">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase text-muted dark:border-white/10">
-            {headers.map((header, index) => (
-              <th key={index} className="px-3 py-2 font-semibold">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
+    <div className="overflow-x-auto">
+      <table className={cn('table', className)}>{children}</table>
     </div>
   );
 }
 
-export function Row({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+export function Row({
+  children,
+  onClick,
+  className,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  className?: string;
+}) {
   return (
-    <tr
-      onClick={onClick}
-      className={cn(
-        'border-b border-gray-100 last:border-0 dark:border-white/5',
-        onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/10',
-      )}
-    >
+    <tr onClick={onClick} className={cn(onClick && 'cursor-pointer', className)}>
       {children}
     </tr>
   );
 }
 
-export function Cell({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn('px-3 py-2', className)}>{children}</td>;
+export function Cell({
+  children,
+  className,
+  style,
+  align,
+  colSpan,
+}: {
+  children?: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  align?: 'left' | 'right' | 'center';
+  colSpan?: number;
+}) {
+  return (
+    <td
+      colSpan={colSpan}
+      className={cn(
+        align === 'right' && 'text-right tabular-nums',
+        align === 'center' && 'text-center',
+        className,
+      )}
+      style={style}
+    >
+      {children}
+    </td>
+  );
 }
 
-// ---------- Badge ----------
+// ---------- Chips and tags ----------
 
-export function Badge({
-  tone,
-  children,
-}: {
-  tone: 'gray' | 'blue' | 'green' | 'red' | 'orange';
-  children: ReactNode;
-}) {
-  const tones = {
-    gray: 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300',
-    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300',
-    green: 'bg-success/15 text-success',
-    red: 'bg-danger/15 text-danger',
-    orange: 'bg-accent/20 text-amber-700 dark:text-accent',
-  };
+export type ChipTone =
+  'accent' | 'accentSoft' | 'neutral' | 'muted' | 'positive' | 'warning' | 'danger' | 'info';
+
+/** [text color, dot/border color] per tone — mirrors the design's `stMeta`. */
+const CHIP_TONES: Record<ChipTone, [string, string]> = {
+  accent: ['var(--color-accent-200)', 'var(--color-accent)'],
+  accentSoft: ['var(--color-accent-300)', 'var(--color-accent-500)'],
+  neutral: ['var(--color-neutral-400)', 'var(--color-neutral-600)'],
+  muted: ['var(--color-neutral-500)', 'var(--color-neutral-700)'],
+  positive: ['var(--color-positive-text)', 'var(--color-positive)'],
+  warning: ['var(--color-warning-text)', 'var(--color-warning)'],
+  danger: ['var(--color-danger-text)', 'var(--color-danger)'],
+  info: ['var(--color-info-text)', 'var(--color-info)'],
+};
+
+/** A pill with a leading status dot, tinted from its tone. */
+export function StatusChip({ tone, children }: { tone: ChipTone; children: ReactNode }) {
+  const [text, dot] = CHIP_TONES[tone];
   return (
-    <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium', tones[tone])}>
+    <span
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] py-0.5 text-[11.5px] font-medium"
+      style={{
+        color: text,
+        border: `1px solid color-mix(in srgb, ${dot} 45%, transparent)`,
+        background: `color-mix(in srgb, ${dot} 10%, transparent)`,
+      }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
       {children}
     </span>
   );
+}
+
+export function Tag({
+  variant = 'neutral',
+  children,
+  className,
+}: {
+  variant?: 'accent' | 'neutral' | 'outline';
+  children: ReactNode;
+  className?: string;
+}) {
+  return <span className={cn('tag', `tag-${variant}`, className)}>{children}</span>;
+}
+
+/** Round initials badge. `tone` accent marks the signed-in user and owners. */
+export function Avatar({
+  initials,
+  size = 27,
+  tone = 'neutral',
+}: {
+  initials: string;
+  size?: number;
+  tone?: 'neutral' | 'accent';
+}) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold"
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.round(size * 0.39),
+        background: tone === 'accent' ? 'var(--color-accent-800)' : 'var(--color-neutral-800)',
+        color: tone === 'accent' ? 'var(--color-accent-200)' : 'var(--color-neutral-300)',
+      }}
+    >
+      {initials}
+    </span>
+  );
+}
+
+/** First letters of the first two words, e.g. "Alisher Qodirov" → "AQ". */
+export function initialsOf(name: string | null | undefined): string {
+  if (!name) return '—';
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 // ---------- Modal ----------
 
 export function Modal({
   title,
+  icon,
   open,
   onClose,
   children,
+  actions,
+  width = 420,
 }: {
   title: string;
+  icon?: string;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  actions?: ReactNode;
+  width?: number;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -172,16 +418,21 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
-      onClick={onClose}
-    >
+    <div className="dialog-backdrop" onClick={onClose} role="presentation">
       <div
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
+        className="dialog"
+        style={{ width }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">{title}</h2>
-        {children}
+        <div className="dialog-title flex items-center gap-2.5">
+          {icon ? <Icon name={icon} size={20} style={{ color: 'var(--color-danger)' }} /> : null}
+          {title}
+        </div>
+        <div className="dialog-body">{children}</div>
+        {actions ? <div className="dialog-actions">{actions}</div> : null}
       </div>
     </div>
   );
@@ -191,19 +442,35 @@ export function Modal({
 
 export function Spinner() {
   const { t } = useTranslation();
-  return <div className="py-8 text-center text-sm text-muted">{t('common.loading')}</div>;
+  return <div className="py-8 text-center text-[13px] text-neutral-500">{t('common.loading')}</div>;
 }
 
-export function EmptyState() {
+export function EmptyState({ message }: { message?: string }) {
   const { t } = useTranslation();
-  return <div className="py-8 text-center text-sm text-muted">{t('common.empty')}</div>;
+  return (
+    <div className="py-10 text-center text-[13px] text-neutral-500">
+      {message ?? t('common.empty')}
+    </div>
+  );
 }
 
 export function ErrorMessage({ error }: { error: unknown }) {
   const { t } = useTranslation();
   if (!error) return null;
   const message = error instanceof Error ? error.message : t('common.errorGeneric');
-  return <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{message}</div>;
+  return (
+    <div
+      className="mb-3 flex items-start gap-2 rounded-md px-3 py-2.5 text-[12.5px]"
+      style={{
+        color: 'var(--color-danger-text)',
+        border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+        background: 'color-mix(in srgb, var(--color-danger) 8%, transparent)',
+      }}
+    >
+      <Icon name="warning-circle" size={15} className="mt-px shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
 }
 
 // ---------- Pagination ----------
@@ -213,26 +480,69 @@ export function Pagination({
   limit,
   total,
   onPage,
+  label,
 }: {
   page: number;
   limit: number;
   total: number;
   onPage: (page: number) => void;
+  label?: string;
 }) {
-  const { t } = useTranslation();
   const pages = Math.max(1, Math.ceil(total / limit));
-  if (pages <= 1) return null;
+  const first = total === 0 ? 0 : (page - 1) * limit + 1;
+  const last = Math.min(page * limit, total);
+  const numbers = pageNumbers(page, pages);
+
   return (
-    <div className="mt-3 flex items-center justify-end gap-2 text-sm">
-      <Button variant="ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        ← {t('common.prev')}
-      </Button>
-      <span className="text-muted">
-        {t('common.page')} {page} / {pages}
-      </span>
-      <Button variant="ghost" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        {t('common.next')} →
-      </Button>
+    <div className="flex items-center border-t border-divider px-[18px] py-[11px] text-[12.5px] text-neutral-500">
+      <span>{label ?? `${first}–${last} / ${total}`}</span>
+      <div className="flex-1" />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+          className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40"
+        >
+          <Icon name="caret-left" size={12} />
+        </button>
+        {numbers.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onPage(n)}
+            aria-current={n === page ? 'page' : undefined}
+            className={cn(
+              'flex h-[26px] w-[26px] items-center justify-center rounded-[6px]',
+              n === page ? 'font-semibold text-accent-200' : 'text-neutral-400',
+            )}
+            style={
+              n === page
+                ? { background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)' }
+                : undefined
+            }
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          type="button"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}
+          className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40"
+        >
+          <Icon name="caret-right" size={12} />
+        </button>
+      </div>
     </div>
   );
+}
+
+/** Up to five page numbers, centred on the current page. */
+export function pageNumbers(page: number, pages: number, window = 3): number[] {
+  const total = Math.max(1, pages);
+  const size = Math.min(window, total);
+  let start = Math.max(1, page - Math.floor(size / 2));
+  if (start + size - 1 > total) start = total - size + 1;
+  return Array.from({ length: size }, (_, i) => start + i);
 }

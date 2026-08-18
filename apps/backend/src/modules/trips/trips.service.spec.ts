@@ -97,8 +97,27 @@ describe('TripsService', () => {
           ? service.complete(ACTOR, 't1', {})
           : action === 'start'
             ? service.start(ACTOR, 't1', {})
-            : service.cancel(ACTOR, 't1');
+            : service.cancel(ACTOR, 't1', { reason: 'client withdrew the order' });
       await expect(call).rejects.toMatchObject({ code: 'TRIP_INVALID_STATUS' });
+    });
+
+    it('records the cancellation reason on the audit trail', async () => {
+      const { service, db } = setup();
+      (audit.log as jest.Mock).mockClear();
+      db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'ASSIGNED' });
+      db.trip!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+        Promise.resolve({ id: 't1', ...data }),
+      );
+
+      await service.cancel(ACTOR, 't1', { reason: 'client withdrew the order' });
+
+      expect(db.trip!.update!.mock.calls[0][0].data.status).toBe('CANCELLED');
+      expect((audit.log as jest.Mock).mock.calls[0][0]).toMatchObject({
+        action: 'STATUS_CHANGE',
+        entityType: 'Trip',
+        entityId: 't1',
+        after: { status: 'CANCELLED', reason: 'client withdrew the order' },
+      });
     });
 
     it('blocks edits once the trip is underway', async () => {

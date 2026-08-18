@@ -1,119 +1,182 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { TripStatus } from 'shared';
 import { api } from '../../shared/api/client';
+import type { Trip } from '../../shared/api/entities';
 import {
-  Badge,
+  Avatar,
   Button,
   Card,
   Cell,
   EmptyState,
   ErrorMessage,
   Field,
+  Icon,
   Input,
   Modal,
-  PageHeader,
   Row,
   Select,
   Spinner,
+  StatusChip,
   Table,
+  Tag,
+  Textarea,
+  initialsOf,
 } from '../../shared/ui';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
 import { formatTiyin, sumTiyin } from '../../shared/utils/money';
-import { StatusBadge } from './StatusBadge';
+import { PAYMENT_STATUS_TONE, TRIP_STATUS_TONE } from '../../shared/utils/status';
+import { tripLifecycle, type LifecycleStep } from './lifecycle';
 import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
 
-type Tab = 'timeline' | 'finance' | 'documents';
+type Tab = 'documents' | 'payments' | 'notes' | 'log';
+
+const TABS: readonly Tab[] = ['documents', 'payments', 'notes', 'log'];
 
 export function TripDetailPage() {
   const { t } = useTranslation();
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const { data: trip, isLoading, error } = useTrip(id);
   const { action } = useTripMutations(id);
-  const [tab, setTab] = useState<Tab>('timeline');
-  const [dialog, setDialog] = useState<'assign' | 'start' | 'complete' | null>(null);
+  const [tab, setTab] = useState<Tab>('documents');
+  const [dialog, setDialog] = useState<'assign' | 'start' | 'complete' | 'cancel' | null>(null);
 
   if (isLoading) return <Spinner />;
-  if (error || !trip) return <ErrorMessage error={error ?? new Error()} />;
+  if (error || !trip) return <ErrorMessage error={error ?? new Error(t('common.errorGeneric'))} />;
 
-  const canAssign = trip.status === 'DRAFT' || trip.status === 'ASSIGNED';
-  const canStart = trip.status === 'ASSIGNED';
-  const canComplete = trip.status === 'IN_PROGRESS';
-  const canCancel = trip.status === 'DRAFT' || trip.status === 'ASSIGNED';
+  const canAssign = trip.status === TripStatus.DRAFT || trip.status === TripStatus.ASSIGNED;
+  const canStart = trip.status === TripStatus.ASSIGNED;
+  const canComplete = trip.status === TripStatus.IN_PROGRESS;
+  const canCancel = canAssign;
+
+  const remaining = BigInt(trip.agreedPrice) - BigInt(trip.driverAdvance);
 
   return (
     <div>
-      <PageHeader
-        title={`${t('trips.title')} №${trip.tripNumber}`}
-        actions={
-          <>
-            <ShareLinkButton tripId={id} />
-            {canAssign && (
-              <Button variant="secondary" onClick={() => setDialog('assign')}>
-                {t('trips.assign')}
-              </Button>
-            )}
-            {canStart && <Button onClick={() => setDialog('start')}>{t('trips.start')}</Button>}
-            {canComplete && (
-              <Button onClick={() => setDialog('complete')}>{t('trips.complete')}</Button>
-            )}
-            {canCancel && (
-              <Button variant="danger" onClick={() => void action.mutateAsync({ verb: 'cancel' })}>
-                {t('trips.cancelTrip')}
-              </Button>
-            )}
-          </>
-        }
-      />
+      <div className="mb-2.5 flex items-center gap-1.5 text-[12.5px] text-neutral-500">
+        <Link to="/trips">{t('trips.title')}</Link>
+        <Icon name="caret-right" size={10} />
+        <span>{trip.tripNumber}</span>
+      </div>
+
+      <div className="mb-[18px] flex flex-wrap items-center gap-3">
+        <h3 className="m-0 text-2xl tabular-nums">{trip.tripNumber}</h3>
+        <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>{t(`status.${trip.status}`)}</StatusChip>
+        <div className="flex-1" />
+        {canAssign ? (
+          <Button variant="secondary" icon="pencil-simple" onClick={() => setDialog('assign')}>
+            {t('trips.assign')}
+          </Button>
+        ) : null}
+        {canStart ? (
+          <Button icon="play" onClick={() => setDialog('start')}>
+            {t('trips.start')}
+          </Button>
+        ) : null}
+        {canComplete ? (
+          <Button icon="flag-checkered" onClick={() => setDialog('complete')}>
+            {t('trips.complete')}
+          </Button>
+        ) : null}
+        <ShareLinkButton tripId={id} />
+        {canCancel ? (
+          <Button variant="ghost" icon="x-circle" onClick={() => setDialog('cancel')}>
+            <span className="text-danger-text">{t('trips.cancelTrip')}</span>
+          </Button>
+        ) : null}
+      </div>
+
       <ErrorMessage error={action.error} />
 
-      <Card className="mb-4">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-4">
-          <Info label={t('trips.status')}>
-            <StatusBadge status={trip.status} />
-          </Info>
-          <Info label={t('trips.route')}>
-            {trip.loadingAddress ?? '—'} → {trip.unloadingAddress ?? '—'}
-          </Info>
-          <Info label={t('trips.client')}>{trip.client?.name ?? '—'}</Info>
-          <Info label={t('trips.cargoName')}>{trip.cargoName ?? '—'}</Info>
-          <Info label={t('trips.vehicle')}>{trip.vehicle?.plateNumber ?? '—'}</Info>
-          <Info label={t('trips.trailer')}>{trip.trailer?.plateNumber ?? '—'}</Info>
-          <Info label={t('trips.driver')}>{trip.driver?.fullName ?? '—'}</Info>
-          <Info label={t('trips.price')}>
-            <span className="font-semibold tabular-nums">{formatTiyin(trip.agreedPrice)}</span>
-          </Info>
-          <Info label={t('trips.advance')}>{formatTiyin(trip.driverAdvance)}</Info>
-          <Info label={t('trips.plannedKm')}>{trip.plannedDistanceKm ?? '—'}</Info>
-          <Info label={t('trips.actualKm')}>{trip.actualDistanceKm ?? '—'}</Info>
-          <Info label={t('trips.loadingDate')}>{formatDate(trip.loadingDate)}</Info>
-        </div>
+      <Card className="mb-3.5 px-5 pb-3.5 pt-[18px]">
+        <Lifecycle steps={tripLifecycle(trip)} />
       </Card>
 
-      <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
-        {(['timeline', 'finance', 'documents'] as Tab[]).map((key) => (
+      <div className="mb-3.5 grid gap-3 lg:grid-cols-3">
+        <Card className="px-4 py-3.5">
+          <SectionLabel>{t('trips.cards.vehicleDriver')}</SectionLabel>
+          <div className="mb-2.5 flex items-center gap-2.5">
+            <Icon name="truck" size={18} style={{ color: 'var(--color-accent)' }} />
+            <div>
+              <div className="font-semibold">{trip.vehicle?.plateNumber ?? '—'}</div>
+              <div className="text-xs text-neutral-500">
+                {[trip.vehicle?.brand, trip.vehicle?.model, trip.vehicle?.year]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Avatar initials={initialsOf(trip.driver?.fullName)} size={28} tone="accent" />
+            <div>
+              <div className="font-medium">{trip.driver?.fullName ?? '—'}</div>
+              <div className="text-xs text-neutral-500">{trip.driver?.phone ?? '—'}</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="px-4 py-3.5">
+          <SectionLabel>{t('trips.cards.routeCargo')}</SectionLabel>
+          <div className="mb-[5px] flex items-center gap-2 font-medium">
+            {trip.loadingAddress ?? '—'}
+            <Icon name="arrow-right" size={12} style={{ color: 'var(--color-accent)' }} />
+            {trip.unloadingAddress ?? '—'}
+          </div>
+          <div className="mb-[9px] text-[12.5px] text-neutral-400">
+            {trip.plannedDistanceKm
+              ? t('trips.distance', { km: trip.plannedDistanceKm })
+              : t('common.notSet')}
+          </div>
+          <div className="text-[13px]">
+            {trip.cargoName ?? '—'}
+            {trip.cargoWeight ? (
+              <span className="text-neutral-400">
+                {' '}
+                · {trip.cargoWeight} {t('common.ton')}
+              </span>
+            ) : null}
+          </div>
+        </Card>
+
+        <Card className="px-4 py-3.5">
+          <SectionLabel>{t('trips.cards.clientFinance')}</SectionLabel>
+          <div className="mb-0.5 font-medium">{trip.client?.name ?? '—'}</div>
+          <div className="mb-[9px] text-xs text-neutral-500">{trip.client?.phone ?? '—'}</div>
+          <MoneyRow label={t('trips.agreedPrice')} value={formatTiyin(trip.agreedPrice)} strong />
+          <MoneyRow label={t('trips.advance')} value={formatTiyin(trip.driverAdvance)} />
+          <div className="mt-1 flex justify-between border-t border-divider pt-[7px] text-[12.5px]">
+            <span className="text-neutral-500">{t('trips.remaining')}</span>
+            <b className="tabular-nums text-warning-text">
+              {formatTiyin(remaining)} {t('common.som')}
+            </b>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mb-3.5 flex border-b border-divider">
+        {TABS.map((key) => (
           <button
             key={key}
+            type="button"
             onClick={() => setTab(key)}
-            className={
-              tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
-            }
+            className="mr-5 cursor-pointer px-0.5 py-2 text-[13px]"
+            style={{
+              borderBottom: `2px solid ${tab === key ? 'var(--color-accent)' : 'transparent'}`,
+              color: tab === key ? 'var(--color-text)' : 'var(--color-neutral-500)',
+            }}
           >
             {t(`trips.tabs.${key}`)}
           </button>
         ))}
       </div>
 
-      {tab === 'timeline' && <TimelineTab trip={trip} />}
-      {tab === 'finance' && <FinanceTab tripId={trip.id} agreedPrice={trip.agreedPrice} />}
-      {tab === 'documents' && (
-        <Card>
-          <p className="text-sm text-muted">{t('trips.documentsNote')}</p>
-        </Card>
-      )}
+      {tab === 'documents' ? <DocumentsTab /> : null}
+      {tab === 'payments' ? <PaymentsTab trip={trip} /> : null}
+      {tab === 'notes' ? <NotesTab /> : null}
+      {tab === 'log' ? <ActivityTab trip={trip} /> : null}
 
       <AssignDialog open={dialog === 'assign'} onClose={() => setDialog(null)} tripId={id} />
       <OdometerDialog
@@ -134,18 +197,274 @@ export function TripDetailPage() {
         title={t('trips.complete')}
         label={t('trips.endOdometer')}
       />
+      <CancelDialog
+        open={dialog === 'cancel'}
+        onClose={() => setDialog(null)}
+        tripNumber={trip.tripNumber}
+        tripId={id}
+        onCancelled={() => navigate('/trips')}
+      />
     </div>
   );
 }
 
-function Info({ label, children }: { label: string; children: React.ReactNode }) {
+function SectionLabel({ children }: { children: string }) {
   return (
-    <div>
-      <div className="text-xs uppercase text-muted">{label}</div>
-      <div className="mt-0.5">{children}</div>
+    <div className="mb-[9px] text-[11px] font-semibold uppercase tracking-[0.07em] text-neutral-500">
+      {children}
     </div>
   );
 }
+
+function MoneyRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex justify-between py-[3px] text-[12.5px]">
+      <span className="text-neutral-500">{label}</span>
+      {strong ? (
+        <b className="tabular-nums">
+          {value} {t('common.som')}
+        </b>
+      ) : (
+        <span className="tabular-nums">
+          {value} {t('common.som')}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** The six-step lifecycle rail across the top of the detail screen. */
+function Lifecycle({ steps }: { steps: LifecycleStep[] }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex">
+      {steps.map((step, index) => (
+        <div key={step.key} className="min-w-0 flex-1">
+          <div className="flex w-full items-center">
+            <span
+              className="shrink-0 rounded-full"
+              style={
+                step.state === 'pending'
+                  ? {
+                      width: 10,
+                      height: 10,
+                      border: '2px solid var(--color-neutral-700)',
+                      boxSizing: 'border-box',
+                    }
+                  : {
+                      width: 12,
+                      height: 12,
+                      background: 'var(--color-accent)',
+                      boxShadow:
+                        step.state === 'current'
+                          ? '0 0 0 4px color-mix(in srgb, var(--color-accent) 22%, transparent)'
+                          : undefined,
+                    }
+              }
+            />
+            {index < steps.length - 1 ? (
+              <span
+                className="mx-2 h-0.5 flex-1"
+                style={{
+                  background:
+                    step.state === 'done' ? 'var(--color-accent-700)' : 'var(--color-neutral-800)',
+                }}
+              />
+            ) : null}
+          </div>
+          <div
+            className="mt-2 text-[12.5px] font-medium"
+            style={{
+              color: step.state === 'pending' ? 'var(--color-neutral-500)' : 'var(--color-text)',
+            }}
+          >
+            {t(`trips.lifecycle.${step.key}`)}
+          </div>
+          <div className="text-[11.5px] tabular-nums text-neutral-600">
+            {step.at ? formatDateTime(step.at) : '—'}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Tabs ----------
+
+/**
+ * Trip documents. The backend exposes upload and signed-URL endpoints but no
+ * per-trip listing yet, so the tab carries the design's shell and its upload
+ * action rather than inventing rows.
+ */
+function DocumentsTab() {
+  const { t } = useTranslation();
+  return (
+    <Card className="px-0 py-1.5">
+      <EmptyState message={t('trips.documentsEmpty')} />
+      <div className="px-[18px] py-2.5">
+        <Button variant="ghost" icon="plus" className="text-[12.5px]">
+          {t('trips.uploadDocument')}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function PaymentsTab({ trip }: { trip: Trip }) {
+  const { t } = useTranslation();
+  const { incomes } = useTripFinance(trip.id);
+  if (incomes.isLoading) return <Spinner />;
+
+  const rows = incomes.data ?? [];
+  const paid = sumTiyin(rows.map((income) => income.amount));
+  const outstanding = BigInt(trip.agreedPrice) - paid;
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <Table>
+        <thead>
+          <tr>
+            <th className="pl-[18px]">{t('finance.date')}</th>
+            <th>{t('finance.invoiceNumber')}</th>
+            <th className="text-right">{t('finance.amountShort')}</th>
+            <th className="pl-4">{t('finance.method')}</th>
+            <th>{t('trips.status')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((income) => (
+            <Row key={income.id}>
+              <Cell className="pl-[18px]">
+                {formatDate(income.paymentDate ?? income.createdAt)}
+              </Cell>
+              <Cell>{income.invoiceNumber ?? '—'}</Cell>
+              <Cell align="right">
+                {formatTiyin(income.amount)} {t('common.som')}
+              </Cell>
+              <Cell className="pl-4">{income.paymentMethod ?? '—'}</Cell>
+              <Cell>
+                <StatusChip tone={PAYMENT_STATUS_TONE[income.status]}>
+                  {t(`finance.paymentStatuses.${income.status}`)}
+                </StatusChip>
+              </Cell>
+            </Row>
+          ))}
+          {outstanding > 0n ? (
+            <Row>
+              <Cell className="pl-[18px]">—</Cell>
+              <Cell>{t('trips.remainingPayment')}</Cell>
+              <Cell align="right">
+                {formatTiyin(outstanding)} {t('common.som')}
+              </Cell>
+              <Cell className="pl-4">—</Cell>
+              <Cell>
+                <Tag variant="outline" className="text-[11px]">
+                  {t('finance.paymentStatuses.PENDING')}
+                </Tag>
+              </Cell>
+            </Row>
+          ) : null}
+        </tbody>
+      </Table>
+      {rows.length === 0 && outstanding <= 0n ? <EmptyState /> : null}
+    </Card>
+  );
+}
+
+/** Trip notes have no endpoint yet — the tab shows the design's empty shell. */
+function NotesTab() {
+  const { t } = useTranslation();
+  return (
+    <Card className="flex flex-col gap-3 px-[18px] py-4">
+      <EmptyState message={t('trips.notesEmpty')} />
+      <div className="flex gap-2">
+        <Input placeholder={t('trips.addNote')} className="flex-1" disabled />
+        <Button disabled>{t('common.send')}</Button>
+      </div>
+    </Card>
+  );
+}
+
+interface TripEventRow {
+  id: string;
+  eventType: string;
+  eventTime: string;
+  address: string | null;
+  odometer: number | null;
+  comment: string | null;
+}
+
+/** The driver's real button presses plus the trip's own lifecycle stamps. */
+function ActivityTab({ trip }: { trip: Trip }) {
+  const { t } = useTranslation();
+  const { data: events, isLoading } = useQuery({
+    queryKey: ['events', trip.id],
+    queryFn: async () =>
+      (await api<TripEventRow[]>('/events', { query: { tripId: trip.id } })).data,
+  });
+  const { expenses } = useTripFinance(trip.id);
+
+  if (isLoading) return <Spinner />;
+
+  const entries = [
+    ...(events ?? []).map((event) => ({
+      id: event.id,
+      at: event.eventTime,
+      title: t(`event.${event.eventType}`),
+      detail: [event.odometer != null ? `${event.odometer} km` : null, event.address, event.comment]
+        .filter(Boolean)
+        .join(' · '),
+      accent: true,
+    })),
+    ...(expenses.data ?? []).map((expense) => ({
+      id: expense.id,
+      at: expense.expenseDate,
+      title: t('trips.log.expenseAdded', {
+        category: t(`finance.categories.${expense.category}`),
+        amount: formatTiyin(expense.amount),
+      }),
+      detail: expense.description ?? '',
+      accent: false,
+    })),
+    {
+      id: 'created',
+      at: trip.createdAt,
+      title: t('trips.log.created'),
+      detail: '',
+      accent: false,
+    },
+  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+  return (
+    <Card className="px-[18px] py-4">
+      <div className="flex flex-col">
+        {entries.map((entry, index) => (
+          <div key={entry.id} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <span
+                className="mt-1 h-2 w-2 rounded-full"
+                style={{
+                  background: entry.accent ? 'var(--color-accent)' : 'var(--color-neutral-600)',
+                }}
+              />
+              {index < entries.length - 1 ? <span className="w-px flex-1 bg-neutral-800" /> : null}
+            </div>
+            <div className={index < entries.length - 1 ? 'pb-3.5' : ''}>
+              <div className="text-[13px]">{entry.title}</div>
+              <div className="text-[11.5px] text-neutral-600">
+                {formatDateTime(entry.at)}
+                {entry.detail ? ` · ${entry.detail}` : ''}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ---------- Actions ----------
 
 function ShareLinkButton({ tripId }: { tripId: string }) {
   const { t } = useTranslation();
@@ -161,142 +480,14 @@ function ShareLinkButton({ tripId }: { tripId: string }) {
     },
   });
   return (
-    <Button variant="secondary" onClick={() => share.mutate()} disabled={share.isPending}>
+    <Button
+      variant="ghost"
+      icon={copied ? 'check' : 'copy'}
+      onClick={() => share.mutate()}
+      disabled={share.isPending}
+    >
       {copied ? t('trips.linkCopied') : t('trips.shareLink')}
     </Button>
-  );
-}
-
-interface TripEventRow {
-  id: string;
-  eventType: string;
-  eventTime: string;
-  address: string | null;
-  odometer: number | null;
-  comment: string | null;
-}
-
-/** W-4 tab 1: the driver's real button presses, time + place + notes. */
-function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip }) {
-  const { t } = useTranslation();
-  const { data: events, isLoading } = useQuery({
-    queryKey: ['events', trip.id],
-    queryFn: async () =>
-      (await api<TripEventRow[]>('/events', { query: { tripId: trip.id } })).data,
-  });
-
-  if (isLoading) return <Spinner />;
-
-  const fallbackPoints = [
-    { label: t('trips.createdAt'), at: trip.createdAt },
-    { label: t('trips.startedAt'), at: trip.startedAt },
-    { label: t('trips.finishedAt'), at: trip.finishedAt },
-  ].filter((p) => p.at);
-
-  return (
-    <Card>
-      {(events ?? []).length > 0 ? (
-        <ul className="space-y-3 text-sm">
-          {events!.map((event) => (
-            <li key={event.id} className="flex items-start gap-3">
-              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
-              <div>
-                <div className="font-semibold">{t(`event.${event.eventType}`)}</div>
-                <div className="text-xs text-muted">
-                  {formatDateTime(event.eventTime)}
-                  {event.odometer != null && <> · {event.odometer} km</>}
-                  {event.address && <> · {event.address}</>}
-                </div>
-                {event.comment && <div className="mt-0.5 text-xs">{event.comment}</div>}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <>
-          <ul className="space-y-2 text-sm">
-            {fallbackPoints.map((point, index) => (
-              <li key={index} className="flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-accent" />
-                <span className="w-32 text-muted">{point.label}</span>
-                <span>{formatDateTime(point.at)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-xs text-muted">{t('trips.timelineNote')}</p>
-        </>
-      )}
-    </Card>
-  );
-}
-
-function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: string }) {
-  const { t } = useTranslation();
-  const { expenses, incomes } = useTripFinance(tripId);
-  if (expenses.isLoading || incomes.isLoading) return <Spinner />;
-
-  const expenseTotal = sumTiyin((expenses.data ?? []).map((e) => e.amount));
-  const incomeTotal = sumTiyin((incomes.data ?? []).map((i) => i.amount));
-  const planned = BigInt(agreedPrice);
-  const income = incomeTotal > 0n ? incomeTotal : planned;
-  const balance = income - expenseTotal;
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeIncome')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-success">
-            {formatTiyin(income)}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeExpenses')}</div>
-          <div className="mt-1 text-lg font-bold tabular-nums text-danger">
-            {formatTiyin(expenseTotal)}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs uppercase text-muted">{t('trips.financeBalance')}</div>
-          <div
-            className={
-              balance >= 0n
-                ? 'mt-1 text-lg font-bold tabular-nums text-success'
-                : 'mt-1 text-lg font-bold tabular-nums text-danger'
-            }
-          >
-            {formatTiyin(balance)}
-          </div>
-        </Card>
-      </div>
-      {(expenses.data ?? []).length === 0 ? (
-        <EmptyState />
-      ) : (
-        <Table
-          headers={[
-            t('finance.date'),
-            t('finance.category'),
-            t('finance.amount'),
-            t('finance.description'),
-            '',
-          ]}
-        >
-          {(expenses.data ?? []).map((expense) => (
-            <Row key={expense.id}>
-              <Cell>{formatDate(expense.expenseDate)}</Cell>
-              <Cell>{t(`finance.categories.${expense.category}`)}</Cell>
-              <Cell className="tabular-nums">{formatTiyin(expense.amount)}</Cell>
-              <Cell>{expense.description ?? '—'}</Cell>
-              <Cell>
-                <Badge tone={expense.isApproved ? 'green' : 'gray'}>
-                  {expense.isApproved ? t('finance.approved') : t('finance.notApproved')}
-                </Badge>
-              </Cell>
-            </Row>
-          ))}
-        </Table>
-      )}
-    </div>
   );
 }
 
@@ -320,25 +511,38 @@ function AssignDialog({
   const trailers = (vehicles.data ?? []).filter((v) => v.type === 'TRAILER' && v.isActive);
 
   return (
-    <Modal title={t('trips.assign')} open={open} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void action
-            .mutateAsync({
-              verb: 'assign',
-              body: { vehicleId, driverId, trailerId: trailerId || undefined },
-            })
-            .then(onClose);
-        }}
-        className="space-y-3"
-      >
+    <Modal
+      title={t('trips.assign')}
+      open={open}
+      onClose={onClose}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={action.isPending || !vehicleId || !driverId}
+            onClick={() =>
+              void action
+                .mutateAsync({
+                  verb: 'assign',
+                  body: { vehicleId, driverId, trailerId: trailerId || undefined },
+                })
+                .then(onClose)
+            }
+          >
+            {t('common.save')}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
         <Field label={t('trips.vehicle')}>
           <Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} required>
             <option value="">{t('common.select')}</option>
-            {trucks.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.plateNumber}
+            {trucks.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.plateNumber}
               </option>
             ))}
           </Select>
@@ -346,9 +550,9 @@ function AssignDialog({
         <Field label={t('trips.trailer')}>
           <Select value={trailerId} onChange={(e) => setTrailerId(e.target.value)}>
             <option value="">{t('common.select')}</option>
-            {trailers.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.plateNumber}
+            {trailers.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.plateNumber}
               </option>
             ))}
           </Select>
@@ -357,24 +561,16 @@ function AssignDialog({
           <Select value={driverId} onChange={(e) => setDriverId(e.target.value)} required>
             <option value="">{t('common.select')}</option>
             {(drivers.data ?? [])
-              .filter((d) => d.isActive)
-              .map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.fullName}
+              .filter((driver) => driver.isActive)
+              .map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.fullName}
                 </option>
               ))}
           </Select>
         </Field>
         <ErrorMessage error={action.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" disabled={action.isPending}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </form>
+      </div>
     </Modal>
   );
 }
@@ -401,29 +597,91 @@ function OdometerDialog({
   const [value, setValue] = useState('');
 
   return (
-    <Modal title={title} open={open} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void action
-            .mutateAsync({ verb, body: value ? { [field]: Number(value) } : {} })
-            .then(onClose);
-        }}
-        className="space-y-3"
-      >
-        <Field label={label}>
-          <Input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} />
-        </Field>
-        <ErrorMessage error={action.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+    <Modal
+      title={title}
+      open={open}
+      onClose={onClose}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={action.isPending}>
+          <Button
+            disabled={action.isPending}
+            onClick={() =>
+              void action
+                .mutateAsync({ verb, body: value ? { [field]: Number(value) } : {} })
+                .then(onClose)
+            }
+          >
             {t('common.save')}
           </Button>
-        </div>
-      </form>
+        </>
+      }
+    >
+      <Field label={label}>
+        <Input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} />
+      </Field>
+      <ErrorMessage error={action.error} />
+    </Modal>
+  );
+}
+
+function CancelDialog({
+  open,
+  onClose,
+  tripId,
+  tripNumber,
+  onCancelled,
+}: {
+  open: boolean;
+  onClose: () => void;
+  tripId: string;
+  tripNumber: string;
+  onCancelled: () => void;
+}) {
+  const { t } = useTranslation();
+  const { action } = useTripMutations(tripId);
+  const [reason, setReason] = useState('');
+
+  return (
+    <Modal
+      title={t('trips.cancelTitle')}
+      icon="warning-circle"
+      open={open}
+      onClose={onClose}
+      actions={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.back')}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={action.isPending || reason.trim().length === 0}
+            onClick={() =>
+              void action
+                .mutateAsync({ verb: 'cancel', body: { reason } })
+                .then(onClose)
+                .then(onCancelled)
+            }
+          >
+            {t('trips.cancelTrip')}
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-3 text-[13.5px]">
+        <b className="tabular-nums">{tripNumber}</b> — {t('trips.cancelWarning')}
+      </div>
+      <Field label={t('trips.cancelReason')}>
+        <Textarea
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={t('trips.cancelReasonPlaceholder')}
+        />
+      </Field>
+      <ErrorMessage error={action.error} />
     </Modal>
   );
 }

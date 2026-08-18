@@ -3,6 +3,7 @@
 import type {
   Currency,
   ExpenseCategory,
+  LiveStatus,
   PaymentStatus,
   SalaryType,
   TripStatus,
@@ -124,4 +125,28 @@ export interface Income {
   invoiceNumber: string | null;
   status: PaymentStatus;
   createdAt: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  inn: string | null;
+  address: string | null;
+  phone: string | null;
+  logo: string | null;
+  tariffPlan: string | null;
+  subscriptionUntil: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+/** GET /tracking/live — one row per vehicle carrying a live position. */
+export interface LiveVehicle {
+  vehicleId: string;
+  plateNumber: string;
+  status: LiveStatus;
+  trip: { id: string; tripNumber: string; cargoName: string | null } | null;
+  driverName: string | null;
+  lastPosition: { lat: number; lng: number; speed: number | null; recordedAt: string } | null;
+  deviationKm: number | null;
 }

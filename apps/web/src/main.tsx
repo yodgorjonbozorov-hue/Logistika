@@ -6,6 +6,10 @@ import { App } from './app/App';
 import { AuthProvider } from './shared/auth/AuthContext';
 import './shared/i18n';
 import './index.css';
+import 'leaflet/dist/leaflet.css';
+import '@phosphor-icons/web/regular';
+// Loaded last so the Nocturne tokens win over Tailwind preflight and Leaflet.
+import './shared/theme/nocturne.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -30,3 +30,23 @@ export function tiyinToSom(tiyin: string | null | undefined): string {
 export function sumTiyin(values: Array<string | null | undefined>): bigint {
   return values.reduce<bigint>((acc, v) => acc + (v ? BigInt(v) : 0n), 0n);
 }
+
+/**
+ * Tiyin → millions of so'm with one decimal, e.g. "81240000000" → "812,4".
+ * The decimal comma is the uz-latn/ru convention the design uses. Arithmetic
+ * stays in BigInt: the tenths are computed before any string formatting.
+ */
+export function formatMillionsTiyin(tiyin: string | bigint | null | undefined): string {
+  if (tiyin === null || tiyin === undefined || tiyin === '') return '—';
+  const value = typeof tiyin === 'bigint' ? tiyin : BigInt(tiyin);
+  const negative = value < 0n;
+  const tenths = (negative ? -value : value) / 10_000_000n; // tiyin → 0.1 mln so'm
+  const whole = (tenths / 10n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${negative ? '-' : ''}${whole},${tenths % 10n}`;
+}
+
+/** Percentage of `part` in `total`, rounded, guarding a zero total. */
+export function percentOf(part: bigint, total: bigint): number {
+  if (total === 0n) return 0;
+  return Number((part * 1000n) / total) / 10;
+}

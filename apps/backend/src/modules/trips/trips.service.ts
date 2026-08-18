@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
   AssignTripDto,
+  CancelTripDto,
   CompleteTripDto,
   CreateTripDto,
   ListTripsDto,
@@ -177,10 +178,10 @@ export class TripsService {
     });
   }
 
-  async cancel(actor: CurrentUserPayload, id: string): Promise<Trip> {
+  async cancel(actor: CurrentUserPayload, id: string, dto: CancelTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
     this.assertTransition(trip.status, 'CANCELLED');
-    return this.transition(actor, trip, 'CANCELLED', {});
+    return this.transition(actor, trip, 'CANCELLED', {}, { reason: dto.reason });
   }
 
   private assertTransition(from: TripStatus, to: TripStatus, allowNoop = false): void {
@@ -198,6 +199,7 @@ export class TripsService {
     trip: Trip,
     status: TripStatus,
     data: Prisma.TripUncheckedUpdateInput,
+    extraAudit?: Record<string, string>,
   ): Promise<Trip> {
     const updated = await this.prisma
       .forCompany(actor.companyId)
@@ -209,7 +211,7 @@ export class TripsService {
       entityType: 'Trip',
       entityId: trip.id,
       before: { status: trip.status },
-      after: { status },
+      after: { status, ...extraAudit },
     });
     return updated;
   }

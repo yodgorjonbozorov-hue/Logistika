@@ -8,7 +8,16 @@
     "drivers": "Haydovchilar",
     "clients": "Mijozlar",
     "finance": "Moliya",
-    "map": "Xarita"
+    "map": "Xarita",
+    "overview": "Umumiy ko'rinish",
+    "cargo": "Yuklar",
+    "documents": "Hujjatlar",
+    "reports": "Hisobotlar",
+    "users": "Foydalanuvchilar",
+    "settings": "Sozlamalar",
+    "groupMain": "Asosiy",
+    "groupAdmin": "Boshqaruv",
+    "help": "Yordam va qo'llab-quvvatlash"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -16,7 +25,24 @@
     "password": "Parol",
     "submit": "Kirish",
     "loggingIn": "Kirilmoqda…",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "loginSubtitle": "Ish hisobingiz bilan davom eting",
+    "identifierPlaceholder": "siz@kompaniya.uz",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "showPassword": "Parolni ko'rsatish",
+    "hidePassword": "Parolni yashirish",
+    "rememberMe": "Meni eslab qol",
+    "noAccount": "Hisobingiz yo'qmi?",
+    "askAdmin": "Administratoringizga murojaat qiling.",
+    "heroLine1": "Har bir reys",
+    "heroLine2": "nazorat ostida.",
+    "heroBody": "Reyslar, mashinalar, haydovchilar va moliya — bitta boshqaruv panelida. Zamonaviy logistika kompaniyasining operatsion tizimi.",
+    "copyright": "© 2026 Truck Control · Toshkent",
+    "highlights": {
+      "gps": "GPS kuzatuv har 3 daqiqada, offlayn rejimda ham",
+      "profit": "Har bir reysning real foydasi — tiyingacha",
+      "driverApp": "Haydovchilar uchun SMS-kod bilan mobil ilova"
+    }
   },
   "common": {
     "actions": "Amallar",
@@ -39,7 +65,21 @@
     "select": "Tanlang…",
     "notSet": "—",
     "theme": "Tungi rejim",
-    "language": "Til"
+    "language": "Til",
+    "search": "Qidirish",
+    "searchPlaceholder": "Reys, mashina, haydovchi qidirish…",
+    "notifications": "Bildirishnomalar",
+    "clear": "Tozalash",
+    "export": "Eksport",
+    "refresh": "Yangilash",
+    "back": "Orqaga",
+    "continue": "Davom etish",
+    "send": "Yuborish",
+    "yes": "Ha",
+    "no": "Yo'q",
+    "mln": "mln",
+    "mlnSom": "mln so'm",
+    "ton": "t"
   },
   "status": {
     "DRAFT": "Qoralama",
@@ -80,7 +120,10 @@
     "tabs": {
       "timeline": "Xronologiya",
       "finance": "Moliya",
-      "documents": "Hujjatlar"
+      "documents": "Hujjatlar",
+      "payments": "To'lovlar",
+      "notes": "Izohlar",
+      "log": "Faoliyat tarixi"
     },
     "timelineNote": "Haydovchi hodisalari mobil ilova ulangach shu yerda ko'rinadi (5-bosqich)",
     "documentsNote": "Hujjatlar moduli 7-bosqichda ulanadi",
@@ -89,7 +132,78 @@
     "financeBalance": "Farq",
     "shareLink": "Mijoz havolasi",
     "linkCopied": "Havola nusxalandi",
-    "copy": "Nusxalash"
+    "copy": "Nusxalash",
+    "subtitle": "Barcha transport reyslarini boshqarish va kuzatish · {{count}} ta reys",
+    "searchPlaceholder": "Reys raqami…",
+    "priceShort": "Narx",
+    "departure": "Jo'nash",
+    "eta": "ETA",
+    "agreedPrice": "Kelishilgan narx",
+    "remaining": "Qoldiq",
+    "remainingPayment": "Qoldiq to'lov",
+    "distance": "{{km}} km",
+    "distanceLabel": "Masofa",
+    "fuelNorm": "Yoqilg'i normasi",
+    "cargoVolume": "Hajmi (m³)",
+    "dates": "Sanalar",
+    "priceAdvance": "Narx / Avans",
+    "vehicleDriver": "Mashina / Haydovchi",
+    "paginationLabel": "{{from}}–{{to}} / {{total}} ta reys",
+    "createTitle": "Yangi reys yaratish",
+    "numberAuto": "Avtomatik",
+    "numberHint": "Avtomatik: yil + tartib raqami",
+    "saveDraft": "Qoralama sifatida saqlash",
+    "createTrip": "Reys yaratish",
+    "noFreeVehicles": "Bo'sh mashina yo'q",
+    "noFreeDrivers": "Bo'sh haydovchi yo'q",
+    "documentsEmpty": "Bu reysga hujjat biriktirilmagan",
+    "uploadDocument": "Hujjat yuklash",
+    "notesEmpty": "Izohlar hali qo'shilmagan",
+    "addNote": "Izoh qo'shish…",
+    "cancelTitle": "Reysni bekor qilish",
+    "cancelWarning": "reysi bekor qilinadi. Bu amalni qaytarib bo'lmaydi — reys tarixda «Bekor qilingan» holatida saqlanadi.",
+    "cancelReason": "Bekor qilish sababi (majburiy)",
+    "cancelReasonPlaceholder": "Masalan: mijoz buyurtmani qaytarib oldi…",
+    "cards": {
+      "vehicleDriver": "Mashina va haydovchi",
+      "routeCargo": "Marshrut va yuk",
+      "clientFinance": "Mijoz va moliya"
+    },
+    "lifecycle": {
+      "created": "Yaratildi",
+      "assigned": "Biriktirildi",
+      "departed": "Jo'nadi",
+      "enRoute": "Yo'lda",
+      "arrived": "Yetib keldi",
+      "finished": "Yakunlandi"
+    },
+    "log": {
+      "created": "Reys yaratildi",
+      "expenseAdded": "{{category}} xarajati qo'shildi — {{amount}} so'm"
+    },
+    "steps": {
+      "1": {
+        "title": "Reys ma'lumotlari",
+        "sub": "Mijoz, sana, narx"
+      },
+      "2": {
+        "title": "Mashina va haydovchi",
+        "sub": "Bo'sh resurslar",
+        "subtitle": "Faqat bo'sh mashina va haydovchilar ko'rsatilgan"
+      },
+      "3": {
+        "title": "Marshrut",
+        "sub": "Manzillar va to'xtashlar"
+      },
+      "4": {
+        "title": "Yuk",
+        "sub": "Tur, og'irlik, miqdor"
+      },
+      "5": {
+        "title": "Ko'rib chiqish",
+        "sub": "Tasdiqlash"
+      }
+    }
   },
   "vehicles": {
     "title": "Avtopark",
@@ -108,7 +222,9 @@
       "TRUCK": "Fura",
       "TRAILER": "Tirkama",
       "SPECIAL": "Maxsus"
-    }
+    },
+    "subtitle": "{{total}} texnika · {{onTrip}} yo'lda · {{free}} bo'sh",
+    "currentTrip": "Joriy reys"
   },
   "drivers": {
     "title": "Haydovchilar",
@@ -125,7 +241,9 @@
       "FIXED": "Oylik",
       "PERCENT": "Foiz",
       "PER_KM": "Km ga"
-    }
+    },
+    "subtitle": "{{count}} haydovchi · SMS-kod orqali mobil ilovaga kirishadi",
+    "activeTrip": "Faol reys"
   },
   "clients": {
     "title": "Mijozlar",
@@ -137,7 +255,13 @@
     "email": "Email",
     "address": "Manzil",
     "paymentTerms": "To'lov muddati (kun)",
-    "balance": "Balans (so'm)"
+    "balance": "Balans (so'm)",
+    "subtitle": "{{count}} mijoz · umumiy qarzdorlik {{debt}} mln so'm",
+    "activeTrips": "Faol reyslar",
+    "debt": "Qarzdorlik",
+    "totalRevenue": "Jami daromad",
+    "termsDays": "{{count}} kun",
+    "prepaid": "Oldindan"
   },
   "finance": {
     "title": "Moliya",
@@ -176,7 +300,11 @@
       "INSURANCE": "Sug'urta",
       "TAX": "Soliq",
       "OTHER": "Boshqa"
-    }
+    },
+    "subtitle": "Kirim va xarajatlar",
+    "totalRevenue": "Jami daromad",
+    "method": "To'lov usuli",
+    "amountShort": "Summa"
   },
   "map": {
     "title": "Jonli xarita",
@@ -192,7 +320,11 @@
     "selectVehicle": "Mashinani tanlang",
     "selectDate": "Sana",
     "noTrack": "Bu kunda trek yo'q",
-    "noPosition": "Hali GPS signal yo'q"
+    "noPosition": "Hali GPS signal yo'q",
+    "liveSubtitle": "{{count}} mashina yo'lda · GPS har 3 daqiqada yangilanadi · oxirgi: {{updated}}",
+    "historySubtitle": "Mashina va sanani tanlang — kun bo'yicha bosib o'tilgan yo'l",
+    "statusBreakdown": "Holatlar bo'yicha",
+    "activeVehicles": "{{count}} faol"
   },
   "track": {
     "title": "Yuk kuzatuvi",
@@ -213,5 +345,281 @@
     "EXPENSE": "Yo'l xarajati",
     "DELIVERED": "Yuk topshirildi",
     "FINISH": "Reys tugadi"
+  },
+  "roles": {
+    "SUPERADMIN": "Superadmin",
+    "OWNER": "Egasi",
+    "LOGIST": "Logist",
+    "ACCOUNTANT": "Buxgalter",
+    "DRIVER": "Haydovchi"
+  },
+  "resourceState": {
+    "ON_TRIP": "Yo'lda",
+    "AVAILABLE": "Bo'sh",
+    "MAINTENANCE": "Ta'mirda",
+    "INACTIVE": "Nofaol"
+  },
+  "overview": {
+    "subtitle": "{{vehicles}} texnika, {{drivers}} haydovchi",
+    "greeting": {
+      "morning": "Xayrli tong, {{name}}",
+      "afternoon": "Xayrli kun, {{name}}",
+      "evening": "Xayrli kech, {{name}}"
+    },
+    "modes": {
+      "panel": "Boshqaruv paneli",
+      "ops": "Operatsion xona"
+    },
+    "kpi": {
+      "activeTrips": "Faol reyslar",
+      "completedMonth": "Yakunlangan · bu oy",
+      "completedHint": "Joriy oy natijasi",
+      "freeVehicles": "Bo'sh mashinalar",
+      "vehicleSplit": "{{busy}} yo'lda · {{free}} bo'sh",
+      "driversFree": "{{count}} bo'sh",
+      "revenue": "Daromad · bu oy",
+      "revenueHint": "To'langan kirimlar bo'yicha",
+      "receivables": "Qarzdorlik",
+      "overdue": "{{amount}} mln muddati o'tgan"
+    },
+    "dynamics": {
+      "title": "Reyslar dinamikasi",
+      "subtitle": "Oxirgi 14 kun · yakunlangan reyslar",
+      "range": "14 kun"
+    },
+    "donut": {
+      "title": "Reyslar holati",
+      "subtitle": "Jami {{count}} reys",
+      "unit": "reys"
+    },
+    "active": {
+      "title": "Faol reyslar",
+      "subtitle": "Hozir yo'lda va biriktirilgan reyslar"
+    },
+    "ops": {
+      "active": "Faol",
+      "freeVehicles": "Bo'sh mashina",
+      "freeDrivers": "Bo'sh haydovchi",
+      "completedMonth": "Bu oy yakunlangan",
+      "overdueDebt": "Muddati o'tgan qarz",
+      "feed": "Jonli lenta",
+      "alerts": "Ogohlantirishlar",
+      "alertOverdue": "Muddati o'tgan qarz: {{amount}} so'm",
+      "alertPending": "To'lov kutilmoqda: {{amount}} so'm",
+      "noAlerts": "Ogohlantirish yo'q",
+      "noVehicleAssigned": "Mashina biriktirilmagan"
+    }
+  },
+  "cargo": {
+    "title": "Yuklar",
+    "subtitle": "Joriy va rejalashtirilgan yuklar ro'yxati",
+    "name": "Yuk",
+    "weight": "Og'irligi",
+    "volume": "Hajmi"
+  },
+  "documents": {
+    "title": "Hujjatlar",
+    "subtitle": "Yuk xatlari, shartnomalar, guvohnomalar va texnik hujjatlar",
+    "upload": "Hujjat yuklash",
+    "empty": "Hujjatlar ro'yxati API'da hali ochilmagan — yuklangan fayllar reys sahifasida ko'rinadi",
+    "owners": {
+      "TRIP": "Reys",
+      "VEHICLE": "Texnika",
+      "DRIVER": "Haydovchi",
+      "COMPANY": "Tashkilot"
+    }
+  },
+  "reports": {
+    "title": "Hisobotlar",
+    "subtitle": "Moliyaviy va operatsion tahlil",
+    "export": "Excel / PDF",
+    "periods": {
+      "week": "Hafta",
+      "month": "Oy",
+      "quarter": "Kvartal",
+      "year": "Yil"
+    },
+    "revenueVsCost": "Daromad va xarajatlar",
+    "revenueCaption": "mln so'm · {{period}} bo'yicha",
+    "revenue": "Daromad",
+    "cost": "Xarajat",
+    "netProfit": "Sof foyda",
+    "costBreakdown": "Xarajatlar taqsimoti",
+    "fleetUtilisation": "Avtopark samaradorligi",
+    "driverPerformance": "Haydovchilar samaradorligi",
+    "topDrivers": "Davr bo'yicha eng yaxshilari"
+  },
+  "users": {
+    "title": "Foydalanuvchilar va rollar",
+    "subtitle": "{{office}} ofis foydalanuvchisi · {{drivers}} haydovchi (mobil)",
+    "new": "Foydalanuvchi qo'shish",
+    "user": "Foydalanuvchi",
+    "fullName": "F.I.Sh.",
+    "contact": "Email / Telefon",
+    "role": "Rol",
+    "lastActive": "Oxirgi faollik",
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "permissionsTitle": "Rollar va ruxsatlar",
+    "permissionsSubtitle": "Tizim rollari bo'yicha huquqlar matritsasi",
+    "permission": "Ruxsat",
+    "permissions": {
+      "createTrip": "Reys yaratish va tahrirlash",
+      "closeTrip": "Reysni yakunlash / bekor qilish",
+      "viewFinance": "Moliya (kirim/xarajat) ko'rish",
+      "approveExpense": "Xarajatlarni tasdiqlash",
+      "manageUsers": "Foydalanuvchilarni boshqarish",
+      "mobileEvents": "Mobil ilovada hodisa yozish (GPS)"
+    }
+  },
+  "settings": {
+    "sections": {
+      "organisation": "Tashkilot",
+      "profile": "Profil",
+      "notifications": "Bildirishnomalar",
+      "security": "Xavfsizlik",
+      "integrations": "Integratsiyalar",
+      "billing": "Obuna va to'lov"
+    },
+    "orgTitle": "Tashkilot ma'lumotlari",
+    "orgName": "Nomi",
+    "inn": "INN / STIR",
+    "timezone": "Vaqt mintaqasi",
+    "currency": "Asosiy valyuta",
+    "currencyUzs": "UZS — so'm",
+    "language": "Interfeys tili",
+    "ownerOnly": "Tashkilot ma'lumotlarini faqat egasi tahrirlaydi",
+    "subscription": "Obuna: {{plan}}",
+    "subscriptionUntil": "Amal qilish muddati: {{date}}",
+    "noSubscription": "Obuna muddati belgilanmagan",
+    "noPlan": "belgilanmagan",
+    "manage": "Boshqarish",
+    "dangerZone": "Xavfli hudud",
+    "archiveWarning": "Tashkilotni arxivlash barcha foydalanuvchilar kirishini to'xtatadi",
+    "archive": "Arxivlash",
+    "comingSoon": "Bu bo'lim keyingi bosqichda ochiladi"
+  },
+  "landing": {
+    "signIn": "Kirish",
+    "signInCta": "Tizimga kirish",
+    "getStarted": "Boshlash",
+    "customers": "O'zbekiston bo'ylab logistika kompaniyalari ishonadi",
+    "nav": {
+      "product": "Mahsulot",
+      "features": "Imkoniyatlar",
+      "solutions": "Yechimlar",
+      "pricing": "Narxlar",
+      "about": "Biz haqimizda"
+    },
+    "hero": {
+      "eyebrow": "O'zbekiston yuk tashish kompaniyalari uchun",
+      "titleLine1": "Har bir reys nazoratda.",
+      "titleLine2": "Avtoparkni aqlliroq boshqaring.",
+      "body": "Truck Control — reyslar, mashinalar, haydovchilar, marshrutlar, yuklar va moliyani bitta platformada boshqaradigan operatsion tizim. Furangiz qayerdaligini emas — qancha foyda keltirayotganini bilib turing.",
+      "perks": {
+        "trial": "14 kun bepul",
+        "setup": "O'rnatish 1 kunda",
+        "languages": "Uz / Ру tillarda"
+      }
+    },
+    "preview": {
+      "greeting": "Xayrli tong, Umar"
+    },
+    "features": {
+      "title": "Butun operatsiya — bitta panelda",
+      "body": "Excel jadvallar va telefon qo'ng'iroqlari o'rniga — tartibli, tezkor va har doim dolzarb tizim.",
+      "items": {
+        "trips": {
+          "title": "Reys boshqaruvi",
+          "body": "Reysni soniyalarda yarating: mijoz, mashina, haydovchi, marshrut va narx — besh qadamda. Har reysning to'liq tarixi saqlanadi."
+        },
+        "gps": {
+          "title": "Jonli GPS kuzatuv",
+          "body": "Barcha mashinalar xaritada, har 3 daqiqada yangilanadi. Internet yo'q joyda ham ma'lumot yig'iladi va keyin sinxronlanadi."
+        },
+        "fleet": {
+          "title": "Avtopark nazorati",
+          "body": "Texnika holati, probeg, yoqilg'i normasi, texnik ko'rik va hujjat muddatlari — eslatmalar bilan."
+        },
+        "driverApp": {
+          "title": "Haydovchi ilovasi",
+          "body": "Haydovchi SMS-kod bilan kiradi, bitta tugma bilan reysni boshlaydi, chek fotosini yuklaydi. O'rgatish shart emas."
+        },
+        "finance": {
+          "title": "Moliya va qarzdorlik",
+          "body": "Kirim, xarajat, avans va mijoz qarzlari so'm va dollarda. Har reysning sof foydasi avtomatik hisoblanadi."
+        },
+        "documents": {
+          "title": "Hujjatlar arxivi",
+          "body": "Yuk xatlari, shartnomalar, guvohnomalar va cheklar — reysga bog'langan holda, bir joyda va qidiriladigan."
+        }
+      }
+    },
+    "dispatcher": {
+      "eyebrow": "Dispetcher uchun",
+      "title": "Reys yaratish — 60 soniyada",
+      "body": "Bo'sh mashina va haydovchini tizim o'zi taklif qiladi. Marshrut, masofa va yoqilg'i normasi avtomatik. Reys raqami takrorlanmaydi: TR-2026-0042 formatida, yil bo'yicha tartibda.",
+      "step1": "Mashina tanlandi — 80 A 455 DA · Volvo FM 420",
+      "step2": "Haydovchi tanlandi — Olim Berdiyev · 64 reys",
+      "step3": "Marshrut: Toshkent (Chinoz) → Navoiy · 470 km",
+      "price": "Narx:",
+      "fuel": "Yoqilg'i:",
+      "profit": "Foyda:"
+    },
+    "owner": {
+      "eyebrow": "Rahbar uchun",
+      "title": "Kompaniya ahvoli — 5 soniyada",
+      "body": "Daromad, xarajat, qarzdorlik va avtopark bandligi bitta ekranda. Muddati o'tgan qarzlar va tugayotgan hujjatlar haqida tizim o'zi ogohlantiradi.",
+      "cardTitle": "Avgust bo'yicha natija",
+      "live": "Jonli",
+      "delta": "+18% o'tgan oyga",
+      "cardCaption": "sof foyda · 48 yakunlangan reys"
+    },
+    "stats": {
+      "companies": {
+        "value": "120+",
+        "label": "kompaniya tizimda"
+      },
+      "trips": {
+        "value": "4 800",
+        "label": "reys har oyda"
+      },
+      "vehicles": {
+        "value": "1 900",
+        "label": "texnika kuzatuvda"
+      },
+      "uptime": {
+        "value": "99,9%",
+        "label": "ishlash kafolati"
+      }
+    },
+    "why": {
+      "title": "Nega Truck Control?",
+      "body": "Umumiy ERP emas — aynan yuk tashish biznesi uchun qurilgan.",
+      "items": {
+        "fast": {
+          "title": "Tez",
+          "body": "Dispetcher reysni 60 soniyada yaratadi. Hech qanday ortiqcha qadam yo'q."
+        },
+        "reliable": {
+          "title": "Ishonchli",
+          "body": "Har bir kompaniya ma'lumoti alohida himoyalangan. Pul hisobi tiyingacha aniq."
+        },
+        "local": {
+          "title": "Mahalliy",
+          "body": "O'zbek (lotin/kirill) va rus tillarida. So'm, Asia/Tashkent, mahalliy SMS provayderlar."
+        }
+      }
+    },
+    "cta": {
+      "title": "Avtoparkingizni bugun tizimga o'tkazing",
+      "body": "14 kun bepul. Karta talab qilinmaydi. Ma'lumotlarni ko'chirishda yordam beramiz."
+    },
+    "footer": {
+      "copyright": "© 2026 · Toshkent, O'zbekiston",
+      "privacy": "Maxfiylik",
+      "terms": "Shartlar",
+      "contact": "Aloqa: +998 71 202 44 80"
+    }
   }
 }

@@ -91,6 +91,33 @@
 - [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
       autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
+## 6.5-bosqich — Nocturne dizayn tizimi (web UI) ✅
+
+Claude Design'dan kelgan handoff (`Truck Control App.dc.html`, `Landing.dc.html`,
+`Login.dc.html` + `_ds/nocturne-*`) web ilovaga ko'chirildi.
+
+- [x] Nocturne token qatlami: `apps/web/src/shared/theme/nocturne.css` (ranglar 100–900
+      ramp'lari, tipografika, `--space-*`/`--radius-*`/`--shadow-*`), Tailwind palitrasi
+      shu o'zgaruvchilardan o'qiydi — kodda qattiq hex yo'q
+- [x] Nocturne komponent kutubxonasi (`shared/ui`): `btn`/`card`/`table`/`tag`/`input`/
+      `seg`/`dialog`, `StatusChip`, `Segmented`, `MeterRow`, `Pagination`, Phosphor ikonkalari
+- [x] Ilova qobig'i: 228px yon panel (Asosiy / Boshqaruv guruhlari, faol reys hisoblagichi),
+      54px sarlavha (qidiruv, tashkilot, bildirishnoma, «Yangi reys»)
+- [x] Landing sahifasi (ochiq `/`) va yangi Kirish ekrani (split-panel, xato/yuklanish holatlari)
+- [x] W-1 Umumiy ko'rinish: «Boshqaruv paneli» (6 KPI, 14 kunlik dinamika, holat donut'i,
+      faol reyslar jadvali) va «Operatsion xona» (kanban, jonli lenta, ogohlantirishlar)
+- [x] Reyslar ro'yxati (filtrlar + pagination), reys kartochkasi (hayot sikli relsi,
+      3 ma'lumot kartasi, 4 tab), 5 qadamli reys yaratish sehrgari
+- [x] Avtopark, Haydovchilar, Yuklar, Mijozlar, Moliya, Hujjatlar, Hisobotlar,
+      Foydalanuvchilar (ruxsatlar matritsasi), Sozlamalar ekranlari
+- [x] Jonli xarita qorong'i tayl'lar va Nocturne marker'lari bilan
+- [x] Reysni bekor qilishda majburiy sabab — backend `CancelTripDto` + audit-logga yoziladi
+- [x] Testlar: dashboard metrikalari, reys hayot sikli, holat ranglari, pul formatlash,
+      UI komponentlari va 3 til uchun i18n kalit-qamrov testi (web: 63 test)
+
+> Cheklov: `documents` ro'yxat endpoint'i hali yo'q (7-bosqich) — Hujjatlar ekrani va reys
+> kartochkasidagi «Hujjatlar»/«Izohlar» tablari dizayn bo'yicha bo'sh holatda turibdi.
+
 ## 7-bosqich — Moliya yadrosi
 
 - [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
@@ -102,7 +129,8 @@
 - [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
 - [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
       xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
+- [ ] Web: W-8 yoqilg'i, W-10 ogohlantirishlar (W-1/W-7/W-9 ekranlari 6.5-bosqichda
+      qo'yildi — bu yerda `finance`/`fuel` hisob-kitoblariga ulanadi)
 - [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
 
 ## 8-bosqich — AI funksiyalari (TZ §8)

@@ -1,70 +1,144 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useCrudMutations, useList } from '../../shared/api/crud';
-import type { Client } from '../../shared/api/entities';
+import { TripStatus } from 'shared';
+import { useCrudMutations } from '../../shared/api/crud';
+import { useAllTrips, useClients, useIncomes } from '../../shared/api/queries';
 import {
   Button,
+  Card,
   Cell,
   EmptyState,
   ErrorMessage,
   Field,
+  Icon,
   Input,
   Modal,
   PageHeader,
-  Pagination,
   Row,
   Spinner,
   Table,
 } from '../../shared/ui';
-import { formatTiyin } from '../../shared/utils/money';
+import { formatMillionsTiyin, formatTiyin } from '../../shared/utils/money';
+import { openTrips } from '../overview/metrics';
 
 export function ClientsPage() {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
-  const { data, isLoading, error } = useList<Client>('clients', page);
+  const { data: clients, isLoading, error } = useClients();
+  const trips = useAllTrips();
+  const incomes = useIncomes();
 
-  const clients = data?.data ?? [];
-  const total = data?.meta?.pagination?.total ?? 0;
+  const rows = useMemo(() => {
+    const allTrips = trips.data ?? [];
+    const open = openTrips(allTrips);
+    const revenueByClient = new Map<string, bigint>();
+    for (const income of incomes.data ?? []) {
+      if (!income.clientId) continue;
+      revenueByClient.set(
+        income.clientId,
+        (revenueByClient.get(income.clientId) ?? 0n) + BigInt(income.amount),
+      );
+    }
+    return (clients ?? []).map((client) => ({
+      client,
+      active: open.filter((trip) => trip.clientId === client.id).length,
+      completed: allTrips.filter(
+        (trip) => trip.clientId === client.id && trip.status === TripStatus.COMPLETED,
+      ).length,
+      revenue: revenueByClient.get(client.id) ?? 0n,
+    }));
+  }, [clients, trips.data, incomes.data]);
+
+  const totalDebt = rows.reduce((sum, row) => {
+    const balance = BigInt(row.client.balance);
+    return balance > 0n ? sum + balance : sum;
+  }, 0n);
 
   return (
     <div>
       <PageHeader
         title={t('clients.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('clients.new')}</Button>}
+        subtitle={t('clients.subtitle', {
+          count: rows.length,
+          debt: formatMillionsTiyin(totalDebt),
+        })}
+        actions={
+          <Button icon="plus" onClick={() => setShowForm(true)}>
+            {t('clients.new')}
+          </Button>
+        }
       />
       <ErrorMessage error={error} />
-      {isLoading ? (
-        <Spinner />
-      ) : clients.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          <Table
-            headers={[
-              t('clients.name'),
-              t('clients.contactPerson'),
-              t('clients.phone'),
-              t('clients.paymentTerms'),
-              t('clients.balance'),
-            ]}
-          >
-            {clients.map((client) => (
-              <Row key={client.id}>
-                <Cell className="font-semibold">{client.name}</Cell>
-                <Cell>{client.contactPerson ?? '—'}</Cell>
-                <Cell>{client.phone ?? '—'}</Cell>
-                <Cell>{client.paymentTermsDays ?? '—'}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(client.balance)}</Cell>
-              </Row>
-            ))}
+
+      <Card className="overflow-hidden p-0">
+        {isLoading ? (
+          <Spinner />
+        ) : rows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <th className="pl-[18px]">{t('clients.name')}</th>
+                <th>{t('clients.phone')}</th>
+                <th className="text-right">{t('clients.activeTrips')}</th>
+                <th className="text-right">{t('status.COMPLETED')}</th>
+                <th className="text-right">{t('clients.debt')}</th>
+                <th className="text-right">{t('clients.totalRevenue')}</th>
+                <th className="pl-4">{t('clients.paymentTerms')}</th>
+                <th className="pr-[18px]" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ client, active, completed, revenue }) => {
+                const balance = BigInt(client.balance);
+                return (
+                  <Row key={client.id}>
+                    <Cell className="whitespace-nowrap pl-[18px] font-medium">{client.name}</Cell>
+                    <Cell className="whitespace-nowrap tabular-nums text-neutral-400">
+                      {client.phone ?? '—'}
+                    </Cell>
+                    <Cell align="right">{active}</Cell>
+                    <Cell align="right" className="text-neutral-400">
+                      {completed}
+                    </Cell>
+                    <Cell
+                      align="right"
+                      className="font-semibold"
+                      style={{ color: balanceColor(balance) }}
+                    >
+                      {formatTiyin(client.balance)}
+                    </Cell>
+                    <Cell align="right">{formatTiyin(revenue)}</Cell>
+                    <Cell className="pl-4 text-neutral-500">
+                      {client.paymentTermsDays != null
+                        ? t('clients.termsDays', { count: client.paymentTermsDays })
+                        : t('clients.prepaid')}
+                    </Cell>
+                    <Cell className="pr-[18px] text-right">
+                      <Icon
+                        name="dots-three"
+                        size={16}
+                        style={{ color: 'var(--color-neutral-500)' }}
+                      />
+                    </Cell>
+                  </Row>
+                );
+              })}
+            </tbody>
           </Table>
-          <Pagination page={page} limit={20} total={total} onPage={setPage} />
-        </>
-      )}
+        )}
+      </Card>
+
       <ClientFormModal open={showForm} onClose={() => setShowForm(false)} />
     </div>
   );
+}
+
+/** Debt reads warm; a settled or credit balance stays neutral. */
+export function balanceColor(balance: bigint): string {
+  if (balance <= 0n) return 'var(--color-neutral-500)';
+  return 'var(--color-warning-text)';
 }
 
 function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -80,7 +154,7 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
     paymentTermsDays: '',
   });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+    setForm((current) => ({ ...current, [key]: e.target.value }));
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -97,9 +171,9 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
   }
 
   return (
-    <Modal title={t('clients.new')} open={open} onClose={onClose}>
-      <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <Field label={t('clients.name')}>
+    <Modal title={t('clients.new')} open={open} onClose={onClose} width={520}>
+      <form onSubmit={(e) => void onSubmit(e)}>
+        <Field label={t('clients.name')} className="mb-3">
           <Input value={form.name} onChange={set('name')} required />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -128,8 +202,8 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
             {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={create.isPending}>
