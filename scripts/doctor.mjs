@@ -1,10 +1,14 @@
 /**
- * `pnpm doctor` — checks every prerequisite the dev setup needs and prints the
- * exact command that fixes whatever is missing.
+ * `pnpm run check` — checks every prerequisite the dev setup needs and prints
+ * the exact command that fixes whatever is missing.
+ *
+ * Named `check`, not `doctor`/`setup`: pnpm owns both of those as built-in
+ * commands and would run its own instead of this script.
  *
  * Deliberately dependency-free and failure-tolerant: it must still produce a
  * useful report on a machine where the install itself went wrong.
  */
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import net from 'node:net';
@@ -56,6 +60,50 @@ function tcpCheck(host, port, timeout = 2500) {
     socket.once('timeout', () => finish(false));
     socket.once('error', () => finish(false));
   });
+}
+
+/** `docker ps` output for our postgres container, or null when docker is unusable. */
+function dockerPostgresRunning() {
+  try {
+    const result = spawnSync(
+      'docker',
+      ['ps', '--filter', 'name=truckcontrol-postgres', '--format', '{{.Names}} {{.Ports}}'],
+      { encoding: 'utf8', shell: process.platform === 'win32', timeout: 8000 },
+    );
+    if (result.status !== 0) return null;
+    return result.stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Tells the two realistic causes of a P1000 apart and returns the matching fix. */
+async function diagnoseAuthFailure(dbPort) {
+  const container = dockerPostgresRunning();
+
+  if (container === null) {
+    return (
+      'Docker javob bermadi. Docker Desktop ochiqmi? So‘ng: docker compose up -d\n' +
+      '        Agar kompyuteringizda alohida PostgreSQL o‘rnatilgan bo‘lsa, u ' +
+      `${dbPort}-portni egallagan bo‘lishi mumkin.`
+    );
+  }
+
+  if (container === '') {
+    return (
+      `truckcontrol-postgres konteyneri ISHLAMAYAPTI, lekin ${dbPort}-portga kimdir javob beryapti —\n` +
+      '        demak portni boshqa PostgreSQL egallagan (Windows’da odatda mahalliy o‘rnatilgan server).\n' +
+      '        Yechim A: o‘sha xizmatni to‘xtating, so‘ng: docker compose up -d\n' +
+      '        Yechim B: .env da POSTGRES_PORT=5433 qiling va DATABASE_URL dagi portni ham 5433 ga\n' +
+      '                  o‘zgartiring, so‘ng: docker compose up -d'
+    );
+  }
+
+  return (
+    'Konteyner ishlayapti, lekin paroli .env dagidan farq qiladi — volume eskirgan.\n' +
+    '        PostgreSQL parolni faqat birinchi ishga tushganda o‘qiydi. Dev ma’lumotni tozalab qayta yarating:\n' +
+    '        docker compose down -v && docker compose up -d && pnpm run bootstrap'
+  );
 }
 
 async function main() {
@@ -185,12 +233,18 @@ async function main() {
         await prisma.$disconnect();
       }
     } catch (error) {
-      const message = String(error?.message ?? error).split('\n')[0];
+      const raw = String(error?.message ?? error);
+      const message = raw.split('\n').find((line) => line.trim()) ?? raw;
+      // P1000 = the port answers but the credentials are refused. On a dev
+      // machine that is almost always another PostgreSQL holding 5432, or a
+      // volume initialised earlier with a different password (Postgres keeps
+      // the old one — POSTGRES_PASSWORD is only read on first start).
+      const authFailed = raw.includes('P1000') || /authentication failed/i.test(raw);
       report(
         'Bazaga ulanish',
         false,
-        message.slice(0, 120),
-        'Login/parol yoki baza nomini .env dagi DATABASE_URL bilan solishtiring',
+        authFailed ? 'login/parol qabul qilinmadi (P1000)' : message.trim().slice(0, 120),
+        authFailed ? await diagnoseAuthFailure(dbPort) : 'DATABASE_URL ni tekshiring',
       );
     }
   }
@@ -217,7 +271,7 @@ async function main() {
   } else {
     console.log(`MUAMMO: ${firstProblem.name} — ${firstProblem.detail}`);
     console.log(`YECHIM: ${firstProblem.fix}`);
-    console.log('\nTuzatgach shu buyruqni qayta ishga tushiring: pnpm doctor');
+    console.log('\nTuzatgach shu buyruqni qayta ishga tushiring: pnpm run check');
   }
   console.log('');
 }

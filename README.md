@@ -43,16 +43,19 @@ docs/              TZ, arxitektura, roadmap
 ```bash
 docker compose up -d      # postgres, redis, minio (Docker ochiq bo'lsin)
 cp .env.example .env      # qiymatlarni to'ldiring
-pnpm setup                # install + migrate + seed + demo ma'lumot
+pnpm run bootstrap        # install + migrate + seed + demo ma'lumot
 pnpm dev                  # backend :3000 + web :5173
 ```
 
 So'ng oching: **http://localhost:5173**
 
-Biror narsa ishlamasa — `pnpm doctor`. U har bir shartni tekshiradi (`.env`,
+Biror narsa ishlamasa — `pnpm run check`. U har bir shartni tekshiradi (`.env`,
 `shared` yig'ilganmi, Prisma Client generatsiya qilinganmi, baza ulanadimi,
 migratsiya va demo ma'lumot bormi, portlar band emasmi) va **aynan qaysi
 buyruq tuzatishini** yozib beradi.
+
+> `bootstrap` va `check` nomlari ataylab tanlangan: `setup` va `doctor` — pnpm'ning
+> o'z buyruqlari, ular paket skriptini emas, pnpm'nikini ishga tushiradi.
 
 Alohida qadamlar kerak bo'lsa:
 
