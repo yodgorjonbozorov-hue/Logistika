@@ -116,15 +116,24 @@ describe('Audit trail (e2e)', () => {
     expect((incomeEntries[1]?.after as Record<string, unknown>).paymentMethod).toBe('bank');
   });
 
-  it('ignores a client-supplied payment status: it comes from the ledger', async () => {
+  it('refuses a client-supplied payment status: it comes from the ledger', async () => {
+    const rejected = await api()
+      .post('/api/v1/incomes')
+      .set('idempotency-key', randomUUID())
+      .set(as(tenant.tokens.owner))
+      .send({ amount: '1000', clientId: tenant.client.id, status: 'PAID' });
+
+    // Marking an unpaid trip PAID by hand used to be one <Select> away. The
+    // field was dropped in silence until M-22; now the caller is told.
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error.code).toBe('VALIDATION_FAILED');
+
     const income = await api()
       .post('/api/v1/incomes')
       .set('idempotency-key', randomUUID())
       .set(as(tenant.tokens.owner))
-      .send({ amount: '1000', clientId: tenant.client.id, status: 'PAID' })
+      .send({ amount: '1000', clientId: tenant.client.id })
       .expect(201);
-
-    // Marking an unpaid trip PAID by hand used to be one <Select> away.
     expect(income.body.data.status).toBe('PENDING');
   });
 

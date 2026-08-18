@@ -105,6 +105,24 @@
         "branches": 57,
         "functions": 82
       },
+      "./src/common/phone.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 92,
+        "functions": 100
+      },
+      "./src/common/dto/date-bounds.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 100,
+        "functions": 100
+      },
+      "./src/common/auth/token-version.service.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 85,
+        "functions": 100
+      },
       "./src/common/dto/catalogue.dto.ts": {
         "statements": 100,
         "lines": 100,

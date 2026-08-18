@@ -442,6 +442,105 @@ describe('ExpensesService optimistic locking (TASK-3.5)', () => {
   });
 });
 
+describe('ExpensesService.reverseExpense (L-8)', () => {
+  const audit = {
+    log: jest.fn(),
+    logInTx: jest.fn().mockResolvedValue(undefined),
+  } as unknown as AuditService;
+
+  beforeEach(() => jest.clearAllMocks());
+
+  function setup(existing: Record<string, unknown> = {}) {
+    const { prisma, db } = createTenantDbMock([
+      'expense',
+      'income',
+      'trip',
+      'vehicle',
+      'driver',
+      'client',
+    ]);
+    db.expense!.findUnique!.mockResolvedValue({
+      id: 'e1',
+      companyId: 'company-a',
+      category: 'FUEL',
+      amount: 500_000_000n,
+      amountBase: 500_000_000n,
+      currency: 'UZS',
+      expenseDate: new Date('2026-08-17T09:00:00Z'),
+      isApproved: true,
+      reversalOfId: null,
+      version: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...existing,
+    });
+    db.expense!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'e2', ...data }),
+    );
+    return { service: new ExpensesService(prisma, audit, ledgerStub, currencyStub), db };
+  }
+
+  const REASON = "Chek noto'g'ri kiritilgan, summa 10 barobar ko'p";
+
+  it('mirrors the original instead of editing or deleting it', async () => {
+    const { service, db } = setup();
+
+    await service.reverseExpense(ACTOR, 'e1', REASON);
+
+    const data = db.expense!.create!.mock.calls[0][0].data;
+    expect(data.reversalOfId).toBe('e1');
+    expect(data.amount).toBe(500_000_000n);
+    expect(data.description).toBe(REASON);
+    // The original is the financial record; nothing about it moves.
+    expect(db.expense!.update).not.toHaveBeenCalled();
+    expect(db.expense!.delete).not.toHaveBeenCalled();
+  });
+
+  it('leaves the reversal unapproved, so somebody signs it off', async () => {
+    const { service, db } = setup();
+    await service.reverseExpense(ACTOR, 'e1', REASON);
+    expect(db.expense!.create!.mock.calls[0][0].data.isApproved).toBe(false);
+  });
+
+  it('does not copy the original identity onto the new row', async () => {
+    const { service, db } = setup();
+    await service.reverseExpense(ACTOR, 'e1', REASON);
+
+    const data = db.expense!.create!.mock.calls[0][0].data;
+    expect(data.id).toBeUndefined();
+    expect(data.version).toBeUndefined();
+    expect(data.createdById).toBe('user-1');
+  });
+
+  it('refuses to reverse a reversal', async () => {
+    const { service } = setup({ reversalOfId: 'e0' });
+
+    // Cancelling a cancellation is a fresh expense, not a third row in a chain.
+    await expect(service.reverseExpense(ACTOR, 'e1', REASON)).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+  });
+
+  it('reports a missing expense as not found', async () => {
+    const { service, db } = setup();
+    db.expense!.findUnique!.mockResolvedValue(null);
+
+    await expect(service.reverseExpense(ACTOR, 'gone', REASON)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('records the reversal in the audit trail against the original', async () => {
+    const { service } = setup();
+    await service.reverseExpense(ACTOR, 'e1', REASON);
+
+    expect(audit.logInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ action: 'REVERSE', entityType: 'Expense', entityId: 'e1' }),
+    );
+  });
+});
+
 describe('ExpensesService income ↔ ledger (TASK-3.1)', () => {
   const audit = {
     log: jest.fn(),

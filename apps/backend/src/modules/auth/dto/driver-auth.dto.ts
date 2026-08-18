@@ -1,12 +1,15 @@
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, Length } from 'class-validator';
+import { IsPhone, NormalizePhone } from '../../../common/phone';
 
 export class RequestCodeDto {
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone!: string;
 }
 
 export class VerifyCodeDto {
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone!: string;
 
   @IsString()

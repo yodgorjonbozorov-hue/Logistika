@@ -6,11 +6,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
 } from 'class-validator';
 import { SalaryType } from 'shared';
 import { IsTiyin } from '../../../common/dto/money';
+import { IsPhone, NormalizePhone } from '../../../common/phone';
 
 export class CreateDriverDto {
   @IsString()
@@ -19,7 +19,8 @@ export class CreateDriverDto {
   fullName!: string;
 
   @IsOptional()
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone?: string;
 
   @IsOptional()

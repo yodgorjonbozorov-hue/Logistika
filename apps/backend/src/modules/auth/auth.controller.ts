@@ -8,11 +8,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { THROTTLERS } from '../../common/throttling/throttling.module';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import {
-  clearRefreshCookie,
-  readRefreshToken,
-  setRefreshCookie,
-} from './refresh-cookie';
+import { clearRefreshCookie, readRefreshToken, setRefreshCookie } from './refresh-cookie';
 import { PasswordService } from './password.service';
 import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
 import { DriverAuthService } from './driver-auth.service';

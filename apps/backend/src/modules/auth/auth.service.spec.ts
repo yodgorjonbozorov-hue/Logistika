@@ -7,6 +7,7 @@ import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuditService } from '../audit/audit.service';
 import type { UsersService } from '../users/users.service';
 import { AuthService, ttlToSeconds } from './auth.service';
+import type { TokenVersionService } from '../../common/auth/token-version.service';
 
 const ENV: Record<string, string> = {
   JWT_ACCESS_SECRET: 'test-access-secret-1234567890',
@@ -65,9 +66,11 @@ describe('AuthService', () => {
     prisma = {
       user: { update: jest.fn() },
       refreshToken: {
-        create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-          Promise.resolve({ id: 'rt-new', ...data }),
-        ),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+            Promise.resolve({ id: 'rt-new', ...data }),
+          ),
         findUnique: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -83,6 +86,11 @@ describe('AuthService', () => {
       jwtService,
       { getOrThrow: (key: string) => ENV[key] } as unknown as ConfigService,
       audit as unknown as AuditService,
+      {
+        currentFor: jest.fn().mockResolvedValue(0),
+        invalidate: jest.fn(),
+        clear: jest.fn(),
+      } as unknown as TokenVersionService,
     );
   });
 
@@ -282,9 +290,7 @@ describe('AuthService', () => {
       expect(data.lockedUntil).toBeInstanceOf(Date);
       // The counter restarts so the next run has to earn the lock again.
       expect(data.failedLoginAttempts).toBe(0);
-      expect(audit.log).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'ACCOUNT_LOCKED' }),
-      );
+      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'ACCOUNT_LOCKED' }));
     });
 
     it('refuses a locked account before checking the password at all', async () => {

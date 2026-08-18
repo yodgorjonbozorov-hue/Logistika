@@ -241,12 +241,10 @@ function IncomesTab() {
 function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { create } = useCrudMutations('incomes');
-  const [form, setForm] = useState({
-    amount: '',
-    invoiceNumber: '',
-    paymentDate: '',
-    status: PaymentStatus.PENDING as PaymentStatus,
-  });
+  // No status field: it is derived from the ledger (BUSINESS-RULES §1). The
+  // picker that used to be here was ignored by the server, and since M-22 it
+  // is refused outright.
+  const [form, setForm] = useState({ amount: '', invoiceNumber: '', paymentDate: '' });
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -256,7 +254,6 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
       amount: somToTiyin(form.amount),
       invoiceNumber: form.invoiceNumber || undefined,
       paymentDate: form.paymentDate ? new Date(form.paymentDate).toISOString() : undefined,
-      status: form.status,
     });
     onClose();
   }
@@ -273,15 +270,6 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </Field>
           <Field label={t('finance.paymentDate')}>
             <Input type="date" value={form.paymentDate} onChange={set('paymentDate')} />
-          </Field>
-          <Field label={t('finance.paymentStatus')}>
-            <Select value={form.status} onChange={set('status')}>
-              {Object.values(PaymentStatus).map((status) => (
-                <option key={status} value={status}>
-                  {t(`finance.paymentStatuses.${status}`)}
-                </option>
-              ))}
-            </Select>
           </Field>
         </div>
         <ErrorMessage error={create.error} />

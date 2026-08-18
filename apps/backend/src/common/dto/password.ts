@@ -83,7 +83,10 @@ function normalise(value: string): string {
 function containsPersonalDetail(password: string, details: string[]): boolean {
   const lower = password.toLowerCase();
   return details.some((detail) => {
-    const cleaned = detail.toLowerCase().split(/[@\s.]+/).filter((part) => part.length >= 4);
+    const cleaned = detail
+      .toLowerCase()
+      .split(/[@\s.]+/)
+      .filter((part) => part.length >= 4);
     return cleaned.some((part) => lower.includes(part));
   });
 }

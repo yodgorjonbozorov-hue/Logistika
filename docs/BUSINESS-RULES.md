@@ -603,3 +603,101 @@ tarix, reja emas.
 
 Nafaqaga chiqarilgan mijozning eski reyslari, invoyslari va ledger yozuvlari
 joyida qoladi va nomi bilan o'qiladi — yumshoq o'chirishning butun ma'nosi shu.
+
+## 12. Mayda, lekin muhim qoidalar (TASK-3.12)
+
+### Noma'lum maydon jimgina tashlanmaydi (M-22)
+
+`whitelist: true` ortiqcha maydonni **indamay o'chirardi**: `amout` deb yozgan
+klient 201 va nol summali xarajat olardi. Endi `forbidNonWhitelisted: true` — 400. Buzuvchi o'zgarish, shuning uchun web va mobil so'rovlari tekshirildi;
+bitta joyda haqiqiy muammo topildi: kirim formasi hali ham `status` yuborardi,
+holbuki TASK-3.1 dan beri u ledger'dan hisoblanadi. Tanlov formadan olib
+tashlandi — server e'tiborsiz qoldiradigan tanlovni ko'rsatish yolg'on.
+
+### Sana ishonarli oyna ichida (M-5, M-6, L-9)
+
+| Maydon                       | Oyna                | Nega                                                                                      |
+| ---------------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `expenseDate`, `paymentDate` | ertaga**gacha**     | ofis va haydovchi yarim tundan ikki tomonda bo'lishi mumkin                               |
+| `eventTime` (telefondan)     | +5 daqiqa … −30 kun | 5 daqiqa — oddiy soat farqi; 30 kun — offline navbat ushlab tura oladigan eng uzoq muddat |
+| `from`/`to` (ro'yxat filtri) | `@IsDate()`         | avval `?from=kecha` `Invalid Date` bo'lib Prisma'ga borardi va **500** qaytarardi         |
+
+Telefon soati noto'g'ri bo'lishi kamdan-kam emas — bir hafta o'chib turgan
+qurilmaning **odatiy holati**. 1970 yoki 2049 sanali hodisa hech qayerda xatoga
+o'xshamaydi: u reys tarixini jimgina qayta tartiblaydi va noto'g'ri hisobot
+oyiga tushadi.
+
+`TripEvent.receivedAt` (server vaqti) qo'shildi: telefon aytgan vaqt bilan
+server qabul qilgan vaqt orasidagi farq — kech sinxronizatsiyani noto'g'ri
+soatdan ajratishning yagona yo'li.
+
+### Telefon raqami — bitta shakl (M-3)
+
+`+998901234567`, `998901234567`, `901234567` va `90 123 45 67` — bitta raqam va
+**to'rtta akkaunt** edi: kirish qidiruvi unique ustun bo'yicha aniq matn
+tengligi. Bir yo'l bilan ro'yxatdan o'tgan haydovchi boshqa yo'l bilan kira
+olmasdi, va allaqachon akkaunti bor odamga ikkinchisi ochilishi mumkin edi.
+
+`normalizePhone()` E.164 beradi (`+998...`), DTO transform'ida ishlaydi, bazaga
+faqat normallashtirilgan holda yoziladi va `findByIdentifier` ham
+normallashtiradi. **Chet el raqami tegilmaydi**: `+` bilan yozilgan raqamning
+davlat kodiga ishoniladi — qozog'istonlik haydovchiga `+998` taxmin qilish
+ishlaydigan raqamni boshqa birovnikiga aylantirardi. Mavjud qatorlar
+migratsiyada tozalandi.
+
+### Token qaror o'zgarganda ishlashdan to'xtaydi (M-2, L-2)
+
+Access token 15 daqiqa yashaydi va **uni o'ldirishi kerak bo'lgan har bir
+qarordan omon qolardi**: lavozimi pasaytirilgan foydalanuvchi eski huquqini
+saqlardi, o'chirilgani to'liq kirishni, «chiqish» esa umumiy telefonda
+oldingi haydovchining tokeni hali ham ishlaydigan chorak soatni qoldirardi.
+
+`User.tokenVersion` — token qaysi avlodda chiqarilgani. Guard uni joriy qiymat
+bilan solishtiradi. Oshiriladi: **rol o'zgarishi, deaktivatsiya, parol
+o'zgarishi, chiqish**. Deaktivatsiyada refresh tokenlar ham bekor qilinadi —
+avval o'chirilgan akkaunt o'ziga yangi access token chiqarib olardi.
+
+Chiqish **barcha** seanslarni tugatadi. Bu ataylab: umumiy telefonda «chiqish»
+dan keyin 15 daqiqa ishlaydigan token — aynan chiqish bartaraf qilishi kerak
+bo'lgan xavf; boshqa qurilmadan chiqib qolish esa qulaylik masalasi.
+
+Kesh 30 soniya, lekin versiyani oshiradigan har bir yo'l keshni **darhol**
+tozalaydi — kechikish faqat ilovadan tashqarida qilingan o'zgarishga tegishli.
+
+### Firma ma'lumoti — faqat ofis uchun (L-1)
+
+`GET /company` INN, manzil, tarif rejasi va obunani qaytaradi. Haydovchiga
+bularning hech biri kerak emas va u hammasini ko'ra olardi. Endi
+`OWNER`/`LOGIST`/`ACCOUNTANT`.
+
+### Xarajat tuzatish — teskari yozuv, manfiy summa emas (L-8)
+
+`Expense.amount` ataylab ishorasiz, tasdiqlangan xarajat esa o'zgarmas —
+ikkalasi birgalikda **tuzatishning umuman iloji yo'q**ligini anglatardi.
+Yetkazib beruvchidan qaytgan pul yoki 500 000 o'rniga 5 000 000 deb kiritilgan
+chek shunchaki yozib bo'lmasdi.
+
+Yechim — ledger'dagi naqsh: original **qanday yozilgan bo'lsa shunday qoladi**
+(moliyaviy yozuvning butun ma'nosi shu), teskari yozuv esa uni bekor qiladi.
+Bekor qilingan juftlik nolga yig'iladi, ya'ni xarajat hisoboti ularni hech
+qanday ishora konvensiyasisiz o'zaro qisqartiradi. Summani tuzatish = teskari
+yozuv + yangi xarajat.
+
+`POST /expenses/:id/reverse` (OWNER/ACCOUNTANT, idempotent), sabab majburiy
+(`@MinLength(10)`). `reversal_of_id` unique — bitta xarajat ikki marta bekor
+qilinmaydi; teskari yozuvni bekor qilib ham bo'lmaydi.
+
+### Hujjat egasi — polimorf, va shunday qoladi (M-15)
+
+`Document.ownerType` + `ownerId` juftligini hech qanday tashqi kalit ifodalay
+olmaydi. Qaror va uning sababi:
+
+`VehicleDocument`/`DriverDocument`/… ga bo'lish haqiqiy FK beradi, lekin to'rtta
+deyarli bir xil jadval evaziga, va «muddati tugayotgan barcha hujjatlar»
+so'rovi `UNION`ga aylanadi — bu esa aynan eng ko'p kerak bo'ladigan so'rov.
+
+Uning o'rniga orphan **ikki uchidan** oldi olinadi: hujjat yaratadigan modul
+egasi shu tenant ichida mavjudligini tekshirishi shart, va TASK-3.10/3.11 dan
+keyin egalarning hech biri **umuman o'chirilmaydi** — faqat nafaqaga
+chiqariladi. Hozircha `Document` modulining o'zi yozilmagan; qoida shu yerda va
+`schema.prisma` izohida uni yozadigan odam uchun qoldirildi.

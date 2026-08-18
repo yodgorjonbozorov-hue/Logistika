@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { UsersService } from '../users/users.service';
 import { SmsService } from './sms.service';
 import type { ChangePasswordDto, ResetPasswordDto } from './dto/password.dto';
+import { TokenVersionService } from '../../common/auth/token-version.service';
 
 const RESET_TTL_MS = 30 * 60 * 1000;
 
@@ -22,6 +23,7 @@ export class PasswordService {
     private readonly audit: AuditService,
     private readonly sms: SmsService,
     private readonly i18n: I18nService,
+    private readonly tokenVersions: TokenVersionService,
   ) {}
 
   /**
@@ -39,7 +41,13 @@ export class PasswordService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await argon2.hash(dto.newPassword) },
+      data: {
+        passwordHash: await argon2.hash(dto.newPassword),
+        // Ends the access tokens too. Changing a password because it may have
+        // leaked, while the leaked session keeps working for 15 minutes, is
+        // not a password change (M-2).
+        tokenVersion: { increment: 1 },
+      },
     });
     await this.revokeAllSessions(user.id);
 
@@ -110,6 +118,7 @@ export class PasswordService {
         // the account, and leaving them locked out helps nobody.
         failedLoginAttempts: 0,
         lockedUntil: null,
+        tokenVersion: { increment: 1 },
       },
     });
     await this.revokeAllSessions(user.id);
@@ -135,6 +144,9 @@ export class PasswordService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    // The row's tokenVersion was already bumped by the caller; this makes the
+    // guard see it now rather than when its cache next expires.
+    this.tokenVersions.invalidate(userId);
   }
 
   /**
@@ -142,11 +154,7 @@ export class PasswordService {
    * was specified, so the link is logged rather than silently dropped.
    * Replacing this log with a real mailer is the whole integration.
    */
-  private async deliver(
-    email: string | null,
-    phone: string | null,
-    token: string,
-  ): Promise<void> {
+  private async deliver(email: string | null, phone: string | null, token: string): Promise<void> {
     if (phone) {
       await this.sms.send(phone, this.i18n.translate('SMS_PASSWORD_RESET', 'uz-latn', { token }));
       return;

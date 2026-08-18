@@ -10,6 +10,7 @@ import { IdempotencyCleanup } from './common/idempotency/idempotency.cleanup';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { LoggingModule } from './common/observability/logging.module';
+import { TokenVersionModule } from './common/auth/token-version.module';
 import { SubscriptionGuard } from './common/subscription/subscription.guard';
 import { SubscriptionModule } from './common/subscription/subscription.module';
 import { ThrottlingModule } from './common/throttling/throttling.module';
@@ -46,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module';
     LoggingModule,
     ThrottlingModule,
     PrismaModule,
+    TokenVersionModule,
     SubscriptionModule,
     I18nModule,
     AuditModule,

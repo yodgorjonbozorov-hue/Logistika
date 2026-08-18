@@ -217,6 +217,10 @@ model User {
   // Brute-force protection: cleared on every successful login.
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
+  /// Bumped whenever every existing session must stop working: a role change,
+  /// a deactivation, a password change, a logout. Access tokens carry the
+  /// value they were minted with, so a stale one no longer matches (M-2, L-2).
+  tokenVersion        Int       @default(0) @map("token_version")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -441,7 +445,10 @@ model TripEvent {
   address       String?
   odometer      Int?
   comment       String?
-  photoUrls     Json?         @map("photo_urls")
+  /// StoredFile ids, not URLs. It was called `photo_urls` and always held ids;
+  /// a URL stored in a row goes stale, and files are served through the files
+  /// module which mints access on demand (M-4).
+  photoFileIds  Json?         @map("photo_file_ids")
   /// Client-generated UUID for idempotent offline batch sync (TZ §3.1).
   ///
   /// Required, and unique **per company** rather than globally: an id one
@@ -449,6 +456,10 @@ model TripEvent {
   /// store, and a nullable key cannot deduplicate anything.
   clientEventId String        @map("client_event_id")
   isSynced      Boolean       @default(true) @map("is_synced")
+  /// When the server accepted it, as opposed to when the phone says it
+  /// happened. An offline queue can hold an event for days, and the gap
+  /// between the two is the only way to tell a late sync from a wrong clock.
+  receivedAt    DateTime      @default(now()) @map("received_at")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
@@ -485,6 +496,10 @@ model Expense {
   expenseDate   DateTime        @map("expense_date")
   createdById   String?         @map("created_by")
   isApproved    Boolean         @default(false) @map("is_approved")
+  /// A correction is a second, mirrored row rather than a negative amount or an
+  /// edit — the ledger pattern (BUSINESS-RULES §1). An approved expense is part
+  /// of the financial record and had no way to be corrected at all (L-8).
+  reversalOfId  String?         @unique @map("reversal_of_id")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
   /// Optimistic lock, as on Trip. Editing an expense is a read-then-write, and
@@ -495,6 +510,8 @@ model Expense {
   trip    Trip?    @relation(fields: [tripId], references: [id])
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
   driver  Driver?  @relation(fields: [driverId], references: [id])
+  reversalOf  Expense?  @relation("ExpenseReversal", fields: [reversalOfId], references: [id])
+  reversedBy  Expense?  @relation("ExpenseReversal")
 
   @@index([companyId, expenseDate])
   @@map("expenses")
@@ -703,6 +720,14 @@ model Maintenance {
   @@map("maintenance")
 }
 
+/// Polymorphic owner (`ownerType` + `ownerId`), which no foreign key can
+/// express (M-15). The decision, so whoever writes this module inherits it:
+/// splitting into VehicleDocument/DriverDocument/... would buy a real FK at the
+/// cost of four near-identical tables and every query over "all expiring
+/// documents" becoming a union. The orphan it protects against is instead
+/// prevented at both ends — the module that creates a document must check the
+/// owner exists in the tenant, and since TASK-3.10/3.11 no owner is deleted at
+/// all, only retired. See docs/BUSINESS-RULES.md §12.
 model Document {
   id           String            @id @default(uuid())
   companyId    String            @map("company_id")

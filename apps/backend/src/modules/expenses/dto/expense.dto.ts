@@ -7,11 +7,13 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  MinLength,
   Min,
 } from 'class-validator';
 import { Currency, ExpenseCategory } from 'shared';
 import { IsTiyin } from '../../../common/dto/money';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { IsWithinDateWindow, RECORDED_DATE_WINDOW } from '../../../common/dto/date-bounds';
 
 export class CreateExpenseDto {
   @IsOptional()
@@ -61,6 +63,7 @@ export class CreateExpenseDto {
   paymentMethod?: string;
 
   @IsDateString()
+  @IsWithinDateWindow(RECORDED_DATE_WINDOW)
   expenseDate!: string;
 }
 
@@ -98,6 +101,7 @@ export class CreateIncomeDto {
 
   @IsOptional()
   @IsDateString()
+  @IsWithinDateWindow(RECORDED_DATE_WINDOW)
   paymentDate?: string;
 
   @IsOptional()
@@ -117,3 +121,17 @@ export class CreateIncomeDto {
 }
 
 export class UpdateIncomeDto extends PartialType(CreateIncomeDto) {}
+
+/**
+ * Why an expense is being cancelled.
+ *
+ * Required and long enough to be a sentence, for the same reason a trip's
+ * failure needs one: "correction" tells the person reviewing a loss-making
+ * month in six weeks exactly nothing.
+ */
+export class ReverseExpenseDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(500)
+  reason!: string;
+}

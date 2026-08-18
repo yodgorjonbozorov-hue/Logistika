@@ -11,7 +11,13 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
+  /**
+   * Office roles only (L-1). This returns the INN, the address, the tariff plan
+   * and the subscription — none of which a driver needs, and all of which a
+   * driver used to be able to read.
+   */
   @Get()
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT)
   getOwn(@CurrentUser() user: CurrentUserPayload) {
     return this.companiesService.getOwn(user.companyId);
   }

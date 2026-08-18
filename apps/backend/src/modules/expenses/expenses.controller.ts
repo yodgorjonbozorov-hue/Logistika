@@ -21,6 +21,7 @@ import {
   CreateIncomeDto,
   ListExpensesDto,
   UpdateExpenseDto,
+  ReverseExpenseDto,
   UpdateIncomeDto,
 } from './dto/expense.dto';
 import { ExpensesService } from './expenses.service';
@@ -57,6 +58,23 @@ export class ExpensesController {
   @HttpCode(HttpStatus.OK)
   approve(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.expensesService.approveExpense(user, id);
+  }
+
+  /**
+   * Cancels an expense with a mirrored row rather than editing or deleting it
+   * (L-8). The reason is required: a correction nobody explained is a number
+   * that changed for no recorded reason.
+   */
+  @Post(':id/reverse')
+  @Idempotent()
+  @Roles(UserRole.OWNER, UserRole.ACCOUNTANT)
+  @HttpCode(HttpStatus.OK)
+  reverse(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReverseExpenseDto,
+  ) {
+    return this.expensesService.reverseExpense(user, id, dto.reason);
   }
 
   @Delete(':id')

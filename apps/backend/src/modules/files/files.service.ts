@@ -7,7 +7,11 @@ import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { detectFileType, looksLikeCompletePdf, type DetectedFileType } from '../../common/file-signature';
+import {
+  detectFileType,
+  looksLikeCompletePdf,
+  type DetectedFileType,
+} from '../../common/file-signature';
 import { requireTenantActor } from '../../common/tenant-actor';
 import { publicStorageEndpoint } from '../../config/env.validation';
 import { FileScanner } from './file-scanner';
@@ -262,12 +266,12 @@ export class FilesService implements OnModuleInit {
   /** File ids referenced by a trip event photo list. */
   private async referencedFileIds(ids: string[]): Promise<Set<string>> {
     const events = await this.prisma.tripEvent.findMany({
-      where: { photoUrls: { not: Prisma.DbNull } },
-      select: { photoUrls: true },
+      where: { photoFileIds: { not: Prisma.DbNull } },
+      select: { photoFileIds: true },
     });
     const referenced = new Set<string>();
     for (const event of events) {
-      for (const value of (event.photoUrls as string[] | null) ?? []) {
+      for (const value of (event.photoFileIds as string[] | null) ?? []) {
         if (ids.includes(value)) referenced.add(value);
       }
     }

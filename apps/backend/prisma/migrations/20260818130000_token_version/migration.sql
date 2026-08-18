@@ -1,0 +1,13 @@
+-- Access tokens can now be invalidated before they expire (TASK-3.12, M-2, L-2).
+--
+-- A role change, a deactivation, a password change and a logout all used to
+-- leave the access token working for its full 15 minutes: the demoted user kept
+-- their old rights, the deactivated one kept full access, and "log out" on a
+-- shared phone left a quarter of an hour in which the previous driver's token
+-- still worked.
+--
+-- The token carries the version it was minted with; the guard compares it to
+-- the user's current one. Existing rows start at 0, which is what every token
+-- issued before this migration will be compared against — nobody is logged out
+-- by the deployment itself.
+ALTER TABLE "users" ADD COLUMN "token_version" INTEGER NOT NULL DEFAULT 0;

@@ -8,6 +8,8 @@ import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import { normalizePhone } from '../../common/phone';
+import { TokenVersionService } from '../../common/auth/token-version.service';
 
 export type SafeUser = Omit<User, 'passwordHash'>;
 
@@ -21,12 +23,32 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly tokenVersions: TokenVersionService,
   ) {}
+
+  /**
+   * Ends every stored session for this user.
+   *
+   * Bumping the token version stops the access tokens; the refresh tokens are
+   * a separate store and used to survive a deactivation entirely, so a
+   * switched-off account could mint itself a fresh access token (M-2).
+   */
+  private async revokeRefreshTokens(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
 
   // ---------- Pre-auth lookups (login happens before the tenant is known) ----------
 
   findByIdentifier(identifier: string): Promise<User | null> {
-    const where = identifier.includes('@') ? { email: identifier } : { phone: identifier };
+    // The login form takes whatever the person types. Without normalising it
+    // here, somebody who registered as +998901234567 could not sign in by
+    // typing 901234567 — the lookup is an exact match on a unique column.
+    const where = identifier.includes('@')
+      ? { email: identifier }
+      : { phone: normalizePhone(identifier) };
     return this.prisma.user.findUnique({ where });
   }
 
@@ -88,11 +110,22 @@ export class UsersService {
     const { password, ...rest } = dto;
     const data: Record<string, unknown> = { ...rest };
     if (password) data.passwordHash = await argon2.hash(password);
+
+    // A demotion, a switch-off or a new password all mean the tokens this user
+    // is carrying no longer describe what they may do. Without this the old
+    // rights lasted another 15 minutes (M-2).
+    const revokes = password !== undefined || rest.role !== undefined || rest.isActive === false;
+    if (revokes) data.tokenVersion = { increment: 1 };
+
     try {
       const user = await this.prisma.forCompany(actor.companyId).user.update({
         where: { id },
         data,
       });
+      if (revokes) {
+        this.tokenVersions.invalidate(id);
+        await this.revokeRefreshTokens(id);
+      }
       this.audit.log({
         companyId: actor.companyId,
         userId: actor.userId,
@@ -115,8 +148,10 @@ export class UsersService {
     try {
       const user = await this.prisma.forCompany(actor.companyId).user.update({
         where: { id },
-        data: { isActive: false },
+        data: { isActive: false, tokenVersion: { increment: 1 } },
       });
+      this.tokenVersions.invalidate(id);
+      await this.revokeRefreshTokens(id);
       this.audit.log({
         companyId: actor.companyId,
         userId: actor.userId,

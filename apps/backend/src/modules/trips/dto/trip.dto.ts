@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { IntersectionType, PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import {
   ValidateIf,
@@ -17,6 +17,7 @@ import {
 } from 'class-validator';
 import { Currency, TripStatus } from 'shared';
 import { IsTiyin } from '../../../common/dto/money';
+import { DateRangeDto } from '../../../common/dto/date-range.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class CreateTripDto {
@@ -150,7 +151,12 @@ export class CompleteTripDto {
   endOdometer?: number;
 }
 
-export class ListTripsDto extends PaginationDto {
+/**
+ * `DateRangeDto` carries the from/to pair, validated. They used to be declared
+ * here with `@Type(() => Date)` and no `@IsDate()`, so `?from=yesterday` became
+ * an `Invalid Date`, reached Prisma and came back as a raw 500 (M-6).
+ */
+export class ListTripsDto extends IntersectionType(PaginationDto, DateRangeDto) {
   @IsOptional()
   @IsEnum(TripStatus)
   status?: TripStatus;
@@ -166,14 +172,6 @@ export class ListTripsDto extends PaginationDto {
   @IsOptional()
   @IsUUID()
   clientId?: string;
-
-  @IsOptional()
-  @Type(() => Date)
-  from?: Date;
-
-  @IsOptional()
-  @Type(() => Date)
-  to?: Date;
 }
 
 /**

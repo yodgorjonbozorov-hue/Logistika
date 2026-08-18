@@ -241,6 +241,67 @@ export class ExpensesService {
     }
   }
 
+  /**
+   * Cancels an expense with a mirrored row (L-8).
+   *
+   * `amount` is unsigned by design and an approved expense is immutable, which
+   * together left no way to correct one at all: a supplier refund, or a receipt
+   * entered as 5 000 000 instead of 500 000, simply could not be recorded.
+   *
+   * The original stays exactly as it was written — that is the point of a
+   * financial record — and the reversal cancels it. A reversed pair sums to
+   * nothing, so a cost report nets them out with no sign convention to get
+   * wrong. Correcting an amount is a reversal plus a fresh expense, the same
+   * shape the ledger uses for a corrected payment.
+   */
+  async reverseExpense(actor: CurrentUserPayload, id: string, reason: string): Promise<Expense> {
+    const tenant = requireTenantActor(actor);
+    const original = await this.prisma
+      .forCompany(tenant.companyId)
+      .expense.findUnique({ where: { id } });
+    if (!original) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    if (original.reversalOfId) {
+      throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [
+        'a reversal cannot itself be reversed',
+      ]);
+    }
+
+    try {
+      return await this.prisma.forCompanyTx(tenant.companyId, async (tx) => {
+        const {
+          id: _id,
+          createdAt: _createdAt,
+          updatedAt: _updatedAt,
+          version: _version,
+          ...copy
+        } = original;
+        const reversal = await tx.expense.create({
+          data: {
+            ...copy,
+            // The unique index is the guarantee: two reversals racing would
+            // cancel the same cost twice.
+            reversalOfId: original.id,
+            isApproved: false,
+            description: reason,
+            createdById: tenant.userId,
+          },
+        });
+        await this.audit.logInTx(tx, {
+          companyId: tenant.companyId,
+          userId: tenant.userId,
+          action: 'REVERSE',
+          entityType: 'Expense',
+          entityId: original.id,
+          before: toAuditJson(original),
+          after: toAuditJson(reversal),
+        });
+        return reversal;
+      });
+    } catch (error) {
+      rethrowPrismaError(error);
+    }
+  }
+
   async removeExpense(actor: CurrentUserPayload, id: string): Promise<{ deleted: boolean }> {
     const existing = await this.prisma
       .forCompany(actor.companyId)

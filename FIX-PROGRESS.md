@@ -7,7 +7,7 @@ Boshlangan: 2026-08-17
 - [x] PHASE 0 — Baseline
 - [x] PHASE 1 — Blockers (8 ta task)
 - [x] PHASE 2 — Security (9 ta task)
-- [ ] PHASE 3 — Core business (12 ta task)
+- [x] PHASE 3 — Core business (12 ta task)
 - [ ] PHASE 4 — Performance (6 ta task)
 - [ ] PHASE 5 — UX (5 ta task)
 
@@ -597,10 +597,59 @@ Tasdiq kutilmoqda.
   (`assertRefsActive`), `test/soft-delete.e2e-spec.ts` (+10 e2e) ·
   unit 310 → 332, e2e 167 → 177. `catalogue.dto.ts` 100%, `trips.service` 80%.
 
-**Keyingi qadam:** TASK-3.12 — PHASE 3 ning qolgan mayda punktlari bitta guruhda
-(M-2..M-6, M-15, M-22, L-1, L-2, L-8, L-9). Ular alohida-alohida commit qilishga
-arzimaydigan kichik tuzatishlar; har birini o'z testi bilan, bitta commitda.
-Shundan keyin **PHASE 3 tugaydi** va tasdiq so'raladi.
+- **TASK-3.12 (M-2..M-6, M-15, M-22, L-1, L-2, L-8, L-9)** · O'n bitta mayda tuzatish,
+  bitta commitda, har biri o'z testi bilan.
+  **M-22** `forbidNonWhitelisted: true` — ortiqcha maydon endi jimgina tashlanmaydi
+  (`amout` deb yozgan klient 201 va nol summali xarajat olardi). Buzuvchi o'zgarish
+  bo'lgani uchun web va mobil so'rovlari tekshirildi; bitta haqiqiy muammo topildi —
+  kirim formasi hali ham `status` yuborardi, holbuki u TASK-3.1 dan beri ledger'dan
+  hisoblanadi. Tanlov formadan olib tashlandi.
+  **M-6** `ListTripsDto` endi `DateRangeDto` bilan birlashadi — `?from=kecha` avval
+  `Invalid Date` bo'lib Prisma'ga borardi va **500** qaytarardi.
+  **M-5 / L-9** `IsWithinDateWindow` dekoratori: `expenseDate`/`paymentDate` ertagagacha
+  (ofis va haydovchi yarim tundan ikki tomonda), `eventTime` +5 daq … −30 kun. Telefon
+  soati noto'g'ri bo'lishi kamdan-kam emas — bir hafta o'chib turgan qurilmaning odatiy
+  holati, va 1970 sanali hodisa hech qayerda xatoga o'xshamaydi. `TripEvent.receivedAt`
+  (server vaqti) qo'shildi: kech sinxronizatsiyani noto'g'ri soatdan ajratishning yagona
+  yo'li.
+  **M-3** `normalizePhone()` (E.164): `+998901234567` / `998901234567` / `901234567` /
+  `90 123 45 67` — bitta raqam va **to'rtta akkaunt** edi. DTO transform'ida, bazaga faqat
+  normallashtirilgan holda, `findByIdentifier` ham normallashtiradi, mavjud qatorlar
+  migratsiyada tozalandi. Chet el raqami tegilmaydi — `+998` taxmin qilish qozog'istonlik
+  haydovchining ishlaydigan raqamini boshqa birovnikiga aylantirardi.
+  **M-2 / L-2** `User.tokenVersion`: access token 15 daqiqa yashaydi va uni o'ldirishi
+  kerak bo'lgan har bir qarordan omon qolardi. Rol o'zgarishi, deaktivatsiya, parol
+  o'zgarishi va chiqishda oshiriladi; deaktivatsiyada refresh tokenlar ham bekor qilinadi
+  (avval o'chirilgan akkaunt o'ziga yangi access token chiqarib olardi). Chiqish **barcha**
+  seanslarni tugatadi — umumiy telefonda bu aynan chiqish bartaraf qilishi kerak bo'lgan
+  xavf. Kesh 30 s, lekin versiyani oshiradigan har bir yo'l keshni darhol tozalaydi.
+  **M-4** `photo_urls` ustuni har doim StoredFile **id**larini saqlagan — nomi yolg'on edi.
+  `photo_file_ids`ga qayta nomlandi (hali hech bir klient o'qimaydi, ya'ni buni haqiqatga
+  aylantirishning oxirgi arzon payti); `resolvePhotoKeys` → `resolvePhotoFileIds`.
+  Yo'l-yo'lakay: begona fayl id'si endi hodisani **rad etadi**, avval chek jimgina tashlab
+  yuborilardi — chek esa isbotning o'zi.
+  **L-1** `GET /company` (INN, manzil, tarif, obuna) endi faqat `OWNER`/`LOGIST`/`ACCOUNTANT`.
+  **L-8** Xarajatni tuzatish: `amount` ataylab ishorasiz va tasdiqlangan xarajat o'zgarmas —
+  ikkalasi birgalikda tuzatishning **umuman iloji yo'q**ligini anglatardi. `POST
+/expenses/:id/reverse` teskari yozuv yaratadi (ledger naqshi): original qanday yozilgan
+  bo'lsa shunday qoladi, juftlik nolga yig'iladi. `reversal_of_id` unique + self-FK +
+  `CHECK` (o'zini bekor qilmaydi); sabab majburiy.
+  **M-15** `Document` polimorf egasi — **qaror**: alohida FK'li jadvallarga bo'lish to'rtta
+  deyarli bir xil jadval evaziga bo'ladi va «muddati tugayotgan barcha hujjatlar» so'rovini
+  `UNION`ga aylantiradi. Orphan ikki uchidan oldi olinadi: modul egani tekshiradi, va
+  TASK-3.10/3.11 dan keyin egalar umuman o'chirilmaydi. `Document` moduli hali yozilmagan —
+  qoida `schema.prisma` izohida va BUSINESS-RULES §12 da qoldirildi. ·
+  migratsiyalar `*_event_received_at`, `*_photo_file_ids`, `*_normalize_phones`,
+  `*_token_version`, `*_expense_reversal`, `common/phone.ts` (+spec 16),
+  `common/dto/date-bounds.ts` (+spec 11), `common/auth/token-version.*` (+spec 8),
+  `bootstrap.ts`, `jwt-auth.guard.ts`, `auth/users/expenses/events/companies` modullari,
+  web `FinancePage.tsx`, `test/small-fixes.e2e-spec.ts` (+22 e2e) ·
+  unit 332 → 375, e2e 177 → 199. `phone.ts`, `date-bounds.ts`, `token-version.service.ts`,
+  `events.service.ts` — 100%.
+
+**PHASE 3 tugadi (12/12).** Keyingi: PHASE 4 — PERFORMANCE & SCALABILITY,
+TASK-4.1 (jonli xarita so'rovi cheklanmagan — H-8, eng yirik perf muammosi).
+Tasdiq kutilmoqda.
 
 PHASE 3 qolgan bog'liqliklar:
 

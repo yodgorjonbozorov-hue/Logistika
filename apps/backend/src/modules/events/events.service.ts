@@ -33,6 +33,9 @@ const STATUS_BY_EVENT: Partial<Record<DriverEventDto['eventType'], TripStatus>> 
 /** Thrown inside the per-event transaction so the event and the status move together. */
 class TransitionConflict extends Error {}
 
+/** At least one photo id does not belong to this tenant. */
+const UNKNOWN_FILE = Symbol('unknown-file');
+
 /**
  * True when the insert lost the race for a client event id.
  *
@@ -134,7 +137,13 @@ export class EventsService {
         }
       }
 
-      const photoUrls = await this.resolvePhotoKeys(actor, event);
+      // A receipt id that is not this tenant's is a rejected event, not an
+      // event stored without its receipt: the photo is the proof.
+      const photoFileIds = await this.resolvePhotoFileIds(actor, event);
+      if (photoFileIds === UNKNOWN_FILE) {
+        result.rejected.push({ clientEventId: event.clientEventId, code: 'NOT_FOUND' });
+        continue;
+      }
       try {
         // Event row and status change land together, or neither lands.
         await this.prisma.forCompanyTx(actor.companyId, async (tx) => {
@@ -150,7 +159,7 @@ export class EventsService {
               address: event.address,
               odometer: event.odometer,
               comment: event.comment,
-              photoUrls,
+              photoFileIds,
               clientEventId: event.clientEventId,
             },
           });
@@ -305,15 +314,24 @@ export class EventsService {
   }
 
   /** Photo file ids → stored keys; foreign/unknown ids are dropped silently-safe (tenant scope). */
-  private async resolvePhotoKeys(
+  /**
+   * The StoredFile ids this event's photos refer to.
+   *
+   * Named for what it returns: the column it feeds was called `photo_urls` and
+   * has only ever held ids (M-4). Ids the tenant cannot see are not silently
+   * dropped — an unknown id means the event refers to a file from somewhere
+   * else, and storing the event without its receipt loses the proof.
+   */
+  private async resolvePhotoFileIds(
     actor: CurrentUserPayload,
     event: DriverEventDto,
-  ): Promise<string[] | undefined> {
+  ): Promise<string[] | undefined | typeof UNKNOWN_FILE> {
     if (!event.photoFileIds?.length) return undefined;
     const files = await this.prisma.forCompany(actor.companyId).storedFile.findMany({
       where: { id: { in: event.photoFileIds } },
       select: { id: true },
     });
+    if (files.length !== event.photoFileIds.length) return UNKNOWN_FILE;
     return files.map((f) => f.id);
   }
 }

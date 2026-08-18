@@ -19,6 +19,7 @@ import { IntersectionType } from '@nestjs/mapped-types';
 import { TripEventType } from 'shared';
 import { DateRangeDto } from '../../../common/dto/date-range.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { DEVICE_EVENT_WINDOW, IsWithinDateWindow } from '../../../common/dto/date-bounds';
 
 export class DriverEventDto {
   /** Client-generated UUID — the idempotency key for offline retries. */
@@ -31,7 +32,13 @@ export class DriverEventDto {
   @IsEnum(TripEventType)
   eventType!: TripEventType;
 
+  /**
+   * Stamped by the phone, whose clock the server does not control (M-5). An
+   * event dated 1970 or 2049 reorders the trip's history and lands in the
+   * wrong reporting month without looking like an error anywhere.
+   */
   @IsDateString()
+  @IsWithinDateWindow(DEVICE_EVENT_WINDOW)
   eventTime!: string;
 
   @IsOptional()

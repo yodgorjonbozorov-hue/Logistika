@@ -25,7 +25,12 @@ export function configureApp(app: INestApplication): INestApplication {
   app.use(cookieParser());
 
   app.setGlobalPrefix('api/v1');
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // forbidNonWhitelisted, not just whitelist: an unknown field used to be
+  // dropped in silence, so a client sending `amout` instead of `amount` got a
+  // 201 and an expense of zero. Being told is the whole point (M-22).
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+  );
   app.enableCors({ origin: config.getOrThrow<string>('WEB_URL'), credentials: true });
 
   return app;

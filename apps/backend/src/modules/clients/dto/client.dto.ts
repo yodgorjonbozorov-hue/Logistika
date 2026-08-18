@@ -1,14 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import {
-  IsEmail,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Matches,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsPhone, NormalizePhone } from '../../../common/phone';
 
 export class CreateClientDto {
   @IsString()
@@ -27,7 +19,8 @@ export class CreateClientDto {
   contactPerson?: string;
 
   @IsOptional()
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone?: string;
 
   @IsOptional()

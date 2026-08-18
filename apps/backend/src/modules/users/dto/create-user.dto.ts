@@ -5,12 +5,12 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
 import { UserRole } from 'shared';
 import { IsStrongPassword } from '../../../common/dto/password';
+import { IsPhone, NormalizePhone } from '../../../common/phone';
 
 /** Roles a tenant may assign; SUPERADMIN is platform-only. */
 export const TENANT_ROLES = [
@@ -31,7 +31,8 @@ export class CreateUserDto {
   email?: string;
 
   @ValidateIf((o: CreateUserDto) => !o.email || !!o.phone)
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone?: string;
 
   @IsString()
@@ -54,7 +55,8 @@ export class UpdateUserDto {
   email?: string;
 
   @IsOptional()
-  @Matches(/^\+?\d{9,15}$/)
+  @NormalizePhone()
+  @IsPhone()
   phone?: string;
 
   @IsOptional()

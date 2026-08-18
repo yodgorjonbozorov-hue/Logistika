@@ -10,6 +10,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { UsersService } from '../users/users.service';
+import { TokenVersionService } from '../../common/auth/token-version.service';
 
 interface RefreshTokenPayload {
   sub: string;
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly tokenVersions: TokenVersionService,
   ) {}
 
   async login(identifier: string, password: string): Promise<AuthTokens> {
@@ -162,12 +164,31 @@ export class AuthService {
     if (!stored) return;
 
     // The whole rotation chain of this session ends, not just the token in
-    // hand: one login is one family, so signing out here leaves other devices
-    // (each with their own family) alone.
+    // hand: one login is one family.
     await this.prisma.refreshToken.updateMany({
       where: { familyId: stored.familyId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    // And the access token, which otherwise keeps working for a further 15
+    // minutes. On a shared phone that is exactly the window logging out is
+    // meant to close — worth ending the user's other sessions for (L-2).
+    await this.revokeAccessTokens(stored.userId);
+  }
+
+  /**
+   * Invalidates every access token this user holds.
+   *
+   * Called wherever the answer to "may this person still do what their token
+   * says" has changed: logout, password change, password reset, and — from the
+   * users module — a role change or a deactivation (M-2).
+   */
+  async revokeAccessTokens(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    this.tokenVersions.invalidate(userId);
   }
 
   async me(userId: string): Promise<Omit<User, 'passwordHash'>> {
@@ -219,7 +240,14 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: user.id, companyId: user.companyId, role: user.role as UserRole },
+        {
+          sub: user.id,
+          companyId: user.companyId,
+          role: user.role as UserRole,
+          // The generation this token belongs to; the guard refuses it once
+          // the user's version moves past it (M-2, L-2).
+          tv: user.tokenVersion,
+        },
         { secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), expiresIn: accessTtl },
       ),
       this.jwtService.signAsync(

@@ -359,6 +359,32 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     expect(result.rejected).toEqual([{ clientEventId: 'c-1', code: 'VEHICLE_BUSY' }]);
   });
 
+  it('rejects an event whose receipt belongs to somewhere else (M-4)', async () => {
+    const { service, db } = setup();
+    // Two ids asked for, one found: the missing one is not this tenant's.
+    db.storedFile!.findMany!.mockResolvedValue([{ id: 'f1' }]);
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [{ ...event('c-1'), photoFileIds: ['f1', 'f2'] }],
+    });
+
+    // Storing the event without its receipt loses the proof the receipt is.
+    expect(result.rejected).toEqual([{ clientEventId: 'c-1', code: 'NOT_FOUND' }]);
+    expect(db.tripEvent!.create).not.toHaveBeenCalled();
+  });
+
+  it('stores the file ids under a column that says so', async () => {
+    const { service, db } = setup();
+    db.storedFile!.findMany!.mockResolvedValue([{ id: 'f1' }]);
+
+    await service.ingestBatch(DRIVER_ACTOR, {
+      events: [{ ...event('c-1'), photoFileIds: ['f1'] }],
+    });
+
+    // The column was called photo_urls and has only ever held ids (M-4).
+    expect(db.tripEvent!.create!.mock.calls[0][0].data.photoFileIds).toEqual(['f1']);
+  });
+
   it('requires an active driver profile', async () => {
     const { service, db } = setup();
     db.driver!.findFirst!.mockResolvedValue(null);
