@@ -12,7 +12,8 @@ import {
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
+import { CatalogueListDto } from '../../common/dto/catalogue.dto';
+import { paginated } from '../../common/dto/pagination.dto';
 import { LedgerService } from '../ledger/ledger.service';
 import { ListLedgerDto } from '../ledger/dto/ledger.dto';
 import { ClientsService } from './clients.service';
@@ -27,7 +28,7 @@ export class ClientsController {
   ) {}
 
   @Get()
-  async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {
+  async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: CatalogueListDto) {
     const { data, total } = await this.clientsService.list(user, pagination);
     return paginated(data, pagination, total);
   }
@@ -68,9 +69,10 @@ export class ClientsController {
     return this.clientsService.update(user, id, dto);
   }
 
+  /** Soft delete, like drivers and vehicles: the history keeps the name. */
   @Delete(':id')
   @Roles(UserRole.OWNER)
-  remove(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
-    return this.clientsService.remove(user, id);
+  deactivate(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.clientsService.deactivate(user, id);
   }
 }

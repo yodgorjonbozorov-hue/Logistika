@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Driver } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { CatalogueListDto } from '../../common/dto/catalogue.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, toAuditJson } from '../audit/audit.service';
@@ -29,16 +29,20 @@ export class DriversService {
 
   async list(
     actor: CurrentUserPayload,
-    pagination: PaginationDto,
+    pagination: CatalogueListDto,
   ): Promise<{ data: Driver[]; total: number }> {
     const db = this.prisma.forCompany(actor.companyId);
+    // Retired records leave the working list but stay reachable with
+    // ?includeInactive=true — the history is the reason they were kept.
+    const where = { isActive: pagination.activeFilter };
     const [data, total] = await Promise.all([
       db.driver.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip: pagination.skip,
         take: pagination.limit,
       }),
-      db.driver.count(),
+      db.driver.count({ where }),
     ]);
     return { data, total };
   }

@@ -100,10 +100,16 @@
         "functions": 91
       },
       "./src/modules/trips/trips.service.ts": {
-        "statements": 76,
-        "lines": 77,
-        "branches": 56,
+        "statements": 78,
+        "lines": 80,
+        "branches": 57,
         "functions": 82
+      },
+      "./src/common/dto/catalogue.dto.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 100,
+        "functions": 100
       },
       "./src/modules/trips/trip-numbering.ts": {
         "statements": 100,

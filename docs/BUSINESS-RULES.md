@@ -555,3 +555,51 @@ bilmasdi.
 Tugagan reyslar to'sqinlik qilmaydi — yuzta yakunlangan reysi bor haydovchi
 aynan nafaqaga chiqariladigan odam. O'chirish avvalgidek **yumshoq**: tarix
 joyida qoladi.
+
+## 11. Katalogni o'chirish — yumshoq, va haqiqatan (TASK-3.11)
+
+### Mijoz endi o'chirilmaydi, nafaqaga chiqariladi
+
+`Driver` va `Vehicle` boshidanoq yumshoq o'chirilardi, `Client` esa **qattiq**
+`DELETE` bilan. Tashqi kalitlar reysi yoki kirimi bor mijozni o'chirishga yo'l
+qo'ymasdi — va aynan shu haqiqiy muammoni **yashirardi**: hech narsa
+biriktirilmagan mijoz uchun o'chirish **muvaffaqiyatli** bo'lardi va qator
+butunlay yo'qolardi. Kontragent umuman mavjud bo'lganidan qolgan yagona iz —
+audit'dagi `before`.
+
+Endi `Client.isActive`, xuddi boshqalari kabi. `DELETE /clients/:id` marshruti
+o'sha-o'sha, lekin u endi nafaqaga chiqaradi.
+
+### Nafaqaga chiqarish qachon rad etiladi
+
+Ikkalasi ham puldan ko'z uzmaslik haqida:
+
+| Sabab                                          | Nega                                                                                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **balans nolga teng emas**                     | Nafaqaga chiqarilgan mijoz ro'yxatdan tushadi, qarz ham u bilan birga — kimdir doimo quvishi kerak bo'lgan yagona raqam |
+| **rejalashtirilgan yoki ketayotgan reysi bor** | Uning invoysi hali chiqarilmagan yoki to'lanmagan, ya'ni u ham o'sha qarzga aylanmoqchi                                 |
+
+Bu `Driver`/`Vehicle` uchun TASK-3.10 da qo'yilgan qoidaning bir xil shakli.
+
+### Nafaqaga chiqarilgan yozuv ish ro'yxatidan chiqadi
+
+Avval o'chirilgan yozuv **har bir ro'yxatda va har bir tanlovda** qolardi —
+kompaniyani tark etgan haydovchini ertangi reysga bemalol qo'yish mumkin edi.
+Hali ham tayinlanishi mumkin bo'lgan yozuv — bu **bayroq, yumshoq o'chirish
+emas**, va u TASK-3.10 ning yo'l o'rtasidagi himoyasini eskirgan ro'yxatdan
+tanlash orqali bekor qilardi.
+
+- `GET /clients`, `/drivers`, `/vehicles` — default **faqat aktivlar**;
+- `?includeInactive=true` — arxiv (tarix o'qilishi shart, yozuv aynan shuning
+  uchun saqlangan);
+- `count` ham **shu to'plamni** sanaydi, aks holda jadvalning oxirgi sahifasi
+  bo'sh chiqadi;
+- reysga **yangi** biriktirish (`POST /trips`, `assign`) nafaqaga chiqarilgan
+  haydovchi/texnika/mijoz bilan `RESOURCE_IN_USE` (409) beradi.
+
+**Faqat yangi majburiyat** tekshiriladi. Haydovchisi allaqachon ishdan ketgan
+**tugagan** reysga chek yozish o'z-o'zidan qabul qilinishi kerak — u chek
+tarix, reja emas.
+
+Nafaqaga chiqarilgan mijozning eski reyslari, invoyslari va ledger yozuvlari
+joyida qoladi va nomi bilan o'qiladi — yumshoq o'chirishning butun ma'nosi shu.

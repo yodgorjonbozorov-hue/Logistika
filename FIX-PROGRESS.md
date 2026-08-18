@@ -569,14 +569,38 @@ Tasdiq kutilmoqda.
   i18n × 3, `test/availability.e2e-spec.ts` (+9 e2e), `test/audit.e2e-spec.ts` (fixture) ·
   unit 288 → 310, e2e 158 → 167. `trip-availability.ts` 100%, `events.service` 97%.
 
-**Keyingi qadam:** TASK-3.11 (mijozni yumshoq o'chirish).
-`clients.remove()` — qattiq `DELETE`. FK tufayli reysi/kirimi bor mijozni o'chirib
-bo'lmaydi (`RESOURCE_IN_USE`), lekin hech qanday bog'lanishi yo'q mijoz **butunlay
-yo'qoladi**, audit'da esa faqat `before` qoladi. Boshqa hamma katalog (`Driver`,
-`Vehicle`) yumshoq o'chiriladi — mijoz ham shunday bo'lishi kerak: `Client.isActive`
-maydoni + `deactivate()`, ro'yxatda default faqat aktivlar, reysga biriktirishda
-o'chirilgan mijoz tanlab bo'lmaydi. Test: o'chirilgan mijoz ro'yxatda yo'q, lekin
-eski reyslari va ledger yozuvlari joyida.
+- **TASK-3.11 (M-9)** · Katalogni yumshoq o'chirish — va uni haqiqiy qilish.
+  **(a)** `Driver` va `Vehicle` boshidanoq yumshoq o'chirilardi, `Client` esa qattiq
+  `DELETE` bilan. Tashqi kalitlar reysi bor mijozni o'chirishga yo'l qo'ymasdi va aynan
+  shu haqiqiy muammoni **yashirardi**: hech narsa biriktirilmagan mijoz uchun o'chirish
+  **muvaffaqiyatli** bo'lardi va qator butunlay yo'qolardi — kontragent mavjud
+  bo'lganidan qolgan yagona iz audit'dagi `before` edi. Endi `Client.isActive`;
+  `DELETE /clients/:id` marshruti o'sha-o'sha, lekin nafaqaga chiqaradi.
+  Rad etish sabablari (ikkalasi ham puldan ko'z uzmaslik haqida): **balans nolga teng
+  emas** (nafaqaga chiqarilgan mijoz ro'yxatdan tushadi, qarz ham u bilan birga) va
+  **rejalashtirilgan/ketayotgan reysi bor** (invoysi hali chiqarilmagan yoki
+  to'lanmagan). Bu TASK-3.10 dagi qoidaning bir xil shakli.
+  **(b)** Muhimroq yarmi: nafaqaga chiqarilgan yozuv **har bir ro'yxatda va tanlovda**
+  qolardi — kompaniyani tark etgan haydovchini ertangi reysga qo'yish mumkin edi.
+  Hali ham tayinlanishi mumkin bo'lgan yozuv — bayroq, yumshoq o'chirish emas, va u
+  TASK-3.10 ning yo'l o'rtasidagi himoyasini eskirgan ro'yxatdan tanlash orqali bekor
+  qilardi. `CatalogueListDto` (`includeInactive`, default `false`) uchala katalogga
+  qo'llandi; `count` ham **shu to'plamni** sanaydi (aks holda jadvalning oxirgi sahifasi
+  bo'sh chiqadi); reysga **yangi** biriktirish nafaqaga chiqarilgan resurs bilan
+  `RESOURCE_IN_USE` (409) beradi. Faqat yangi majburiyat tekshiriladi — haydovchisi
+  ishdan ketgan **tugagan** reysga chek yozish qabul qilinaveradi, u chek tarix.
+  Diqqat: tekshiruv `isActive === false` (shunchaki falsy emas) — ustunsiz o'qilgan
+  qator nafaqaga chiqarilganlik dalili emas. ·
+  migratsiya `20260818090000_client_soft_delete`, `schema.prisma`,
+  `common/dto/catalogue.dto.ts` (+spec 4), `clients.service.ts` (+spec 10),
+  `clients/drivers/vehicles` servis va kontrollerlari, `trips.service.ts`
+  (`assertRefsActive`), `test/soft-delete.e2e-spec.ts` (+10 e2e) ·
+  unit 310 → 332, e2e 167 → 177. `catalogue.dto.ts` 100%, `trips.service` 80%.
+
+**Keyingi qadam:** TASK-3.12 — PHASE 3 ning qolgan mayda punktlari bitta guruhda
+(M-2..M-6, M-15, M-22, L-1, L-2, L-8, L-9). Ular alohida-alohida commit qilishga
+arzimaydigan kichik tuzatishlar; har birini o'z testi bilan, bitta commitda.
+Shundan keyin **PHASE 3 tugaydi** va tasdiq so'raladi.
 
 PHASE 3 qolgan bog'liqliklar:
 

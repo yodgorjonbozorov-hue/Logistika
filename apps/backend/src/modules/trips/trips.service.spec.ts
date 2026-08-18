@@ -51,8 +51,8 @@ describe('TripsService', () => {
 
     it('starts as ASSIGNED when vehicle and driver are given and they exist in the tenant', async () => {
       const { service, db } = setup();
-      db.vehicle!.findUnique!.mockResolvedValue({ id: 'v1' });
-      db.driver!.findUnique!.mockResolvedValue({ id: 'd1' });
+      db.vehicle!.findUnique!.mockResolvedValue({ id: 'v1', isActive: true });
+      db.driver!.findUnique!.mockResolvedValue({ id: 'd1', isActive: true });
       db.trip!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
         Promise.resolve({ id: 't1', ...data }),
       );
@@ -60,6 +60,23 @@ describe('TripsService', () => {
       await service.create(ACTOR, { vehicleId: 'v1', driverId: 'd1' });
       expect(db.trip!.create!.mock.calls[0][0].data.status).toBe('ASSIGNED');
     });
+
+    it.each(['driver', 'vehicle', 'client'])(
+      'refuses to put a new trip on a retired %s (TASK-3.11)',
+      async (resource) => {
+        const { service, db } = setup();
+        for (const model of ['driver', 'vehicle', 'client']) {
+          db[model]!.findUnique!.mockResolvedValue({ id: 'x', isActive: model !== resource });
+        }
+
+        // Retiring a record that can still be assigned is a flag, not a soft
+        // delete: a driver who left would still turn up on tomorrow's run.
+        await expect(
+          service.create(ACTOR, { driverId: 'd1', vehicleId: 'v1', clientId: 'c1' }),
+        ).rejects.toMatchObject({ code: 'RESOURCE_IN_USE', details: { reason: 'inactive' } });
+        expect(db.trip!.create).not.toHaveBeenCalled();
+      },
+    );
 
     it('rejects references that do not exist inside the tenant (cross-company ids look missing)', async () => {
       const { service, db } = setup();

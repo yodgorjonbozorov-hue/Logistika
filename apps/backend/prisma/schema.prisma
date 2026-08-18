@@ -348,6 +348,10 @@ model Client {
   /// increment inside the same transaction as the entry that caused it —
   /// never read-modify-written (see LedgerService).
   balance          BigInt  @default(0)
+  /// Soft delete, as on Driver and Vehicle. A client is referenced by trips,
+  /// incomes and ledger entries; removing the row would take the counterparty
+  /// out of records that have to stay readable for years.
+  isActive         Boolean  @default(true) @map("is_active")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

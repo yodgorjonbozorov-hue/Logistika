@@ -372,6 +372,45 @@ export class TripsService {
     actor: CurrentUserPayload,
     refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },
   ): Promise<void> {
-    await assertTenantRefs(this.prisma.forCompany(actor.companyId), refs);
+    const db = this.prisma.forCompany(actor.companyId);
+    await assertTenantRefs(db, refs);
+    await this.assertRefsActive(db, refs);
+  }
+
+  /**
+   * A retired driver, truck or client cannot be put on a new trip (TASK-3.11).
+   *
+   * Retiring a record that can still be assigned is a flag, not a soft delete:
+   * a driver who left the company would still turn up on tomorrow's run, and
+   * the guard that stops them being retired mid-route (TASK-3.10) would be
+   * undone the moment somebody picked them out of a stale list.
+   *
+   * Only new commitments are checked. An expense recorded against a finished
+   * trip whose driver has since left still has to be accepted — that receipt
+   * is history, not a plan.
+   */
+  private async assertRefsActive(
+    db: TenantScopedClient,
+    refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },
+  ): Promise<void> {
+    const checks: Array<[string | undefined, () => Promise<{ isActive: boolean } | null>]> = [
+      [refs.driverId, () => db.driver.findUnique({ where: { id: refs.driverId! } })],
+      [refs.vehicleId, () => db.vehicle.findUnique({ where: { id: refs.vehicleId! } })],
+      [refs.trailerId, () => db.vehicle.findUnique({ where: { id: refs.trailerId! } })],
+      [refs.clientId, () => db.client.findUnique({ where: { id: refs.clientId! } })],
+    ];
+
+    for (const [id, lookup] of checks) {
+      if (!id) continue;
+      const found = await lookup();
+      // Explicitly false, not merely falsy: a row read without the column is
+      // not evidence that it was retired.
+      if (found?.isActive === false) {
+        throw new AppException('RESOURCE_IN_USE', HttpStatus.CONFLICT, undefined, {
+          reason: 'inactive',
+          id,
+        });
+      }
+    }
   }
 }
