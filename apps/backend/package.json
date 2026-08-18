@@ -108,8 +108,8 @@
       "./src/modules/tracking/tracking.service.ts": {
         "statements": 94,
         "lines": 96,
-        "branches": 75,
-        "functions": 85
+        "branches": 77,
+        "functions": 86
       },
       "./src/common/phone.ts": {
         "statements": 100,

@@ -781,10 +781,37 @@ payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
   `docs/ARCHITECTURE.md` §6, `test/cron-lock.e2e-spec.ts` (+5 e2e) ·
   unit 450 → 470, e2e 221 → 226.
 
+- **TASK-4.5 (M-7)** · GPS nuqtalarida idempotency. Telefon paketni **server
+  tasdiqlagandan keyingina** «yuborildi» deb belgilaydi; oradagi lahzada o'lgan
+  telefon uni qayta yuboradi — bu nosozlik emas, offline navbatning oddiy
+  ishlashi. `GpsTrack`da nuqtani noyob qiladigan hech narsa yo'q edi: o'sha
+  koordinatalar ikki marta tushib, **har bir masofa yig'indisini shishirardi**
+  (per-km oyligi bor haydovchida — to'g'ridan-to'g'ri pul) va marshrutni
+  takrorlangan nuqtalarda duduqlantirardi.
+  `@@unique([companyId, vehicleId, recordedAt])` — bitta mashina bitta lahzada
+  bitta joyda. Kalit `company_id` bilan boshlanadi, ya'ni bir firmaning soati
+  boshqasiniki bilan to'qnashmaydi. Yozish `createMany({ skipDuplicates: true })`
+  bilan: «avval tekshir» tekshiruv va yozuv orasida oyna qoldiradi va **bitta
+  telefonning ikkita flush'i** aynan o'sha oynada poyga qiladi. Paketning o'z
+  ichidagi takror ham bazaga borishdan oldin yig'ishtiriladi.
+  Javob endi `{ accepted, duplicates, dropped }` — to'liq qayta yuborilgan
+  paketga to'g'ri javob «yangisi yo'q», «yana N ta nuqta» emas.
+  Migratsiya **qo'lda yozildi**: unique'ni qo'shishdan oldin jadvaldagi mavjud
+  dublikatlarni o'chirish kerak (`a.id > b.id` bo'yicha), va bir xil ustunlardagi
+  oddiy indeks unique bilan **almashtiriladi** — ikkalasini saqlash eng tez
+  o'sadigan jadvalda ikkinchi indeksni bekorga qo'llab-quvvatlash bo'lardi.
+  **Isbot**: test bazasidan unique indeks olib tashlanganda 6 ta e2e'dan **4 tasi
+  qizil** bo'ldi, qaytarilganda yana yashil. ·
+  `schema.prisma`, migratsiya `20260818200000_gps_point_idempotency` (qo'lda),
+  `tracking.service.ts` (+5 test), `test/gps-idempotency.e2e-spec.ts` (+6 e2e),
+  `test/setup-e2e.ts` (`sms_messages` truncate ro'yxatiga),
+  `test/jobs.e2e-spec.ts` (har chaqiruvga yangi IP — Redis'dagi per-IP hisoblagich
+  butun e2e to'plamiga umumiy) · unit 470 → 475, e2e 226 → 232.
+
 **PHASE 3 tugadi (12/12).**
 
-**Keyingi qadam:** TASK-4.5 — GPS nuqtalarida idempotency (M-7). Telefon
-so'rovdan keyin o'lsa nuqtalar takrorlanadi; `GpsTrack`da unique constraint yo'q.
+**Keyingi qadam:** TASK-4.6 — yuklama testi (k6/artillery, `load-test/`),
+natijalar `docs/PERFORMANCE.md` ga.
 
 PHASE 3 qolgan bog'liqliklar:
 

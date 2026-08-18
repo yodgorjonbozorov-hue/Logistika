@@ -32,23 +32,24 @@ describe('TrackingService.ingestPositions', () => {
     return { service, db };
   }
 
-  const point = (tripId: string) => ({
+  const point = (tripId: string, minute = 0) => ({
     tripId,
     lat: 40.1,
     lng: 67.8,
     speed: 72,
-    recordedAt: '2026-08-06T10:00:00Z',
+    recordedAt: `2026-08-06T10:0${minute}:00Z`,
   });
 
   it('resolves vehicleId from the trip and stores accepted points', async () => {
     const { service, db } = setup();
     db.trip!.findMany!.mockResolvedValue([{ id: 'trip-1', vehicleId: 'v1' }]);
+    (db.gpsTrack!.createMany as jest.Mock).mockResolvedValue({ count: 2 });
 
     const result = await service.ingestPositions(DRIVER_ACTOR, {
-      positions: [point('trip-1'), point('trip-1')],
+      positions: [point('trip-1', 0), point('trip-1', 1)],
     });
 
-    expect(result).toEqual({ accepted: 2, dropped: 0 });
+    expect(result).toEqual({ accepted: 2, duplicates: 0, dropped: 0 });
     const rows = (db.gpsTrack!.createMany as jest.Mock).mock.calls[0][0].data;
     expect(rows[0].vehicleId).toBe('v1');
     expect(rows[0].companyId).toBe('company-a');
@@ -63,8 +64,79 @@ describe('TrackingService.ingestPositions', () => {
       positions: [point('foreign-trip')],
     });
 
-    expect(result).toEqual({ accepted: 0, dropped: 1 });
+    expect(result).toEqual({ accepted: 0, duplicates: 0, dropped: 1 });
     expect(db.gpsTrack!.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('TrackingService.ingestPositions — idempotency (TASK-4.5, M-7)', () => {
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['trip', 'gpsTrack', 'vehicle', 'tripEvent']);
+    db.trip!.findMany!.mockResolvedValue([{ id: 'trip-1', vehicleId: 'v1' }]);
+    db.gpsTrack!.createMany = jest.fn().mockResolvedValue({ count: 0 });
+    const eventsService = {
+      requireDriverProfile: jest.fn().mockResolvedValue({ id: 'd1' }),
+    } as unknown as EventsService;
+    return { service: new TrackingService(prisma, eventsService, cronLock, config), db };
+  }
+
+  const at = (iso: string) => ({ tripId: 'trip-1', lat: 40.1, lng: 67.8, recordedAt: iso });
+
+  it('asks the database to skip what it already has', async () => {
+    const { service, db } = setup();
+
+    await service.ingestPositions(DRIVER_ACTOR, { positions: [at('2026-08-06T10:00:00Z')] });
+
+    // Not a read-then-write: two flushes from the same phone would race each
+    // other through the gap between the check and the insert.
+    expect((db.gpsTrack!.createMany as jest.Mock).mock.calls[0][0].skipDuplicates).toBe(true);
+  });
+
+  it('collapses a batch that repeats an instant within itself', async () => {
+    const { service, db } = setup();
+
+    await service.ingestPositions(DRIVER_ACTOR, {
+      positions: [at('2026-08-06T10:00:00Z'), at('2026-08-06T10:00:00Z')],
+    });
+
+    const rows = (db.gpsTrack!.createMany as jest.Mock).mock.calls[0][0].data;
+    expect(rows).toHaveLength(1);
+  });
+
+  it('reports a fully re-sent batch as duplicates, not as accepted', async () => {
+    const { service, db } = setup();
+    (db.gpsTrack!.createMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+    const result = await service.ingestPositions(DRIVER_ACTOR, {
+      positions: [at('2026-08-06T10:00:00Z'), at('2026-08-06T10:01:00Z')],
+    });
+
+    // The phone marks a batch sent only after the server answers, so a phone
+    // that dies in between re-sends it. That is normal, and the honest answer
+    // is "nothing new", not "two more points".
+    expect(result).toEqual({ accepted: 0, duplicates: 2, dropped: 0 });
+  });
+
+  it('counts a partly-new batch correctly', async () => {
+    const { service, db } = setup();
+    (db.gpsTrack!.createMany as jest.Mock).mockResolvedValue({ count: 1 });
+
+    const result = await service.ingestPositions(DRIVER_ACTOR, {
+      positions: [at('2026-08-06T10:00:00Z'), at('2026-08-06T10:01:00Z')],
+    });
+
+    expect(result).toEqual({ accepted: 1, duplicates: 1, dropped: 0 });
+  });
+
+  it('keeps the last-known position fresh even when every point was a duplicate', async () => {
+    const { service, db } = setup();
+    (db.gpsTrack!.createMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+    await service.ingestPositions(DRIVER_ACTOR, { positions: [at('2026-08-06T10:00:00Z')] });
+
+    // A duplicate carries the same coordinates, and the guard on lastSeenAt
+    // already refuses anything older than what the map shows.
+    expect(db.vehicle!.updateMany).toHaveBeenCalled();
   });
 });
 

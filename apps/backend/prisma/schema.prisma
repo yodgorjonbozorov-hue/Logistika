@@ -693,7 +693,13 @@ model GpsTrack {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   trip    Trip?   @relation(fields: [tripId], references: [id])
 
-  @@index([companyId, vehicleId, recordedAt])
+  /// One vehicle cannot be in two places at one instant (M-7, TASK-4.5).
+  ///
+  /// The phone acknowledges a batch and only then marks it sent; a phone that
+  /// dies in between re-sends it, and without this the same points landed
+  /// twice — inflating every distance and drawing a stuttering route. The key
+  /// doubles as the de-duplication rule for `skipDuplicates`.
+  @@unique([companyId, vehicleId, recordedAt])
   // Declared here as well as in the migration that created them: an index that
   // only exists in SQL is an index the next `migrate dev` offers to drop, and
   // these two are what make the live map and the tracking link fast (TASK-4.1).

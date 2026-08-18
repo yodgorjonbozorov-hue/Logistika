@@ -12,6 +12,7 @@
  * it runs differs.
  */
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { bearer, createTenant, type TenantFixture } from './helpers';
 import { createE2EApp, truncateAll } from './setup-e2e';
@@ -44,7 +45,6 @@ describe('Background jobs (e2e)', () => {
 
   beforeEach(async () => {
     await truncateAll(prisma);
-    await prisma.smsMessage.deleteMany({});
     tenant = await createTenant(app, 'Jobs');
   });
 
@@ -109,8 +109,21 @@ describe('Background jobs (e2e)', () => {
      * created with an email only — an unknown number is answered with a cheerful
      * `sent: true` on purpose, so an attacker cannot enumerate drivers.
      */
+    /**
+     * A fresh forwarded-for per call: the per-IP counters live in Redis and
+     * outlive the process, so every e2e suite shares one 127.0.0.1 budget.
+     */
+    const requestCode = (phone: string) =>
+      request(app.getHttpServer())
+        .post('/api/v1/auth/driver/request-code')
+        .set(
+          'x-forwarded-for',
+          `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
+        )
+        .send({ phone });
+
     async function driverWithPhone(): Promise<string> {
-      const phone = tenant.driver.phone!;
+      const phone = `+9989${String(randomUUID().replace(/\D/g, '') + '11111111').slice(0, 8)}`;
       await prisma.user.update({ where: { id: tenant.driverUser.id }, data: { phone } });
       return phone;
     }
@@ -118,9 +131,7 @@ describe('Background jobs (e2e)', () => {
     it('records that a login code was queued and sent', async () => {
       const phone = await driverWithPhone();
 
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/driver/request-code')
-        .send({ phone });
+      const res = await requestCode(phone);
 
       expect(res.status).toBe(200);
       const messages = await prisma.smsMessage.findMany({ where: { phone } });
@@ -138,9 +149,7 @@ describe('Background jobs (e2e)', () => {
       // exactly how BullMQ is told to retry.
       jest.spyOn(jobs, 'enqueue').mockImplementationOnce(() => Promise.resolve());
 
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/driver/request-code')
-        .send({ phone });
+      const res = await requestCode(phone);
 
       // The driver still gets an answer — they can always ask for another code
       // — and the row says plainly that nothing was delivered.

@@ -124,10 +124,19 @@ export class TrackingService {
     private readonly config: ConfigService,
   ) {}
 
+  /**
+   * Takes a batch of positions from a phone.
+   *
+   * Re-sending is normal, not exceptional (M-7, TASK-4.5): the phone marks a
+   * batch sent only after the server acknowledges it, so a phone that dies in
+   * between sends it again. Duplicates are skipped in the database rather than
+   * checked for beforehand — a read-then-write would still race two flushes
+   * from the same phone against each other.
+   */
   async ingestPositions(
     actor: CurrentUserPayload,
     dto: PositionBatchDto,
-  ): Promise<{ accepted: number; dropped: number }> {
+  ): Promise<{ accepted: number; duplicates: number; dropped: number }> {
     const driver = await this.eventsService.requireDriverProfile(actor);
     const db = this.prisma.forCompany(actor.companyId);
 
@@ -155,11 +164,34 @@ export class TrackingService {
       ];
     });
 
+    let accepted = 0;
     if (rows.length > 0) {
-      await db.gpsTrack.createMany({ data: rows });
-      await this.rememberLastPositions(db, rows);
+      // A batch can also contain the same instant twice within itself, so the
+      // rows are deduplicated here before the database has to.
+      const unique = this.dedupe(rows);
+      ({ count: accepted } = await db.gpsTrack.createMany({
+        data: unique,
+        skipDuplicates: true,
+      }));
+      // The last-known position is still refreshed from the whole batch: a
+      // duplicate carries the same coordinates, and the guard on `lastSeenAt`
+      // already refuses anything older than what the map shows.
+      await this.rememberLastPositions(db, unique);
     }
-    return { accepted: rows.length, dropped: dto.positions.length - rows.length };
+    return {
+      accepted,
+      duplicates: rows.length - accepted,
+      dropped: dto.positions.length - rows.length,
+    };
+  }
+
+  /** Keeps one row per vehicle and instant, matching the database's own key. */
+  private dedupe<T extends { vehicleId: string; recordedAt: Date }>(rows: T[]): T[] {
+    const seen = new Map<string, T>();
+    for (const row of rows) {
+      seen.set(`${row.vehicleId}|${row.recordedAt.getTime()}`, row);
+    }
+    return [...seen.values()];
   }
 
   /**

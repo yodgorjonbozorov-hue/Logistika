@@ -37,6 +37,7 @@ const TABLES = [
   'drivers',
   'refresh_tokens',
   'sms_codes',
+  'sms_messages',
   'users',
   'companies',
 ];

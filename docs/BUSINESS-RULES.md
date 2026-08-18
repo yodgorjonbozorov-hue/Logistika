@@ -942,3 +942,50 @@ sug'urta bahsi taxminan shuncha orqaga cho'ziladi. `0` — tozalash o'chirilgan
 
 `gps_tracks` ni oylik partitsiyaga o'tkazish rejasi — `docs/ARCHITECTURE.md`
 §6 da yozilgan va **ataylab keyinga qoldirilgan** (sabablari o'sha yerda).
+
+---
+
+## 17. GPS nuqtasi ikki marta tushmaydi (TASK-4.5, M-7)
+
+Telefon paketni **server tasdiqlagandan keyingina** «yuborildi» deb belgilaydi.
+Oradagi lahzada o'lgan telefon o'sha paketni **qayta yuboradi** — bu nosozlik
+emas, offline-first navbatning oddiy ishlashi. `GpsTrack`da nuqtani noyob
+qiladigan hech narsa yo'q edi, natijada o'sha koordinatalar ikki marta tushardi:
+
+- har bir **masofa yig'indisi shishardi** — bu per-km oyligi bor haydovchida
+  to'g'ridan-to'g'ri pul;
+- chizilgan marshrut takrorlangan nuqtalarda **duduqlanardi**.
+
+### Kalit
+
+```
+@@unique([companyId, vehicleId, recordedAt])
+```
+
+Bitta mashina bitta lahzada bitta joyda bo'ladi. Kalit `company_id` bilan
+boshlanadi, ya'ni bir firmaning soati boshqasiniki bilan **hech qachon
+to'qnashmaydi**.
+
+### Nega `skipDuplicates`, «avval tekshir» emas
+
+Yozishdan oldin «bu nuqta bormi?» deb o'qish tekshiruv bilan yozuv orasida
+oyna qoldiradi, va **bitta telefonning ikkita flush'i** aynan o'sha oynada
+poyga qiladi. Dublikatni bazaning o'zi (`ON CONFLICT DO NOTHING`) tashlab
+yuboradi — poyga yo'q.
+
+Paketning **o'z ichida** ham bir lahza takrorlanishi mumkin, shuning uchun
+qatorlar bazaga borishdan oldin xotirada ham yig'ishtiriladi.
+
+### Javob
+
+```
+{ accepted, duplicates, dropped }
+```
+
+To'liq qayta yuborilgan paketga to'g'ri javob — «yangisi yo'q»
+(`accepted: 0, duplicates: N`), «yana N ta nuqta» emas. `dropped` esa ilgarigidek
+— bu haydovchining reysi bo'lmagani uchun rad etilganlar.
+
+Oxirgi ma'lum pozitsiya (TASK-4.1) baribir yangilanadi: dublikat o'sha
+koordinatani olib keladi, `lastSeenAt` qorovuli esa xaritadagidan eskisini
+allaqachon rad etadi.
