@@ -106,6 +106,11 @@ export class CreateTripDto {
   @IsOptional()
   @IsTiyin()
   driverAdvance?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 }
 
 export class UpdateTripDto extends PartialType(CreateTripDto) {}

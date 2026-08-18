@@ -73,8 +73,10 @@ export class TripsController {
     return this.tripsService.assign(user, id, dto);
   }
 
+  // Drivers start and finish their own trip from the driver app (service-level
+  // ownership check); dispatchers may act on any trip in the tenant.
   @Post(':id/start')
-  @Roles(UserRole.OWNER, UserRole.LOGIST)
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.DRIVER)
   @HttpCode(HttpStatus.OK)
   start(
     @CurrentUser() user: CurrentUserPayload,
@@ -85,7 +87,7 @@ export class TripsController {
   }
 
   @Post(':id/complete')
-  @Roles(UserRole.OWNER, UserRole.LOGIST)
+  @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.DRIVER)
   @HttpCode(HttpStatus.OK)
   complete(
     @CurrentUser() user: CurrentUserPayload,

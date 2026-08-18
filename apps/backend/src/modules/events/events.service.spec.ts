@@ -85,3 +85,35 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
+
+describe('EventsService.listByTrip visibility', () => {
+  const audit = { log: jest.fn() } as unknown as AuditService;
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['tripEvent', 'trip', 'driver', 'storedFile']);
+    return { service: new EventsService(prisma, audit), db };
+  }
+
+  it('narrows a driver to their own events on the trip', async () => {
+    const { service, db } = setup();
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+
+    await service.listByTrip(DRIVER_ACTOR, 'trip-1');
+
+    expect(db.tripEvent!.findMany).toHaveBeenCalledWith({
+      where: { tripId: 'trip-1', driverId: 'd1' },
+      orderBy: { eventTime: 'asc' },
+    });
+  });
+
+  it('lets office roles read every event of the trip', async () => {
+    const { service, db } = setup();
+
+    await service.listByTrip(ACTOR, 'trip-1');
+
+    expect(db.tripEvent!.findMany).toHaveBeenCalledWith({
+      where: { tripId: 'trip-1' },
+      orderBy: { eventTime: 'asc' },
+    });
+    expect(db.driver!.findFirst).not.toHaveBeenCalled();
+  });
+});

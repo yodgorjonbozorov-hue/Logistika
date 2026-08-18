@@ -20,6 +20,11 @@ void i18n.use(initReactI18next).init({
   },
   lng: initialLocale,
   fallbackLng: DEFAULT_LOCALE,
+  // Without this i18next title-cases the script subtag ("uz-latn" → "uz-Latn")
+  // when resolving, which misses our lower-case resource keys and makes every
+  // lookup fall back to the raw key. The locale ids are lower-case everywhere
+  // (Accept-Language header, DB, Flutter), so lower-casing is the right fix.
+  lowerCaseLng: true,
   interpolation: { escapeValue: false },
 });
 

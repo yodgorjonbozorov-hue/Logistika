@@ -1,13 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TripStatus } from 'shared';
 import { api } from '../../shared/api/client';
-import type { Client, Driver, Expense, Income, Trip, Vehicle } from '../../shared/api/entities';
+import type {
+  Client,
+  Driver,
+  Expense,
+  GpsPoint,
+  Income,
+  Trip,
+  TripEvent,
+  Vehicle,
+} from '../../shared/api/entities';
 
-export function useTrips(filter: { page: number; status?: TripStatus }) {
+export interface TripFilter {
+  page: number;
+  status?: TripStatus;
+  driverId?: string;
+  vehicleId?: string;
+  clientId?: string;
+  from?: string;
+  to?: string;
+}
+
+export function useTrips(filter: TripFilter) {
   return useQuery({
     queryKey: ['trips', filter],
     queryFn: () =>
-      api<Trip[]>('/trips', { query: { page: filter.page, limit: 20, status: filter.status } }),
+      api<Trip[]>('/trips', {
+        query: {
+          page: filter.page,
+          limit: 20,
+          status: filter.status,
+          driverId: filter.driverId,
+          vehicleId: filter.vehicleId,
+          clientId: filter.clientId,
+          from: filter.from,
+          to: filter.to,
+        },
+      }),
   });
 }
 
@@ -15,6 +45,32 @@ export function useTrip(id: string) {
   return useQuery({
     queryKey: ['trips', id],
     queryFn: async () => (await api<Trip>(`/trips/${id}`)).data,
+    enabled: Boolean(id),
+  });
+}
+
+export function useTripEvents(tripId: string) {
+  return useQuery({
+    queryKey: ['events', tripId],
+    queryFn: async () => (await api<TripEvent[]>('/events', { query: { tripId } })).data,
+    enabled: Boolean(tripId),
+  });
+}
+
+/** GPS points of the trip's vehicle inside the trip window (map tab). */
+export function useTripTrack(trip: Trip | undefined) {
+  const vehicleId = trip?.vehicleId ?? '';
+  const from = trip?.startedAt ?? trip?.createdAt;
+  const to = trip?.finishedAt ?? new Date().toISOString();
+  return useQuery({
+    queryKey: ['tracking', 'history', vehicleId, from, to],
+    queryFn: async () =>
+      (
+        await api<GpsPoint[]>(`/tracking/vehicles/${vehicleId}/history`, {
+          query: { from, to },
+        })
+      ).data,
+    enabled: Boolean(vehicleId && from),
   });
 }
 
@@ -52,16 +108,23 @@ export function useTripMutations(tripId?: string) {
   const queryClient = useQueryClient();
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['trips'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
   const create = useMutation({
-    mutationFn: (body: Record<string, unknown>) => api<Trip>('/trips', { method: 'POST', body }),
+    mutationFn: async (body: Record<string, unknown>) =>
+      (await api<Trip>('/trips', { method: 'POST', body })).data,
+    onSuccess: invalidate,
+  });
+  const update = useMutation({
+    mutationFn: async (body: Record<string, unknown>) =>
+      (await api<Trip>(`/trips/${tripId}`, { method: 'PATCH', body })).data,
     onSuccess: invalidate,
   });
   const action = useMutation({
-    mutationFn: ({ verb, body }: { verb: string; body?: Record<string, unknown> }) =>
-      api<Trip>(`/trips/${tripId}/${verb}`, { method: 'POST', body: body ?? {} }),
+    mutationFn: async ({ verb, body }: { verb: string; body?: Record<string, unknown> }) =>
+      (await api<Trip>(`/trips/${tripId}/${verb}`, { method: 'POST', body: body ?? {} })).data,
     onSuccess: invalidate,
   });
-  return { create, action };
+  return { create, update, action };
 }

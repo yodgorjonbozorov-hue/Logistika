@@ -34,9 +34,19 @@ export class AdminCompaniesController {
     return paginated(data, pagination, total);
   }
 
+  @Get('stats')
+  stats() {
+    return this.companiesService.adminStats();
+  }
+
   @Post()
   create(@CurrentUser() user: CurrentUserPayload, @Body() dto: AdminCreateCompanyDto) {
     return this.companiesService.adminCreate(user.userId, dto);
+  }
+
+  @Get(':id')
+  getById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.companiesService.adminGetById(id);
   }
 
   @Patch(':id')

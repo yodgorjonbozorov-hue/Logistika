@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Driver, TripEvent } from '@prisma/client';
-import type { CurrentUserPayload } from 'shared';
+import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -92,9 +92,18 @@ export class EventsService {
     return result;
   }
 
+  /**
+   * Office roles read any trip in their tenant; a driver only their own trips —
+   * a colleague's route and stops are none of their business.
+   */
   async listByTrip(actor: CurrentUserPayload, tripId: string): Promise<TripEvent[]> {
+    const where: { tripId: string; driverId?: string } = { tripId };
+    if (actor.role === UserRole.DRIVER) {
+      const driver = await this.requireDriverProfile(actor);
+      where.driverId = driver.id;
+    }
     return this.prisma.forCompany(actor.companyId).tripEvent.findMany({
-      where: { tripId },
+      where,
       orderBy: { eventTime: 'asc' },
     });
   }

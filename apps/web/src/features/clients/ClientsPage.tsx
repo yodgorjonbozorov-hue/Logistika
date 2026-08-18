@@ -1,64 +1,111 @@
-import { useState, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../../shared/api/client';
 import { useCrudMutations, useList } from '../../shared/api/crud';
-import type { Client } from '../../shared/api/entities';
+import type { Client, Trip } from '../../shared/api/entities';
 import {
   Button,
-  Cell,
-  EmptyState,
+  DataTable,
   ErrorMessage,
   Field,
   Input,
   Modal,
   PageHeader,
   Pagination,
-  Row,
-  Spinner,
-  Table,
+  Skeleton,
+  type Column,
 } from '../../shared/ui';
 import { formatTiyin } from '../../shared/utils/money';
 
 export function ClientsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const { data, isLoading, error } = useList<Client>('clients', page);
 
+  // Per-client totals are derived from real trips; there is no aggregate endpoint yet.
+  // TODO: backend `GET /clients/:id/stats` (trips, revenue, receivables) with Finance Core.
+  const trips = useQuery({
+    queryKey: ['trips', { limit: 100, forClients: true }],
+    queryFn: async () => (await api<Trip[]>('/trips', { query: { limit: 100 } })).data,
+  });
+
+  const stats = useMemo(() => {
+    const map = new Map<string, { trips: number; revenue: bigint }>();
+    for (const trip of trips.data ?? []) {
+      if (!trip.clientId) continue;
+      const bucket = map.get(trip.clientId) ?? { trips: 0, revenue: 0n };
+      bucket.trips += 1;
+      if (trip.status !== 'CANCELLED') bucket.revenue += BigInt(trip.agreedPrice);
+      map.set(trip.clientId, bucket);
+    }
+    return map;
+  }, [trips.data]);
+
   const clients = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
+
+  const columns: Array<Column<Client>> = [
+    { key: 'name', header: t('clients.name'), primary: true, cell: (client) => client.name },
+    {
+      key: 'balance',
+      header: t('clients.balance'),
+      secondary: true,
+      className: 'money',
+      cell: (client) =>
+        BigInt(client.balance) > 0n ? (
+          <span className="font-semibold text-danger money">{formatTiyin(client.balance)}</span>
+        ) : (
+          <span className="text-ink-2">{formatTiyin(client.balance)}</span>
+        ),
+    },
+    {
+      key: 'contact',
+      header: t('clients.contactPerson'),
+      cell: (client) => client.contactPerson ?? '—',
+    },
+    { key: 'phone', header: t('clients.phone'), cell: (client) => client.phone ?? '—' },
+    {
+      key: 'trips',
+      header: t('clients.trips'),
+      className: 'money',
+      cell: (client) => stats.get(client.id)?.trips ?? 0,
+    },
+    {
+      key: 'revenue',
+      header: t('clients.revenue'),
+      className: 'money',
+      cell: (client) => formatTiyin(stats.get(client.id)?.revenue ?? 0n),
+    },
+    {
+      key: 'terms',
+      header: t('clients.paymentTerms'),
+      cell: (client) => client.paymentTermsDays ?? '—',
+    },
+  ];
 
   return (
     <div>
       <PageHeader
         title={t('clients.title')}
+        subtitle={t('clients.subtitle')}
         actions={<Button onClick={() => setShowForm(true)}>+ {t('clients.new')}</Button>}
       />
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
-      ) : clients.length === 0 ? (
-        <EmptyState />
+        <Skeleton className="h-64" />
       ) : (
         <>
-          <Table
-            headers={[
-              t('clients.name'),
-              t('clients.contactPerson'),
-              t('clients.phone'),
-              t('clients.paymentTerms'),
-              t('clients.balance'),
-            ]}
-          >
-            {clients.map((client) => (
-              <Row key={client.id}>
-                <Cell className="font-semibold">{client.name}</Cell>
-                <Cell>{client.contactPerson ?? '—'}</Cell>
-                <Cell>{client.phone ?? '—'}</Cell>
-                <Cell>{client.paymentTermsDays ?? '—'}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(client.balance)}</Cell>
-              </Row>
-            ))}
-          </Table>
+          <DataTable
+            rows={clients}
+            columns={columns}
+            getKey={(client) => client.id}
+            onRowClick={(client) => navigate(`/trips?q=${encodeURIComponent(client.name)}`)}
+          />
+          <p className="mt-2 text-xs text-ink-2">{t('clients.balanceNote')}</p>
           <Pagination page={page} limit={20} total={total} onPage={setPage} />
         </>
       )}

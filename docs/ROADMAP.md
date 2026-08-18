@@ -91,6 +91,31 @@
 - [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
       autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
+## 6.5-bosqich — Web mahsulot: landing → login → rol paneli ✅
+
+> Maqsad: mahsulotni brauzerda real foydalanuvchi sifatida boshdan-oxir ishlatib ko'rish.
+
+- [x] Ommaviy landing `/` (hero, imkoniyatlar, qanday ishlaydi, CTA, footer) — 3 tilda, responsive
+- [x] `/login` qayta ishlangan: rol bo'yicha yo'naltirish
+      (SUPERADMIN→/admin, DRIVER→/driver, qolganlari→/dashboard)
+- [x] Ilova qobig'i: desktopda yon panel, telefonda pastki navigatsiya + drawer;
+      rol bo'yicha menyu (TZ §17), 403/404 sahifalari, marshrut darajasidagi rol-guard
+- [x] W-1 dashboard: `GET /dashboard/summary` (KPI, faol reyslar, oxirgi tranzaksiyalar,
+      jonli transport) — «bugun» kompaniya vaqt mintaqasi bo'yicha
+- [x] Reyslar: filtrlar (status/haydovchi/transport/mijoz/sana), `/trips/new` to'liq forma,
+      reys kartochkasi (marshrut, haydovchi/transport, xronologiya, GPS, moliya)
+- [x] W-9 hisobotlar: `GET /reports/{trips,finance,vehicles,drivers}` — faqat mavjud
+      yozuvlardan deterministik agregatsiya; P&L/ROI/1 km tannarxi «Finance Core» deb belgilangan
+- [x] Sozlamalar (kompaniya, profil, foydalanuvchilar, xavfsizlik) va superadmin paneli
+      (`GET /admin/companies/stats`, kompaniya yaratish/faollashtirish/obuna)
+- [x] Haydovchi uchun mobil-birinchi web `/driver`: START, hodisa tugmalari, foto,
+      GPS, offline navbat (rad etilgan hodisa hech qachon «yuborilgan» deb belgilanmaydi)
+- [x] Dizayn tizimi: light/dark token'lar, responsive `DataTable` (desktopda jadval,
+      telefonda kartochka) — 375–1920px oralig'ida gorizontal overflow yo'q
+- [x] Seed'lar: `prisma/seed.ts` (production superadmin) va `prisma/seed-demo.ts`
+      («TruckControl Demo»: 3 haydovchi, 4 texnika, 5 mijoz, reyslar, hodisalar, GPS, moliya)
+- [x] i18n: uz-latn/uz-cyrl/ru to'liq qamrov + kalit-qamrov va til-kodi regressiya testlari
+
 ## 7-bosqich — Moliya yadrosi
 
 - [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
@@ -100,9 +125,10 @@
 - [ ] `maintenance`: TO tarixi, keyingi TO rejasi
 - [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
 - [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
-- [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
-      xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
+- [ ] `reports`: Excel/PDF eksport, yo'nalish va mijoz kesimlari
+      (W-1 dashboard va reys/mashina/haydovchi/moliya hisobotlari 6.5-bosqichda bajarildi)
+- [ ] Web: W-8 yoqilg'i, W-10 ogohlantirishlar
+      (W-1 dashboard, W-7 moliya, W-9 hisobotlar 6.5-bosqichda bajarildi)
 - [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
 
 ## 8-bosqich — AI funksiyalari (TZ §8)

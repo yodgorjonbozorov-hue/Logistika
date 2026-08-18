@@ -13,11 +13,13 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CompaniesModule } from './modules/companies/companies.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
@@ -26,7 +28,13 @@ import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    // The monorepo keeps one .env at the root; the package-local file (if any)
+    // takes precedence for per-service overrides.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '../../.env'],
+      validate: validateEnv,
+    }),
     ScheduleModule.forRoot(),
     PrismaModule,
     I18nModule,
@@ -43,6 +51,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ExpensesModule,
     FilesModule,
     PublicLinkModule,
+    DashboardModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [

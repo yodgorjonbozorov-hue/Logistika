@@ -1,13 +1,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
-import type { AuthTokens } from 'shared';
+import type { AuthTokens, UserRole } from 'shared';
 import { api, tokenStore } from '../api/client';
 import type { User } from '../api/entities';
 
 interface AuthContextValue {
   user: User | null;
+  role: UserRole | null;
+  /** A refresh token exists — the router may render protected routes. */
+  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (identifier: string, password: string) => Promise<void>;
+  /** /auth/me failed (deactivated user, revoked session…). */
+  error: unknown;
+  login: (identifier: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -15,11 +20,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const isAuthenticated = Boolean(tokenStore.refresh);
 
-  const { data: user = null, isLoading } = useQuery({
+  const {
+    data: user = null,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api<User>('/auth/me')).data,
-    enabled: Boolean(tokenStore.access),
+    enabled: isAuthenticated,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -31,7 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: { identifier, password },
       });
       tokenStore.set(data.accessToken, data.refreshToken);
-      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      // The role decides where to land, so the profile is fetched before redirecting.
+      const me = (await api<User>('/auth/me')).data;
+      queryClient.setQueryData(['auth', 'me'], me);
+      return me;
     },
     [queryClient],
   );
@@ -58,7 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role: (user?.role as UserRole | undefined) ?? null,
+        isAuthenticated,
+        isLoading,
+        error,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -21,8 +21,13 @@ describe('TripsService', () => {
 
       await service.create(ACTOR, { agreedPrice: '1250000000' });
 
+      const year = new Date().getUTCFullYear();
+      // Only trips from the current year feed the sequence.
+      expect(db.trip!.count!.mock.calls[0][0].where.createdAt.gte).toEqual(
+        new Date(Date.UTC(year, 0, 1)),
+      );
       const data = db.trip!.create!.mock.calls[0][0].data;
-      expect(data.tripNumber).toBe('42');
+      expect(data.tripNumber).toBe(`TR-${year}-0042`);
       expect(data.status).toBe('DRAFT');
       expect(data.agreedPrice).toBe(1_250_000_000n);
       expect(data.createdById).toBe('user-1');
@@ -108,5 +113,69 @@ describe('TripsService', () => {
         code: 'TRIP_INVALID_STATUS',
       });
     });
+  });
+});
+
+describe('TripsService — driver-operated lifecycle', () => {
+  const audit = { log: jest.fn() } as unknown as AuditService;
+  const DRIVER_ACTOR = {
+    userId: 'user-driver',
+    companyId: 'company-a',
+    role: 'DRIVER',
+  } as import('shared').CurrentUserPayload;
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['trip', 'vehicle', 'driver', 'client']);
+    return { service: new TripsService(prisma, audit), db };
+  }
+
+  it('lets a driver start the trip assigned to them', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'ASSIGNED', driverId: 'd1' });
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+    db.trip!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 't1', ...data }),
+    );
+
+    const trip = await service.start(DRIVER_ACTOR, 't1', {});
+
+    expect(trip.status).toBe('IN_PROGRESS');
+    expect(db.driver!.findFirst).toHaveBeenCalledWith({
+      where: { userId: 'user-driver', isActive: true },
+    });
+  });
+
+  it("refuses a driver acting on someone else's trip", async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'ASSIGNED', driverId: 'other' });
+    db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+
+    await expect(service.start(DRIVER_ACTOR, 't1', {})).rejects.toMatchObject({
+      code: 'AUTH_FORBIDDEN',
+    });
+    expect(db.trip!.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a driver with no active driver profile', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'IN_PROGRESS', driverId: 'd1' });
+    db.driver!.findFirst!.mockResolvedValue(null);
+
+    await expect(service.complete(DRIVER_ACTOR, 't1', { endOdometer: 10 })).rejects.toMatchObject({
+      code: 'AUTH_FORBIDDEN',
+    });
+  });
+
+  it('leaves the dispatcher path unrestricted', async () => {
+    const { service, db } = setup();
+    db.trip!.findUnique!.mockResolvedValue({ id: 't1', status: 'ASSIGNED', driverId: 'someone' });
+    db.trip!.update!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 't1', ...data }),
+    );
+
+    await expect(service.start(ACTOR, 't1', {})).resolves.toMatchObject({
+      status: 'IN_PROGRESS',
+    });
+    expect(db.driver!.findFirst).not.toHaveBeenCalled();
   });
 });

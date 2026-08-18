@@ -78,6 +78,43 @@ async function tryRefresh(): Promise<boolean> {
   return false;
 }
 
+/**
+ * Multipart upload (POST /files/upload). Kept apart from `api()` because the
+ * body is FormData — the browser sets the content-type boundary itself.
+ */
+export async function apiUpload<T>(path: string, file: File): Promise<T> {
+  const send = async (): Promise<ApiResponse<T>> => {
+    const body = new FormData();
+    body.append('file', file);
+    const headers: Record<string, string> = { 'accept-language': i18n.language };
+    if (tokenStore.access) headers.authorization = `Bearer ${tokenStore.access}`;
+    const response = await fetch(new URL(API_URL + path, window.location.origin).toString(), {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return (await response.json().catch(() => ({
+      success: false,
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: i18n.t('common.errorGeneric') },
+      meta: null,
+    }))) as ApiResponse<T>;
+  };
+
+  let result = await send();
+  if (!result.success && result.error?.code === 'AUTH_TOKEN_EXPIRED' && (await tryRefresh())) {
+    result = await send();
+  }
+  if (!result.success || result.error) {
+    const error = result.error ?? {
+      code: 'INTERNAL_ERROR',
+      message: i18n.t('common.errorGeneric'),
+    };
+    throw new ApiError(error.code, error.message, error.details);
+  }
+  return result.data as T;
+}
+
 /** Unwraps the { success, data, error, meta } envelope; auto-refreshes once on expiry. */
 export async function api<T>(
   path: string,

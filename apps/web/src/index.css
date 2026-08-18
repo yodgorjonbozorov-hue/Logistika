@@ -3,10 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light theme is the default; .dark on <html> swaps the same token set. */
+  :root {
+    --canvas: 244 246 250;
+    --surface: 255 255 255;
+    --surface-2: 241 244 249;
+    --line: 226 232 240;
+    --ink: 15 23 42;
+    --ink-2: 100 116 139;
+  }
+
+  .dark {
+    --canvas: 11 18 33;
+    --surface: 22 32 58;
+    --surface-2: 28 40 69;
+    --line: 40 54 87;
+    --ink: 232 236 244;
+    --ink-2: 147 160 181;
+  }
+
   html {
     @apply antialiased;
+    scroll-behavior: smooth;
   }
+
   body {
-    @apply bg-gray-100 text-gray-900 dark:bg-navy dark:text-gray-100;
+    @apply bg-canvas text-ink;
+    /* Nothing may push the viewport sideways — TZ responsive requirement. */
+    overflow-x: hidden;
+  }
+
+  /* Native controls follow the theme (date pickers, selects, scrollbars). */
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-accent/70 ring-offset-1 ring-offset-canvas;
+  }
+}
+
+@layer utilities {
+  /* Tabular numerals keep money columns aligned across rows. */
+  .money {
+    @apply tabular-nums;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

@@ -1,97 +1,145 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { SalaryType } from 'shared';
 import { useCrudMutations, useList } from '../../shared/api/crud';
 import type { Driver } from '../../shared/api/entities';
+import { useAuth } from '../../shared/auth/AuthContext';
+import { can } from '../../shared/auth/permissions';
 import {
   Badge,
   Button,
-  Cell,
-  EmptyState,
+  DataTable,
   ErrorMessage,
   Field,
   Input,
   Modal,
   PageHeader,
   Pagination,
-  Row,
   Select,
-  Spinner,
-  Table,
+  Skeleton,
+  Toolbar,
+  type Column,
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 
+/** PERCENT is stored as basis points; every other type is tiyin. */
+export function formatSalary(driver: Driver): string {
+  if (!driver.salaryValue) return '—';
+  if (driver.salaryType === 'PERCENT') return `${Number(driver.salaryValue) / 100}%`;
+  return formatTiyin(driver.salaryValue);
+}
+
 export function DriversPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { role } = useAuth();
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const [term, setTerm] = useState('');
   const { data, isLoading, error } = useList<Driver>('drivers', page);
   const { remove } = useCrudMutations('drivers');
 
-  const drivers = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
+  const drivers = (data?.data ?? []).filter((driver) =>
+    term
+      ? `${driver.fullName} ${driver.phone ?? ''} ${driver.licenseNumber ?? ''}`
+          .toLowerCase()
+          .includes(term.toLowerCase())
+      : true,
+  );
+
+  const columns: Array<Column<Driver>> = [
+    {
+      key: 'name',
+      header: t('drivers.fullName'),
+      primary: true,
+      cell: (driver) => driver.fullName,
+    },
+    {
+      key: 'status',
+      header: t('drivers.status'),
+      secondary: true,
+      cell: (driver) => (
+        <Badge tone={driver.isActive ? 'green' : 'gray'}>
+          {driver.isActive ? t('common.active') : t('common.inactive')}
+        </Badge>
+      ),
+    },
+    { key: 'phone', header: t('drivers.phone'), cell: (driver) => driver.phone ?? '—' },
+    { key: 'license', header: t('drivers.license'), cell: (driver) => driver.licenseNumber ?? '—' },
+    {
+      key: 'licenseExpiry',
+      header: t('drivers.licenseExpiry'),
+      cell: (driver) => formatDate(driver.licenseExpiry),
+    },
+    {
+      key: 'salaryType',
+      header: t('drivers.salaryType'),
+      cell: (driver) => (driver.salaryType ? t(`drivers.salaryTypes.${driver.salaryType}`) : '—'),
+    },
+    {
+      key: 'salaryValue',
+      header: t('drivers.salaryValue'),
+      className: 'money',
+      cell: formatSalary,
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      desktopOnly: true,
+      cell: (driver) =>
+        driver.isActive && can(role, 'deactivate') ? (
+          <button
+            className="text-xs text-danger hover:underline"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (window.confirm(t('common.confirmDeactivate'))) {
+                void remove.mutateAsync(driver.id);
+              }
+            }}
+          >
+            {t('common.deactivate')}
+          </button>
+        ) : null,
+    },
+  ];
 
   return (
     <div>
       <PageHeader
         title={t('drivers.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('drivers.new')}</Button>}
+        subtitle={t('drivers.subtitle')}
+        actions={
+          can(role, 'manageFleet') ? (
+            <Button onClick={() => setShowForm(true)}>+ {t('drivers.new')}</Button>
+          ) : null
+        }
       />
+      <Toolbar>
+        <div className="w-full sm:w-64">
+          <Field label={t('common.search')}>
+            <Input
+              value={term}
+              placeholder={t('common.searchPlaceholder')}
+              onChange={(event) => setTerm(event.target.value)}
+            />
+          </Field>
+        </div>
+      </Toolbar>
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
-      ) : drivers.length === 0 ? (
-        <EmptyState />
+        <Skeleton className="h-64" />
       ) : (
         <>
-          <Table
-            headers={[
-              t('drivers.fullName'),
-              t('drivers.phone'),
-              t('drivers.license'),
-              t('drivers.licenseExpiry'),
-              t('drivers.salaryType'),
-              t('drivers.salaryValue'),
-              t('common.actions'),
-            ]}
-          >
-            {drivers.map((driver) => (
-              <Row key={driver.id}>
-                <Cell className="font-semibold">
-                  {driver.fullName}{' '}
-                  {!driver.isActive && <Badge tone="gray">{t('common.deactivate')}</Badge>}
-                </Cell>
-                <Cell>{driver.phone ?? '—'}</Cell>
-                <Cell>{driver.licenseNumber ?? '—'}</Cell>
-                <Cell>{formatDate(driver.licenseExpiry)}</Cell>
-                <Cell>
-                  {driver.salaryType ? t(`drivers.salaryTypes.${driver.salaryType}`) : '—'}
-                </Cell>
-                <Cell className="tabular-nums">
-                  {driver.salaryType === 'PERCENT'
-                    ? driver.salaryValue
-                      ? `${Number(driver.salaryValue) / 100}%`
-                      : '—'
-                    : formatTiyin(driver.salaryValue)}
-                </Cell>
-                <Cell>
-                  {driver.isActive && (
-                    <button
-                      className="text-xs text-danger hover:underline"
-                      onClick={() =>
-                        window.confirm(t('common.confirmDeactivate')) &&
-                        void remove.mutateAsync(driver.id)
-                      }
-                    >
-                      {t('common.deactivate')}
-                    </button>
-                  )}
-                </Cell>
-              </Row>
-            ))}
-          </Table>
-          <Pagination page={page} limit={20} total={total} onPage={setPage} />
+          <DataTable
+            rows={drivers}
+            columns={columns}
+            getKey={(driver) => driver.id}
+            onRowClick={(driver) => navigate(`/drivers/${driver.id}`)}
+          />
+          {!term ? <Pagination page={page} limit={20} total={total} onPage={setPage} /> : null}
         </>
       )}
       <DriverFormModal open={showForm} onClose={() => setShowForm(false)} />

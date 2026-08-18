@@ -44,7 +44,27 @@ docs/              TZ, arxitektura, roadmap
 docker compose up -d      # postgres, redis, minio
 cp .env.example .env      # qiymatlarni to'ldiring
 pnpm install
-pnpm dev                  # backend + web
+pnpm --filter shared build                 # web/backend `shared` tiplaridan foydalanadi
+pnpm --filter backend exec prisma migrate deploy
+pnpm --filter backend seed                 # platforma SUPERADMIN hisobi
+pnpm --filter backend seed:demo            # ixtiyoriy: «TruckControl Demo» ma'lumotlari
+pnpm dev                                   # backend :3000 + web :5173
+```
+
+`seed` production uchun mo'ljallangan va faqat SUPERADMIN yaratadi
+(`SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD`; production'da bu o'zgaruvchilar
+majburiy). `seed:demo` esa alohida demo-tenant yaratadi va `NODE_ENV=production` bo'lsa
+ishlamaydi — qayta ishga tushirilsa faqat o'sha demo kompaniyani yangilaydi.
+
+Brauzerda: `http://localhost:5173/` → landing → **Platformaga kirish** → rolga mos panel
+(`/dashboard`, `/driver` yoki `/admin`).
+
+## Tekshirish
+
+```bash
+pnpm lint && pnpm format:check
+pnpm --filter shared build && pnpm -r test   # backend (Jest) + web (Vitest)
+pnpm build
 ```
 
 Batafsil — [`CLAUDE.md`](CLAUDE.md).

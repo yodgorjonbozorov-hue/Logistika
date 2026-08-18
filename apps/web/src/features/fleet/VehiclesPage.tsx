@@ -1,29 +1,31 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { VehicleType } from 'shared';
 import type { Vehicle } from '../../shared/api/entities';
 import { useCrudMutations, useList } from '../../shared/api/crud';
+import { useAuth } from '../../shared/auth/AuthContext';
+import { can } from '../../shared/auth/permissions';
 import {
   Badge,
   Button,
-  Cell,
-  EmptyState,
+  DataTable,
   ErrorMessage,
   Field,
   Input,
   Modal,
   PageHeader,
   Pagination,
-  Row,
   Select,
-  Spinner,
-  Table,
+  Skeleton,
+  type Column,
 } from '../../shared/ui';
-import { formatDate } from '../../shared/utils/date';
-import { dateInputToIso } from '../../shared/utils/date';
+import { dateInputToIso, formatDate } from '../../shared/utils/date';
 
 export function VehiclesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { role } = useAuth();
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const { data, isLoading, error } = useList<Vehicle>('vehicles', page);
@@ -32,59 +34,92 @@ export function VehiclesPage() {
   const vehicles = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
 
+  const columns: Array<Column<Vehicle>> = [
+    {
+      key: 'plate',
+      header: t('vehicles.plate'),
+      primary: true,
+      cell: (vehicle) => vehicle.plateNumber,
+    },
+    {
+      key: 'status',
+      header: t('vehicles.status'),
+      secondary: true,
+      cell: (vehicle) => (
+        <Badge tone={vehicle.isActive ? 'green' : 'gray'}>
+          {vehicle.isActive ? t('common.active') : t('common.inactive')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'type',
+      header: t('vehicles.type'),
+      cell: (vehicle) => t(`vehicles.types.${vehicle.type}`),
+    },
+    {
+      key: 'brand',
+      header: t('vehicles.brand'),
+      cell: (vehicle) => [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '—',
+    },
+    {
+      key: 'norm',
+      header: t('vehicles.fuelNorm'),
+      cell: (vehicle) => vehicle.fuelNormPer100km ?? '—',
+    },
+    {
+      key: 'odometer',
+      header: t('vehicles.odometer'),
+      className: 'money',
+      cell: (vehicle) => vehicle.currentOdometer ?? '—',
+    },
+    {
+      key: 'insurance',
+      header: t('vehicles.insuranceExpiry'),
+      cell: (vehicle) => formatDate(vehicle.insuranceExpiry),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      desktopOnly: true,
+      cell: (vehicle) =>
+        vehicle.isActive && can(role, 'deactivate') ? (
+          <button
+            className="text-xs text-danger hover:underline"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (window.confirm(t('common.confirmDeactivate'))) {
+                void remove.mutateAsync(vehicle.id);
+              }
+            }}
+          >
+            {t('common.deactivate')}
+          </button>
+        ) : null,
+    },
+  ];
+
   return (
     <div>
       <PageHeader
         title={t('vehicles.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('vehicles.new')}</Button>}
+        subtitle={t('vehicles.subtitle')}
+        actions={
+          can(role, 'manageFleet') ? (
+            <Button onClick={() => setShowForm(true)}>+ {t('vehicles.new')}</Button>
+          ) : null
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (
-        <Spinner />
-      ) : vehicles.length === 0 ? (
-        <EmptyState />
+        <Skeleton className="h-64" />
       ) : (
         <>
-          <Table
-            headers={[
-              t('vehicles.plate'),
-              t('vehicles.type'),
-              t('vehicles.brand'),
-              t('vehicles.fuelNorm'),
-              t('vehicles.odometer'),
-              t('vehicles.insuranceExpiry'),
-              t('common.actions'),
-            ]}
-          >
-            {vehicles.map((vehicle) => (
-              <Row key={vehicle.id}>
-                <Cell className="font-semibold">
-                  {vehicle.plateNumber}{' '}
-                  {!vehicle.isActive && <Badge tone="gray">{t('common.deactivate')}</Badge>}
-                </Cell>
-                <Cell>{t(`vehicles.types.${vehicle.type}`)}</Cell>
-                <Cell>
-                  {vehicle.brand ?? '—'} {vehicle.model ?? ''}
-                </Cell>
-                <Cell>{vehicle.fuelNormPer100km ?? '—'}</Cell>
-                <Cell className="tabular-nums">{vehicle.currentOdometer ?? '—'}</Cell>
-                <Cell>{formatDate(vehicle.insuranceExpiry)}</Cell>
-                <Cell>
-                  {vehicle.isActive && (
-                    <button
-                      className="text-xs text-danger hover:underline"
-                      onClick={() =>
-                        window.confirm(t('common.confirmDeactivate')) &&
-                        void remove.mutateAsync(vehicle.id)
-                      }
-                    >
-                      {t('common.deactivate')}
-                    </button>
-                  )}
-                </Cell>
-              </Row>
-            ))}
-          </Table>
+          <DataTable
+            rows={vehicles}
+            columns={columns}
+            getKey={(vehicle) => vehicle.id}
+            onRowClick={(vehicle) => navigate(`/vehicles/${vehicle.id}`)}
+          />
           <Pagination page={page} limit={20} total={total} onPage={setPage} />
         </>
       )}

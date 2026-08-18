@@ -298,6 +298,7 @@ model Trip {
   currency          Currency   @default(UZS)
   driverAdvance     BigInt     @default(0) @map("driver_advance")
   status            TripStatus @default(DRAFT)
+  notes             String?
   startOdometer     Int?       @map("start_odometer")
   endOdometer       Int?       @map("end_odometer")
   startedAt         DateTime?  @map("started_at")

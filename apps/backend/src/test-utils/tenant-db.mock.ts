@@ -11,6 +11,8 @@ export function createTenantDbMock(models: string[]) {
       update: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
+      aggregate: jest.fn().mockResolvedValue({ _sum: {} }),
+      groupBy: jest.fn().mockResolvedValue([]),
     };
   }
   const forCompany = jest.fn().mockReturnValue(db);

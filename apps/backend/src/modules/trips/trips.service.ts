@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type Trip, type TripStatus } from '@prisma/client';
-import type { CurrentUserPayload } from 'shared';
+import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -24,6 +24,11 @@ const TRANSITIONS: Record<TripStatus, TripStatus[]> = {
 };
 
 const EDITABLE_STATUSES: TripStatus[] = ['DRAFT', 'ASSIGNED'];
+
+/** Human-facing trip number: per company, per year — `TR-2026-0042`. */
+function formatTripNumber(year: number, sequence: number): string {
+  return `TR-${year}-${String(sequence).padStart(4, '0')}`;
+}
 
 function toData(dto: CreateTripDto | UpdateTripDto) {
   const { agreedPrice, driverAdvance, loadingDate, unloadingDate, ...rest } = dto;
@@ -86,12 +91,16 @@ export class TripsService {
     await this.assertRefsExist(actor, dto);
     const status: TripStatus = dto.vehicleId && dto.driverId ? 'ASSIGNED' : 'DRAFT';
 
-    // Per-company sequential number; retry on the (companyId, tripNumber)
-    // unique constraint in case two trips are opened at the same moment.
+    // Per-company, per-year sequential number; retry on the (companyId,
+    // tripNumber) unique constraint in case two trips are opened at the same
+    // moment.
+    const year = new Date().getUTCFullYear();
+    const yearStart = new Date(Date.UTC(year, 0, 1));
     for (let attempt = 0; ; attempt++) {
-      const tripNumber = String(
-        (await this.prisma.forCompany(actor.companyId).trip.count()) + 1 + attempt,
-      );
+      const soFar = await this.prisma
+        .forCompany(actor.companyId)
+        .trip.count({ where: { createdAt: { gte: yearStart } } });
+      const tripNumber = formatTripNumber(year, soFar + 1 + attempt);
       try {
         const trip = await this.prisma.forCompany(actor.companyId).trip.create({
           data: {
@@ -156,6 +165,7 @@ export class TripsService {
 
   async start(actor: CurrentUserPayload, id: string, dto: StartTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
+    await this.assertMayDrive(actor, trip);
     this.assertTransition(trip.status, 'IN_PROGRESS');
     return this.transition(actor, trip, 'IN_PROGRESS', {
       startedAt: new Date(),
@@ -165,6 +175,7 @@ export class TripsService {
 
   async complete(actor: CurrentUserPayload, id: string, dto: CompleteTripDto): Promise<Trip> {
     const trip = await this.getById(actor, id);
+    await this.assertMayDrive(actor, trip);
     this.assertTransition(trip.status, 'COMPLETED');
     const actualDistanceKm =
       dto.endOdometer != null && trip.startOdometer != null
@@ -181,6 +192,21 @@ export class TripsService {
     const trip = await this.getById(actor, id);
     this.assertTransition(trip.status, 'CANCELLED');
     return this.transition(actor, trip, 'CANCELLED', {});
+  }
+
+  /**
+   * A driver may start and finish only the trip assigned to them. Logists and
+   * owners keep the unrestricted dispatcher view; every other role never
+   * reaches here because the controller guard rejects it first.
+   */
+  private async assertMayDrive(actor: CurrentUserPayload, trip: Trip): Promise<void> {
+    if (actor.role !== UserRole.DRIVER) return;
+    const driver = await this.prisma
+      .forCompany(actor.companyId)
+      .driver.findFirst({ where: { userId: actor.userId, isActive: true } });
+    if (!driver || trip.driverId !== driver.id) {
+      throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
+    }
   }
 
   private assertTransition(from: TripStatus, to: TripStatus, allowNoop = false): void {

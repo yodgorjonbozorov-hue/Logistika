@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json",
-    "prisma": "prisma"
+    "prisma": "node scripts/with-env.mjs prisma",
+    "seed": "node scripts/with-env.mjs ts-node -P tsconfig.json prisma/seed.ts",
+    "seed:demo": "node scripts/with-env.mjs ts-node -P tsconfig.json prisma/seed-demo.ts",
+    "migrate": "node scripts/with-env.mjs prisma migrate deploy"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
