@@ -317,6 +317,19 @@ model Vehicle {
   fuelNormPer100km     Decimal?    @map("fuel_norm_per_100km") @db.Decimal(6, 2)
   tankCapacity         Decimal?    @map("tank_capacity") @db.Decimal(7, 2)
   currentOdometer      Int?        @map("current_odometer")
+  /// Denormalised last known position (TASK-4.1).
+  ///
+  /// The live map asked gps_tracks for "the newest row per vehicle", which
+  /// Prisma answers by fetching every matching row and de-duplicating in the
+  /// client — a sequential scan and a sort of ten million rows, every thirty
+  /// seconds, to display forty of them. These five columns are written once per
+  /// vehicle at the end of each position batch, and the map now reads only this
+  /// table: O(vehicles) instead of O(all history).
+  lastLat              Float?      @map("last_lat")
+  lastLng              Float?      @map("last_lng")
+  lastSpeed            Float?      @map("last_speed")
+  lastSeenAt           DateTime?   @map("last_seen_at")
+  lastTripId           String?     @map("last_trip_id")
   insuranceExpiry      DateTime?   @map("insurance_expiry")
   techInspectionExpiry DateTime?   @map("tech_inspection_expiry")
   nextServiceOdometer  Int?        @map("next_service_odometer")

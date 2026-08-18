@@ -105,6 +105,12 @@
         "branches": 57,
         "functions": 82
       },
+      "./src/modules/tracking/tracking.service.ts": {
+        "statements": 90,
+        "lines": 91,
+        "branches": 72,
+        "functions": 76
+      },
       "./src/common/phone.ts": {
         "statements": 100,
         "lines": 100,

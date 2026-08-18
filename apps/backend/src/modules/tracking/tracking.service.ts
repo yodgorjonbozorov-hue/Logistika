@@ -1,13 +1,73 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { AppException } from '../../common/exceptions/app.exception';
 import { Cron } from '@nestjs/schedule';
 import type { TripEventType } from '@prisma/client';
 import { LiveStatus, type CurrentUserPayload } from 'shared';
 import { distanceToSegmentKm } from '../../common/geo';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import { EventsService } from '../events/events.service';
 import { PositionBatchDto } from './dto/position.dto';
 
 const GPS_RETENTION_DAYS = 90;
+
+/**
+ * The widest history window a single request may ask for.
+ *
+ * A month of one truck is already ~86 000 points. Anything wider is a report,
+ * not a map, and belongs to an export that can be built in the background.
+ */
+export const MAX_HISTORY_DAYS = 31;
+
+/** Rows read before thinning — the ceiling on what one request can cost. */
+export const MAX_HISTORY_ROWS = 100_000;
+
+/** Points actually returned. More than this cannot be seen on a polyline. */
+export const MAX_HISTORY_POINTS = 2_000;
+
+export interface HistoryPoint {
+  lat: number;
+  lng: number;
+  speed: number | null;
+  recordedAt: Date;
+}
+
+export interface HistoryResult {
+  points: HistoryPoint[];
+  /** How many stored points the returned line was drawn from. */
+  totalPoints: number;
+  /** True when the range held more than MAX_HISTORY_ROWS and was cut short. */
+  truncated: boolean;
+}
+
+function assertHistoryWindow(from: Date, to: Date): void {
+  if (to < from) {
+    throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [
+      'to must not be earlier than from',
+    ]);
+  }
+  const days = (to.getTime() - from.getTime()) / (24 * 3600 * 1000);
+  if (days > MAX_HISTORY_DAYS) {
+    throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [
+      `the history window must not exceed ${MAX_HISTORY_DAYS} days`,
+    ]);
+  }
+}
+
+/**
+ * Keeps at most `limit` points, evenly spaced, with both ends intact.
+ *
+ * Evenly spaced rather than "every Nth until the budget runs out": the first
+ * and last point are where the journey began and ended, and a route that loses
+ * its end looks like a truck that never arrived.
+ */
+export function downsample(points: HistoryPoint[], limit: number): HistoryPoint[] {
+  if (points.length <= limit) return points;
+
+  const step = (points.length - 1) / (limit - 1);
+  const kept: HistoryPoint[] = [];
+  for (let i = 0; i < limit; i++) kept.push(points[Math.round(i * step)]!);
+  return kept;
+}
 
 /** Vehicle status derives from the latest driver event (TZ §4.1 W-2). */
 export function statusFromEvent(
@@ -83,8 +143,56 @@ export class TrackingService {
 
     if (rows.length > 0) {
       await db.gpsTrack.createMany({ data: rows });
+      await this.rememberLastPositions(db, rows);
     }
     return { accepted: rows.length, dropped: dto.positions.length - rows.length };
+  }
+
+  /**
+   * Copies the newest point of this batch onto each vehicle (TASK-4.1).
+   *
+   * One update per vehicle, not per point — a batch of 500 points from four
+   * trucks is four writes. This is what lets the live map read `vehicles` alone
+   * instead of searching ten million tracks for the newest row per vehicle.
+   *
+   * The guard on `lastSeenAt` matters because a phone that was offline flushes
+   * its queue late: those points are older than what the map already shows, and
+   * writing them would drag the marker backwards in time.
+   */
+  private async rememberLastPositions(
+    db: TenantScopedClient,
+    rows: Array<{
+      vehicleId: string;
+      tripId: string;
+      lat: number;
+      lng: number;
+      speed?: number | null;
+      recordedAt: Date;
+    }>,
+  ): Promise<void> {
+    const newest = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      const current = newest.get(row.vehicleId);
+      if (!current || row.recordedAt > current.recordedAt) newest.set(row.vehicleId, row);
+    }
+
+    await Promise.all(
+      [...newest.values()].map((row) =>
+        db.vehicle.updateMany({
+          where: {
+            id: row.vehicleId,
+            OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: row.recordedAt } }],
+          },
+          data: {
+            lastLat: row.lat,
+            lastLng: row.lng,
+            lastSpeed: row.speed ?? null,
+            lastSeenAt: row.recordedAt,
+            lastTripId: row.tripId,
+          },
+        }),
+      ),
+    );
   }
 
   /** W-2 live map: every active vehicle with derived status and last point. */
@@ -99,25 +207,28 @@ export class TrackingService {
     ]);
     const tripByVehicle = new Map(activeTrips.map((t) => [t.vehicleId, t]));
 
-    const [lastEvents, lastPositions] = await Promise.all([
-      db.tripEvent.findMany({
-        where: { tripId: { in: activeTrips.map((t) => t.id) } },
-        orderBy: { eventTime: 'desc' },
-        distinct: ['tripId'],
-      }),
-      db.gpsTrack.findMany({
-        where: { vehicleId: { in: vehicles.map((v) => v.id) } },
-        orderBy: { recordedAt: 'desc' },
-        distinct: ['vehicleId'],
-      }),
-    ]);
+    // gps_tracks is deliberately not read here (TASK-4.1). Asking it for the
+    // newest row per vehicle meant a sequential scan and a sort of the whole
+    // table — ten million rows to display forty — every thirty seconds.
+    const lastEvents = await db.tripEvent.findMany({
+      where: { tripId: { in: activeTrips.map((t) => t.id) } },
+      orderBy: { eventTime: 'desc' },
+      distinct: ['tripId'],
+    });
     const eventByTrip = new Map(lastEvents.map((e) => [e.tripId, e]));
-    const positionByVehicle = new Map(lastPositions.map((p) => [p.vehicleId, p]));
 
     return vehicles.map((vehicle) => {
       const trip = tripByVehicle.get(vehicle.id) ?? null;
       const lastEvent = trip ? (eventByTrip.get(trip.id) ?? null) : null;
-      const position = positionByVehicle.get(vehicle.id) ?? null;
+      const position =
+        vehicle.lastSeenAt != null && vehicle.lastLat != null && vehicle.lastLng != null
+          ? {
+              lat: vehicle.lastLat,
+              lng: vehicle.lastLng,
+              speed: vehicle.lastSpeed,
+              recordedAt: vehicle.lastSeenAt,
+            }
+          : null;
 
       let deviationKm: number | null = null;
       if (
@@ -156,19 +267,42 @@ export class TrackingService {
     });
   }
 
-  /** Route history for one vehicle (map polyline, TZ W-2 «marshrut tarixi»). */
+  /**
+   * Route history for one vehicle (map polyline, TZ W-2 «marshrut tarixi»).
+   *
+   * Bounded twice over (TASK-4.1). The window is capped at 31 days because the
+   * query was unbounded: 90 days of one truck is 259 000 points, sent as one
+   * JSON array, to draw a line on a screen a thousand pixels wide.
+   *
+   * Beyond MAX_HISTORY_POINTS the result is thinned rather than truncated. A
+   * truncated route is a lie — it shows the truck stopping where the limit fell
+   * — while an evenly thinned one is the same journey at lower resolution,
+   * which is all a polyline can show anyway.
+   */
   async history(
     actor: CurrentUserPayload,
     vehicleId: string,
     from: Date,
     to: Date,
-  ): Promise<Array<{ lat: number; lng: number; speed: number | null; recordedAt: Date }>> {
+  ): Promise<HistoryResult> {
+    assertHistoryWindow(from, to);
+
     const points = await this.prisma.forCompany(actor.companyId).gpsTrack.findMany({
       where: { vehicleId, recordedAt: { gte: from, lte: to } },
       orderBy: { recordedAt: 'asc' },
       select: { lat: true, lng: true, speed: true, recordedAt: true },
+      // One more than the cap, so the caller learns the route was thinned
+      // without a second counting query over the same range.
+      take: MAX_HISTORY_ROWS + 1,
     });
-    return points;
+
+    const truncated = points.length > MAX_HISTORY_ROWS;
+    const kept = truncated ? points.slice(0, MAX_HISTORY_ROWS) : points;
+    return {
+      points: downsample(kept, MAX_HISTORY_POINTS),
+      totalPoints: kept.length,
+      truncated,
+    };
   }
 
   /** TZ §5 note: gps_tracks grows fast — nightly move of >90-day rows to cold storage. */

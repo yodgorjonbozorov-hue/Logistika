@@ -647,9 +647,41 @@ Tasdiq kutilmoqda.
   unit 332 → 375, e2e 177 → 199. `phone.ts`, `date-bounds.ts`, `token-version.service.ts`,
   `events.service.ts` — 100%.
 
-**PHASE 3 tugadi (12/12).** Keyingi: PHASE 4 — PERFORMANCE & SCALABILITY,
-TASK-4.1 (jonli xarita so'rovi cheklanmagan — H-8, eng yirik perf muammosi).
-Tasdiq kutilmoqda.
+- **TASK-4.1 (H-8, L-5)** · Jonli xarita so'rovi — PHASE 4 ning eng yirik muammosi.
+  **BEFORE (o'lchandi, 40 mashina × 90 kun × 30s = 10 368 000 qator, 3.8 GB):**
+  `live()` — `Parallel Seq Scan` + butun jadval `Sort`i, **`LIMIT` yo'q**, cost 2 122 483,
+  **10 daqiqada tugamadi**. Sabab: Prisma'ning `distinct`i **klientda** deduplikatsiya
+  qiladi, ya'ni 40 qatorni ko'rsatish uchun 10.4 million qator tarmoqdan o'tadi — va
+  xarita buni har 30 soniyada so'raydi. `history()` 90 kun — `Index Scan`, 258 759 qator,
+  bitta JSON javobda.
+  **Yechim**: `Vehicle`ga `lastLat`/`lastLng`/`lastSpeed`/`lastSeenAt`/`lastTripId`
+  denormalizatsiyasi, har pozitsiya paketi oxirida **har mashina uchun bitta** `update`
+  (500 nuqta, 4 mashina = 4 yozuv). `live()` endi `gps_tracks`ga umuman tegmaydi.
+  Nozik joy: yozuv `lastSeenAt < yangi vaqt` sharti bilan — offline turgan telefon
+  navbatini kech bo'shatganda o'sha nuqtalar xaritadagidan eskiroq va markerni orqaga
+  sudrardi. Migratsiya mavjud qatorlarni `DISTINCT ON` bilan to'ldiradi, ya'ni xarita
+  deploydan keyingi birinchi so'rovdayoq to'g'ri.
+  `history()`: oyna **≤ 31 kun** (oshsa 400), `take` = 100 001 qator, javob **2 000
+  nuqtagacha siyraklashtiriladi**. Kesib tashlash emas — kesilgan marshrut yolg'on, u
+  mashina chegara tugagan joyda to'xtagandek ko'rsatadi; ikkala uchi ham saqlanadi.
+  Javob shakli `{ points, totalPoints, truncated }` (buzuvchi — web moslashtirildi).
+  Indekslar: `(vehicle_id, recorded_at DESC)` va `(trip_id)` (L-5).
+  **AFTER (o'sha 10.4M qatorda):** `live()` **0.086 ms** (17 buffer) — 10+ daqiqadan;
+  `history()` 31 kun **1 080 ms**, 89 280 qator o'qilib 2 000 ga siyraklashtiriladi. ·
+  migratsiya `20260818150000_vehicle_last_position`, `schema.prisma`,
+  `tracking.service.ts` (+spec 26 test), web `MapPage.tsx`,
+  `test/tracking-perf.e2e-spec.ts` (+8 e2e), `tenant-isolation`/`query-validation` e2e
+  (yangi javob shakli) · unit 375 → 393, e2e 200 → 208. `tracking.service` 90%.
+
+**PHASE 3 tugadi (12/12).**
+
+**Keyingi qadam:** TASK-4.2 (`count()`lar va N+1). `events.service`dagi N+1 TASK-3.8 da
+allaqachon `findMany`ga o'tkazilgan — tasdiqlab o'tish kerak; `listByTrip` pagination
+TASK-2.3 da tuzatilgan. Qoladi: katta jadvallarda `count()` sekin (`expense.count`,
+`income.count`, `gpsTrack`) — `meta.pagination.total`ni opsional qilish
+(`?withTotal=false`) yoki cursor/`hasNextPage` naqshiga o'tish; frontend
+`useRefLists()` har form ochilishida 3 so'rov yuboradi → `staleTime`; barcha
+`findMany`larni ko'rib chiqib `take`siz joylarni cheklash.
 
 PHASE 3 qolgan bog'liqliklar:
 

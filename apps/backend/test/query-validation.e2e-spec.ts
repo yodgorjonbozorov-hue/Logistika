@@ -119,7 +119,10 @@ describe('Query validation (e2e)', () => {
       const to = new Date().toISOString();
       const res = await get(path(`?from=${from}&to=${to}`), tenant.tokens.logist);
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      // A thinned polyline plus what it was drawn from, not a raw array of
+      // every stored point (TASK-4.1).
+      expect(Array.isArray(res.body.data.points)).toBe(true);
+      expect(res.body.data.truncated).toBe(false);
     });
   });
 });

@@ -177,19 +177,23 @@ function HistoryMap({
 
   const from = new Date(`${date}T00:00:00`).toISOString();
   const to = new Date(`${date}T23:59:59`).toISOString();
-  const { data: points, isLoading } = useQuery({
+  const { data: history, isLoading } = useQuery({
     queryKey: ['tracking', 'history', vehicleId, date],
     enabled: Boolean(vehicleId),
     queryFn: async () =>
+      // The route arrives thinned to a couple of thousand points: more than
+      // that cannot be seen on a polyline, and the unbounded version sent a
+      // quarter of a million (TASK-4.1).
       (
-        await api<Array<{ lat: number; lng: number; recordedAt: string }>>(
-          `/tracking/vehicles/${vehicleId}/history`,
-          { query: { from, to } },
-        )
+        await api<{
+          points: Array<{ lat: number; lng: number; recordedAt: string }>;
+          totalPoints: number;
+          truncated: boolean;
+        }>(`/tracking/vehicles/${vehicleId}/history`, { query: { from, to } })
       ).data,
   });
 
-  const track: [number, number][] = (points ?? []).map((p) => [p.lat, p.lng]);
+  const track: [number, number][] = (history?.points ?? []).map((p) => [p.lat, p.lng]);
   const bounds = track.length > 1 ? L.latLngBounds(track) : undefined;
 
   return (

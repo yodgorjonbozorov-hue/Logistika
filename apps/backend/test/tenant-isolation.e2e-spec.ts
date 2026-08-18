@@ -63,7 +63,12 @@ describe('Tenant isolation (e2e)', () => {
     });
 
     it('list endpoints only ever return own rows', async () => {
-      for (const path of ['/api/v1/trips', '/api/v1/drivers', '/api/v1/vehicles', '/api/v1/clients']) {
+      for (const path of [
+        '/api/v1/trips',
+        '/api/v1/drivers',
+        '/api/v1/vehicles',
+        '/api/v1/clients',
+      ]) {
         const res = await asBeta(api().get(path));
         expect(res.status).toBe(200);
         const rows = res.body.data as Array<{ id: string; companyId?: string }>;
@@ -88,7 +93,7 @@ describe('Tenant isolation (e2e)', () => {
         api().get(`/api/v1/tracking/vehicles/${alpha.vehicle.id}/history?from=${from}&to=${to}`),
       );
       if (res.status === 200) {
-        expect(res.body.data).toHaveLength(0);
+        expect(res.body.data.points).toHaveLength(0);
       } else {
         expectDenied(res.status);
       }
@@ -150,8 +155,7 @@ describe('Tenant isolation (e2e)', () => {
 
     it('POST /expenses referencing another company trip → denied, nothing stored', async () => {
       const res = await asBeta(
-        api().post('/api/v1/expenses')
-      .set('idempotency-key', randomUUID()).send({
+        api().post('/api/v1/expenses').set('idempotency-key', randomUUID()).send({
           tripId: alpha.trip.id,
           category: 'FUEL',
           amount: '1000000',
@@ -165,8 +169,7 @@ describe('Tenant isolation (e2e)', () => {
 
     it('POST /incomes referencing another company client → denied, nothing stored', async () => {
       const res = await asBeta(
-        api().post('/api/v1/incomes')
-      .set('idempotency-key', randomUUID()).send({
+        api().post('/api/v1/incomes').set('idempotency-key', randomUUID()).send({
           clientId: alpha.client.id,
           amount: '1000000',
         }),

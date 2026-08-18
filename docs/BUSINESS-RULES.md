@@ -701,3 +701,63 @@ egasi shu tenant ichida mavjudligini tekshirishi shart, va TASK-3.10/3.11 dan
 keyin egalarning hech biri **umuman o'chirilmaydi** — faqat nafaqaga
 chiqariladi. Hozircha `Document` modulining o'zi yozilmagan; qoida shu yerda va
 `schema.prisma` izohida uni yozadigan odam uchun qoldirildi.
+
+## 13. Jonli xarita va marshrut tarixi (TASK-4.1)
+
+### O'lchov — BEFORE
+
+Realistik ma'lumot yaratildi: **40 mashina × 90 kun × 30 soniyada bitta nuqta =
+10 368 000 qator (3.8 GB)**.
+
+| So'rov             | Reja                                                                         | Natija                   |
+| ------------------ | ---------------------------------------------------------------------------- | ------------------------ |
+| `live()`           | `Parallel Seq Scan` + butun jadval `Sort`i, **`LIMIT` yo'q**, cost 2 122 483 | **10 daqiqada tugamadi** |
+| `history()` 90 kun | `Index Scan`, 258 759 qator, cost 309 133                                    | bitta JSON javobda       |
+
+`live()` ning sababi Prisma'ning `distinct`i: u **klientda** deduplikatsiya
+qiladi, ya'ni 40 ta qatorni ko'rsatish uchun 10.4 million qator tarmoqdan
+o'tadi. Xarita esa buni **har 30 soniyada** so'raydi.
+
+### Yechim — denormalizatsiya
+
+`Vehicle`ga oxirgi ma'lum joylashuv: `lastLat`, `lastLng`, `lastSpeed`,
+`lastSeenAt`, `lastTripId`. Ular har pozitsiya paketi oxirida **har mashina
+uchun bitta** `update` bilan yoziladi (500 nuqta, 4 mashina = 4 yozuv).
+
+`live()` endi `gps_tracks`ga **umuman tegmaydi** — O(mashina), O(butun tarix)
+emas.
+
+Bitta nozik joy: yozuv `lastSeenAt < yangi vaqt` sharti bilan bajariladi.
+Offline turgan telefon navbatini kech bo'shatganda o'sha nuqtalar xaritada
+ko'rsatilayotgandan **eskiroq** bo'ladi va ularni yozish markerni orqaga
+sudrardi.
+
+### O'lchov — AFTER
+
+| So'rov             | Natija                                                                  |
+| ------------------ | ----------------------------------------------------------------------- |
+| `live()`           | **0.086 ms** (17 buffer) — faqat `vehicles` jadvali                     |
+| `history()` 31 kun | **1 080 ms**, 89 280 qator o'qiladi va 2 000 nuqtaga siyraklashtiriladi |
+
+`live()`: **10+ daqiqadan 0.086 ms gacha.**
+
+### `history()` chegaralari
+
+- **oyna ≤ 31 kun** (oshsa 400). Bir oyning o'zi ~86 000 nuqta; undan kengi —
+  bu xarita emas, hisobot, va u fonda tayyorlanadigan eksportga tegishli;
+- **`take` = 100 001 qator** — bitta so'rov qancha turishi mumkinligining shifti;
+- javob **2 000 nuqtagacha siyraklashtiriladi** (`downsample`).
+
+Kesib tashlash emas, **siyraklashtirish**: kesilgan marshrut yolg'on — u
+mashina chegara tugagan joyda to'xtagandek ko'rsatadi. Teng oraliqda
+siyraklashtirilgani esa o'sha safarning past aniqlikdagi tasviri, polyline
+baribir shundan ko'proq ko'rsata olmaydi. **Ikkala uchi ham saqlanadi** —
+oxirini yo'qotgan marshrut hech qachon yetib bormagan mashinaga o'xshaydi.
+
+Javob shakli endi `{ points, totalPoints, truncated }` — klient marshrut
+siyraklashtirilganini biladi.
+
+### Indekslar
+
+`gps_tracks (vehicle_id, recorded_at DESC)` va `gps_tracks (trip_id)` —
+ikkinchisi arxivlash job'i va ochiq kuzatuv havolasi uchun (L-5).
