@@ -7,6 +7,7 @@ import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { IdempotencyCleanup } from './common/idempotency/idempotency.cleanup';
+import { JobsModule } from './common/jobs/jobs.module';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { LoggingModule } from './common/observability/logging.module';
@@ -46,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ScheduleModule.forRoot(),
     LoggingModule,
     ThrottlingModule,
+    JobsModule,
     PrismaModule,
     TokenVersionModule,
     SubscriptionModule,

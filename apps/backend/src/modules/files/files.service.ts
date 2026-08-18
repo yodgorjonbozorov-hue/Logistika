@@ -15,6 +15,8 @@ import {
 import { requireTenantActor } from '../../common/tenant-actor';
 import { publicStorageEndpoint } from '../../config/env.validation';
 import { FileScanner } from './file-scanner';
+import { JobsService } from '../../common/jobs/jobs.service';
+import { QUEUES, type CompressImageJob } from '../../common/jobs/job-queues';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** Photos are downscaled before storage — 1500px is enough for OCR (TZ §8.3). */
@@ -59,6 +61,7 @@ export class FilesService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scanner: FileScanner,
+    private readonly jobs: JobsService,
     config: ConfigService,
   ) {
     // getOrThrow, not `?? ''`: an app that boots without storage credentials
@@ -90,6 +93,7 @@ export class FilesService implements OnModuleInit {
    * the lazy path retries on every upload.
    */
   async onModuleInit(): Promise<void> {
+    this.jobs.register(QUEUES.files, (job) => this.compressStored(job));
     try {
       await this.ensureBucket();
     } catch (error) {
@@ -131,30 +135,105 @@ export class FilesService implements OnModuleInit {
 
     await this.assertQuota(tenant.companyId, file.buffer.length);
 
-    let body = file.buffer;
-    let mimeType: string = detected;
-    if (IMAGE_MIMES.has(detected)) {
-      body = await this.compressImage(file.buffer);
-      mimeType = 'image/jpeg';
-    }
+    // Validation, virus scan and quota stay on the request thread — they decide
+    // whether the upload is allowed at all. Compression does not, and it is the
+    // slow part (TASK-4.3): a driver on a village road used to hold the
+    // connection open for seconds of sharp while their photo was resized.
+    const isImage = IMAGE_MIMES.has(detected);
+    if (isImage) await this.assertReadableImage(file.buffer);
+    const mimeType: string = isImage ? 'image/jpeg' : detected;
 
     // Object keys are tenant-prefixed so bucket listings can never cross companies.
     const key = `${tenant.companyId}/${randomUUID()}${mimeType === 'application/pdf' ? '.pdf' : '.jpg'}`;
     await this.ensureBucket();
-    await this.client.putObject(this.bucket, key, body, body.length, {
+    // The original bytes go up as they are, so the file is downloadable from
+    // this moment on. PROCESSING means "not yet shrunk", never "not yet there".
+    await this.client.putObject(this.bucket, key, file.buffer, file.buffer.length, {
       'Content-Type': mimeType,
     });
 
-    return this.prisma.forCompany(actor.companyId).storedFile.create({
+    const stored = await this.prisma.forCompany(actor.companyId).storedFile.create({
       data: {
         companyId: actor.companyId as string,
         key,
         mimeType,
-        size: body.length,
+        size: file.buffer.length,
         originalName: file.originalname,
         createdById: actor.userId,
+        status: isImage ? 'PROCESSING' : 'READY',
       },
     });
+
+    if (isImage) {
+      await this.jobs.enqueue(QUEUES.files, {
+        companyId: stored.companyId,
+        fileId: stored.id,
+      });
+    }
+    return stored;
+  }
+
+  /**
+   * Downscales a stored image in place, run by the worker.
+   *
+   * An unreadable image is not retried: sharp will not like it any better on
+   * the third attempt. It is marked FAILED and the original stays downloadable,
+   * which is better than deleting a receipt a driver cannot photograph again.
+   */
+  private async compressStored(job: CompressImageJob): Promise<void> {
+    const db = this.prisma.forCompany(job.companyId);
+    const file = await db.storedFile.findUnique({ where: { id: job.fileId } });
+    if (!file || file.status === 'READY') return;
+
+    const original = await this.readObject(file.key);
+    let body: Buffer;
+    try {
+      body = await this.compressImage(original);
+    } catch {
+      await db.storedFile.update({ where: { id: file.id }, data: { status: 'FAILED' } });
+      this.logger.warn(`Could not compress ${file.id}; original kept`);
+      return;
+    }
+
+    await this.client.putObject(this.bucket, file.key, body, body.length, {
+      'Content-Type': file.mimeType,
+    });
+    await db.storedFile.update({
+      where: { id: file.id },
+      data: { size: body.length, status: 'READY' },
+    });
+  }
+
+  private async readObject(key: string): Promise<Buffer> {
+    const stream = await this.client.getObject(this.bucket, key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks);
+  }
+
+  /**
+   * Rejects an unreadable image while the caller is still listening.
+   *
+   * Only the header is decoded, which is microseconds — the point is that a
+   * corrupted photo still comes back as 415 at upload time. Moving compression
+   * to a queue must not turn "your photo is broken" into a success followed by
+   * a FAILED row nobody looks at.
+   */
+  private async assertReadableImage(buffer: Buffer): Promise<void> {
+    try {
+      const meta = await sharp(buffer, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+      if (!meta.width || !meta.height) throw new Error('no dimensions');
+    } catch (error) {
+      this.logger.warn(
+        `Rejected unreadable image: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new AppException(
+        'FILE_TYPE_NOT_ALLOWED',
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+        undefined,
+        { reason: 'unreadable image' },
+      );
+    }
   }
 
   /**

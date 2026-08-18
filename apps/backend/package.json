@@ -194,6 +194,24 @@
         "lines": 94,
         "branches": 100,
         "functions": 83
+      },
+      "./src/modules/auth/sms.service.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 73,
+        "functions": 100
+      },
+      "./src/common/jobs/jobs.service.ts": {
+        "statements": 60,
+        "lines": 63,
+        "branches": 40,
+        "functions": 42
+      },
+      "./src/modules/files/files.service.ts": {
+        "statements": 76,
+        "lines": 80,
+        "branches": 56,
+        "functions": 66
       }
     }
   }

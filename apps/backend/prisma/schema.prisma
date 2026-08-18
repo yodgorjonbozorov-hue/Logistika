@@ -135,6 +135,24 @@ enum DocumentOwnerType {
   @@map("document_owner_type")
 }
 
+/// How a background-queued delivery ended up (TASK-4.3).
+enum SmsStatus {
+  QUEUED
+  SENT
+  FAILED
+
+  @@map("sms_status")
+}
+
+/// An upload is usable the moment it lands; compression happens after (TASK-4.3).
+enum FileStatus {
+  PROCESSING
+  READY
+  FAILED
+
+  @@map("file_status")
+}
+
 enum MaintenanceType {
   PLANNED_TO
   REPAIR
@@ -378,6 +396,9 @@ model Client {
   ledgerEntries LedgerEntry[]
 
   @@index([companyId])
+  // The working-set list filters on both (TASK-3.11); declared so the next
+  // `migrate dev` does not offer to drop what a migration created.
+  @@index([companyId, isActive])
   @@map("clients")
 }
 
@@ -673,6 +694,11 @@ model GpsTrack {
   trip    Trip?   @relation(fields: [tripId], references: [id])
 
   @@index([companyId, vehicleId, recordedAt])
+  // Declared here as well as in the migration that created them: an index that
+  // only exists in SQL is an index the next `migrate dev` offers to drop, and
+  // these two are what make the live map and the tracking link fast (TASK-4.1).
+  @@index([vehicleId, recordedAt(sort: Desc)])
+  @@index([tripId])
   @@map("gps_tracks")
 }
 
@@ -791,9 +817,15 @@ model StoredFile {
   createdById  String?  @map("created_by")
   createdAt    DateTime @default(now()) @map("created_at")
 
+  /// PROCESSING until the compression job has rewritten the object (TASK-4.3).
+  /// The original bytes are already stored, so the file is downloadable
+  /// throughout — the status says whether it is still the full-size original.
+  status FileStatus @default(READY)
+
   company Company @relation(fields: [companyId], references: [id])
 
   @@index([companyId])
+  @@index([status])
   @@map("stored_files")
 }
 
@@ -809,6 +841,26 @@ model SmsCode {
 
   @@index([phone])
   @@map("sms_codes")
+}
+
+/// Whether an SMS actually went out (TASK-4.3).
+///
+/// The message *text* is deliberately not stored: for a login it contains the
+/// one-time code, and a table of live codes is a table worth stealing. What is
+/// kept is enough to answer "did this number get their code, and if not why".
+model SmsMessage {
+  id        String    @id @default(uuid())
+  phone     String
+  purpose   String
+  status    SmsStatus @default(QUEUED)
+  attempts  Int       @default(0)
+  lastError String?   @map("last_error")
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([phone, createdAt])
+  @@index([status])
+  @@map("sms_messages")
 }
 
 /// Replay protection for money endpoints (TASK-3.2).

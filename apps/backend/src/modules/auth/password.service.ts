@@ -156,7 +156,11 @@ export class PasswordService {
    */
   private async deliver(email: string | null, phone: string | null, token: string): Promise<void> {
     if (phone) {
-      await this.sms.send(phone, this.i18n.translate('SMS_PASSWORD_RESET', 'uz-latn', { token }));
+      await this.sms.send(
+        phone,
+        this.i18n.translate('SMS_PASSWORD_RESET', 'uz-latn', { token }),
+        'PASSWORD_RESET',
+      );
       return;
     }
     if (email) {

@@ -5,12 +5,19 @@ import { FilesService } from './files.service';
 const putObject = jest.fn();
 const presignedGetObject = jest.fn();
 const bucketExists = jest.fn().mockResolvedValue(true);
+/** The compression job reads the stored original back before shrinking it. */
+const getObject = jest.fn(async () =>
+  (async function* () {
+    yield Buffer.from('stored-original');
+  })(),
+);
 
 jest.mock('minio', () => ({
   Client: jest.fn().mockImplementation(() => ({
     putObject,
     presignedGetObject,
     bucketExists,
+    getObject,
     makeBucket: jest.fn(),
   })),
 }));
@@ -21,6 +28,7 @@ jest.mock('sharp', () => {
     resize: jest.fn().mockReturnThis(),
     jpeg: jest.fn().mockReturnThis(),
     toBuffer: jest.fn().mockResolvedValue(Buffer.from('compressed')),
+    metadata: jest.fn().mockResolvedValue({ width: 800, height: 600 }),
   };
   return { __esModule: true, default: jest.fn(() => chain), chain };
 });
@@ -54,12 +62,36 @@ const PDF = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n%%EOF\n');
 const EXE = Buffer.concat([Buffer.from([0x4d, 0x5a]), Buffer.from('this is a windows binary')]);
 
 describe('FilesService', () => {
+  /**
+   * Records what was queued and can replay it, so a test can assert both that
+   * the upload handed the work off *and* what the handler then does.
+   */
+  function fakeJobs() {
+    const enqueued: unknown[] = [];
+    let handler: ((payload: never) => Promise<void>) | undefined;
+    return {
+      enqueued,
+      run: (payload: unknown) => handler!(payload as never),
+      service: {
+        register: (_name: string, fn: (payload: never) => Promise<void>) => {
+          handler = fn;
+        },
+        enqueue: (_name: string, payload: unknown) => {
+          enqueued.push(payload);
+          return Promise.resolve();
+        },
+      },
+    };
+  }
+
   function setup(scan: { clean: boolean; threat?: string } = { clean: true }) {
     const { prisma, db } = createTenantDbMock(['storedFile']);
     db.storedFile!.aggregate = jest.fn().mockResolvedValue({ _sum: { size: 0 } });
     const scanner = { scan: jest.fn().mockResolvedValue(scan) };
-    const service = new FilesService(prisma, scanner, config);
-    return { service, db, scanner };
+    const jobs = fakeJobs();
+    const service = new FilesService(prisma, scanner, jobs.service as never, config);
+    void service.onModuleInit();
+    return { service, db, scanner, jobs };
   }
 
   beforeEach(() => jest.clearAllMocks());
@@ -86,25 +118,33 @@ describe('FilesService', () => {
 
   it('rejects an unreadable image with 415 rather than a bare 500', async () => {
     const { service } = setup();
-    const sharpModule = jest.requireMock('sharp') as { default: jest.Mock; chain: { toBuffer: jest.Mock } };
-    sharpModule.chain.toBuffer.mockRejectedValueOnce(new Error('unsupported image format'));
+    const sharpModule = jest.requireMock('sharp') as {
+      default: jest.Mock;
+      chain: { metadata: jest.Mock };
+    };
+    // Compression moved to a queue (TASK-4.3), but only the header is decoded
+    // while the caller waits — a broken photo must still come back as 415 then,
+    // not as a success followed by a FAILED row nobody looks at.
+    sharpModule.chain.metadata.mockRejectedValueOnce(new Error('unsupported image format'));
 
     await expect(
       service.upload(ACTOR, { buffer: PNG, mimetype: 'image/png' }),
     ).rejects.toMatchObject({ code: 'FILE_TYPE_NOT_ALLOWED' });
-    sharpModule.chain.toBuffer.mockResolvedValue(Buffer.from('compressed'));
+    expect(putObject).not.toHaveBeenCalled();
   });
 
   it('caps the decoded pixel count so a decompression bomb cannot take the process down', async () => {
     const { service, db } = setup();
-    db.storedFile!.create!.mockResolvedValue({ id: 'f1' });
+    db.storedFile!.create!.mockResolvedValue({ id: 'f1', companyId: 'company-a' });
     const sharpModule = jest.requireMock('sharp') as { default: jest.Mock };
 
     await service.upload(ACTOR, { buffer: PNG, mimetype: 'image/png' });
 
+    // The cap applies to the header probe too: a bomb must not get through by
+    // being declared rather than decoded.
     expect(sharpModule.default).toHaveBeenCalledWith(
       PNG,
-      expect.objectContaining({ limitInputPixels: 50_000_000, failOn: 'error' }),
+      expect.objectContaining({ limitInputPixels: 50_000_000 }),
     );
   });
 
@@ -128,8 +168,8 @@ describe('FilesService', () => {
     expect(putObject).not.toHaveBeenCalled();
   });
 
-  it('compresses images and stores them under a tenant-prefixed key', async () => {
-    const { service, db } = setup();
+  it('stores the image under a tenant-prefixed key and queues the shrink (TASK-4.3)', async () => {
+    const { service, db, jobs } = setup();
     db.storedFile!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: 'f1', ...data }),
     );
@@ -143,9 +183,68 @@ describe('FilesService', () => {
     const key = putObject.mock.calls[0][1] as string;
     expect(key.startsWith('company-a/')).toBe(true);
     expect(key.endsWith('.jpg')).toBe(true);
-    // compressed body, not the original
-    expect(putObject.mock.calls[0][2].toString()).toBe('compressed');
-    expect(db.storedFile!.create!.mock.calls[0][0].data.mimeType).toBe('image/jpeg');
+    // The original bytes, right away: a driver on a village road should not
+    // hold the connection open for seconds of sharp. PROCESSING means "not yet
+    // shrunk", never "not yet there" — the file downloads throughout.
+    expect(putObject.mock.calls[0][2]).toEqual(PNG);
+    const created = db.storedFile!.create!.mock.calls[0][0].data;
+    expect(created.mimeType).toBe('image/jpeg');
+    expect(created.status).toBe('PROCESSING');
+    expect(jobs.enqueued).toEqual([{ companyId: 'company-a', fileId: 'f1' }]);
+  });
+
+  it('replaces the object with the compressed one when the job runs', async () => {
+    const { service, db, jobs } = setup();
+    db.storedFile!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'f1', ...data }),
+    );
+    await service.upload(ACTOR, { buffer: PNG, mimetype: 'image/png' });
+    const key = putObject.mock.calls[0][1] as string;
+    db.storedFile!.findUnique!.mockResolvedValue({
+      id: 'f1',
+      key,
+      mimeType: 'image/jpeg',
+      status: 'PROCESSING',
+    });
+
+    await jobs.run({ companyId: 'company-a', fileId: 'f1' });
+
+    // Same key, smaller body, and the row now says READY with the new size.
+    expect(putObject.mock.calls[1][1]).toBe(key);
+    expect(putObject.mock.calls[1][2].toString()).toBe('compressed');
+    expect(db.storedFile!.update!.mock.calls[0][0].data).toMatchObject({
+      status: 'READY',
+      size: Buffer.from('compressed').length,
+    });
+  });
+
+  it('keeps the original and marks FAILED when the image will not compress', async () => {
+    const { db, jobs } = setup();
+    db.storedFile!.findUnique!.mockResolvedValue({
+      id: 'f1',
+      key: 'company-a/x.jpg',
+      mimeType: 'image/jpeg',
+      status: 'PROCESSING',
+    });
+    const sharpModule = jest.requireMock('sharp') as { chain: { toBuffer: jest.Mock } };
+    sharpModule.chain.toBuffer.mockRejectedValueOnce(new Error('unsupported'));
+
+    await jobs.run({ companyId: 'company-a', fileId: 'f1' });
+
+    // Deleting a receipt a driver cannot photograph again would be worse than
+    // storing it full size.
+    expect(db.storedFile!.update!.mock.calls[0][0].data).toEqual({ status: 'FAILED' });
+    expect(putObject).not.toHaveBeenCalled();
+  });
+
+  it('does not compress a file that is already READY', async () => {
+    const { db, jobs } = setup();
+    db.storedFile!.findUnique!.mockResolvedValue({ id: 'f1', key: 'k', status: 'READY' });
+
+    await jobs.run({ companyId: 'company-a', fileId: 'f1' });
+
+    expect(putObject).not.toHaveBeenCalled();
+    expect(db.storedFile!.update).not.toHaveBeenCalled();
   });
 
   it('passes PDFs through untouched', async () => {

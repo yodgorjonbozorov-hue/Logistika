@@ -305,6 +305,14 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-12 (HIGH, tuzatildi — TASK-4.3)**: qo'lda yozilgan migratsiyalarda
+  yaratilgan uchta indeks `schema.prisma`da **e'lon qilinmagan** edi
+  (`gps_tracks (vehicle_id, recorded_at DESC)`, `gps_tracks (trip_id)`,
+  `clients (company_id, is_active)`). Prisma sxemani haqiqat deb biladi, shuning
+  uchun **keyingi har bir `migrate dev` ularni `DROP INDEX` qilishni taklif
+  qilardi** — TASK-4.1 ning butun ishini bekor qiladigan indekslar shular edi.
+  Bu safar migratsiya generatsiyasida ko'rindi va sxemaga e'lon qo'shildi.
+  Qoida: qo'lda yozilgan migratsiya indeks yaratsa, u **sxemada ham** bo'lishi shart.
 - **N-11 (MEDIUM, ochiq)**: `tracking.service.ts` — jonli xaritaga oxirgi hodisani
   qo'shadigan qidiruv faol reyslarning **barcha** hodisalarini o'qib, Prisma'ning
   klient tomonidagi `distinct`i bilan siyraklashtiradi. TASK-4.1 dagi `gps_tracks`
@@ -716,12 +724,41 @@ Tasdiq kutilmoqda.
   Ratchet ko'tarildi: events 100, ledger 100/90/100/100, expenses 95, trips 85,
   `pagination.dto` yangi.
 
+- **TASK-4.3 (A-3, L-7)** · Fon ishlari — BullMQ nihoyat ishga tushdi.
+  `bullmq` va `ioredis` boshidan `dependency`da edi va **hech qanday kod navbat
+  ochmagan**: haydovchining fotosi `sharp` tugashini, kirish esa SMS-shlyuz
+  javobini so'rov oqimida kutardi.
+  `JobsService` — BullMQ bilan gaplashadigan **yagona joy**: `enqueue(navbat,
+payload)`, `register(navbat, handler)`, va bitta umumiy siyosat — 3 urinish,
+  eksponensial backoff (5 s), `removeOnComplete: 100`, `removeOnFail: 1000`,
+  urinishlar tugagach **`<navbat>.dead`** ga ko'chirish (o'chmaydigan qilib —
+  avtomatik o'chadigan o'lik xat hech kim qayta yubormaydigan o'lik xat).
+  Navbatlar: `sms`, `files`, `gps-archive` (oxirgisi TASK-4.4 uchun).
+  **Fayl**: tekshiruv/virus/kvota so'rovda qoladi (ular ruxsatni hal qiladi),
+  siqish esa navbatga o'tdi. Nozik joy — buzuq rasm baribir **415** olishi kerak,
+  shuning uchun `sharp().metadata()` bilan **sarlavha** so'rov ichida o'qiladi
+  (mikrosoniyalar), og'ir `resize`/`jpeg` esa worker'da. Asl baytlar darhol
+  saqlanadi: `PROCESSING` «hali siqilmagan» degani, «hali yo'q» degani emas —
+  imzolangan havola shu daqiqadan ishlaydi. Siqib bo'lmagani `FAILED` bo'ladi va
+  **asl nusxa qoladi**.
+  **SMS**: `sms_messages` jadvali (`purpose`, `status`, `attempts`, `lastError`,
+  `sentAt`) — **matn saqlanmaydi**, chunki kirish matni bir martalik kodni o'z
+  ichiga oladi. Worker xatoda `throw` qiladi (BullMQ shundan qayta uradi), lekin
+  `settle()` ning o'z xatosi job'ni yiqitmaydi — aks holda yuborilgan SMS ikkinchi
+  marta ketardi.
+  `JOBS_INLINE=true` — Redis'siz, chaqiruvchi jarayonda; testlar va lokal ishlash
+  uchun, handler kodi bir xil. Yo'l-yo'lakay N-12 (e'lon qilinmagan indekslar)
+  topildi va tuzatildi. ·
+  `common/jobs/*` (yangi, +14 test), `sms.service.ts` (+7 test),
+  `files.service.ts` (+spec yangilandi), `driver-auth`/`password` chaqiruvlari,
+  `app.module.ts`, `env.validation.ts`, `.env.example`, `schema.prisma`,
+  migratsiya `20260818190449_jobs_sms_and_file_status`,
+  `test/jobs.e2e-spec.ts` (+7 e2e) · unit 428 → 450, e2e 214 → 221.
+
 **PHASE 3 tugadi (12/12).**
 
-**Keyingi qadam:** TASK-4.3 (fon ishlari / BullMQ). Hozir og'ir ishlar — hisobot
-yig'ish, arxivlash, fayl tozalash — so'rov oqimida bajariladi. Redis allaqachon bor,
-navbat yo'q. Shuningdek N-11 (jonli xaritadagi oxirgi hodisa qidiruvi) mustaqil task
-sifatida ochiq.
+**Keyingi qadam:** TASK-4.4 — cron'lar uchun distributed lock (A-2, M-8) va GPS
+arxiv retention (M-9). `gps-archive` navbati TASK-4.3 da tayyorlab qo'yilgan.
 
 PHASE 3 qolgan bog'liqliklar:
 

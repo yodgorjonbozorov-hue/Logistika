@@ -45,6 +45,15 @@ export class EnvironmentVariables {
   @IsString()
   REDIS_URL = 'redis://localhost:6379';
 
+  /**
+   * Run background jobs in the API process instead of through Redis (TASK-4.3).
+   * For tests and for a developer without `docker compose up`; a deployment
+   * leaves this off so the work is actually queued, retried and observable.
+   */
+  @IsOptional()
+  @IsBooleanString()
+  JOBS_INLINE = 'false';
+
   @IsString()
   @MinLength(16)
   JWT_ACCESS_SECRET!: string;

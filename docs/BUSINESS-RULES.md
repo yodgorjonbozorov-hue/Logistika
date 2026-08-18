@@ -830,3 +830,73 @@ o'zgaradigan avtopark ro'yxati uchun.
   ham) qator-baqator o'qirdi. Endi faqat DEBIT'lar qator sifatida, CREDIT'lar
   esa **bitta yig'indi** bo'lib keladi; natija o'zgarmaydi, chunki to'lovlar
   baribir eng eski hisob-fakturadan boshlab yopiladi.
+
+---
+
+## 15. Fon ishlari: navbat, qayta urinish va o'lik xat (TASK-4.3)
+
+`bullmq` va `ioredis` boshidan beri `dependency`da edi va **hech qanday kod
+navbat ochmagan** (L-7). Natijada og'ir ishlarning hammasi so'rov oqimida
+bajarilardi: haydovchining fotosi `sharp` tugashini kutardi, kirish esa
+SMS-shlyuz javobini.
+
+### Navbatlar
+
+| Navbat        | Nima qiladi                                   |
+| ------------- | --------------------------------------------- |
+| `sms`         | Bir martalik kodlar va xabarnomalar           |
+| `files`       | Rasmni kichraytirish                          |
+| `gps-archive` | Kechasi GPS arxivlash va retention (TASK-4.4) |
+
+### Qayta urinish siyosati — hamma navbat uchun bir xil
+
+- **3 urinish**, **eksponensial backoff** (5 s dan). 502 qaytargan shlyuz o'n
+  soniyadan keyin odatda ishlaydi; haqiqatan o'lgani esa ikki soniyadan keyingi
+  to'rtinchi urinishdan tuzalmaydi;
+- muvaffaqiyatlilar **qirqiladi** (`removeOnComplete: 100`) — million yashil
+  job faqat sekin Redis demakdir;
+- muvaffaqiyatsizlar **saqlanadi** (`removeOnFail: 1000`) — hech kim ko'rmagan
+  xato hech kim tuzatmagan xato;
+- barcha urinish tugagach job **`<navbat>.dead`** ga ko'chiriladi va u yerda
+  `removeOnComplete: false` bilan qoladi. Avtomatik o'chib ketadigan o'lik xat —
+  hech kim qayta yubormaydigan o'lik xat.
+
+### Fayl yuklash endi kutmaydi
+
+Tekshiruv, virus skani va kvota **so'rov oqimida qoladi** — ular yuklashga
+umuman ruxsat bor-yo'qligini hal qiladi. Siqish esa qolmaydi.
+
+1. Rasm **sarlavhasi** (`sharp().metadata()`) darhol o'qiladi — buzuq foto
+   baribir **415** bilan qaytariladi, chunki «muvaffaqiyat, keyin hech kim
+   ko'rmaydigan FAILED qatori» — bu yolg'on javob;
+2. **asl baytlar** darhol MinIO'ga qo'yiladi va `StoredFile` yaratiladi;
+3. rasm bo'lsa status `PROCESSING`, `files` navbatiga job qo'yiladi;
+4. worker asl faylni o'qib siqadi, **o'sha kalitga** qayta yozadi, `size` va
+   `status: READY` ni yangilaydi.
+
+**`PROCESSING` hech qachon «hali yo'q» degani emas** — asl baytlar allaqachon
+joyida, imzolangan havola ham ishlaydi. Siqib bo'lmagan rasm `FAILED` bo'ladi va
+**asl nusxa saqlanadi**: haydovchi qayta suratga ololmaydigan chekni o'chirish
+undan yomonroq.
+
+### SMS holati ko'rinadi
+
+`sms_messages` jadvali: `phone`, `purpose`, `status` (QUEUED/SENT/FAILED),
+`attempts`, `lastError`, `sentAt`. **Xabar matni saqlanmaydi** — kirish uchun
+u bir martalik kodni o'z ichiga oladi, tirik kodlar jadvali esa o'g'irlashga
+arziydigan jadval. Shuning uchun `purpose` (`DRIVER_LOGIN`, `PASSWORD_RESET`)
+yoziladi, matn emas.
+
+Worker xatoda **`throw` qiladi** — BullMQ'ga qayta urinish kerakligini shu
+aytadi. Yagona qayta urinilmaydigan holat — shlyuz umuman sozlanmagani.
+Hisobot yozuvining o'zi (`settle`) xato bersa, job **muvaffaqiyatli** hisoblanadi:
+aks holda allaqachon yuborilgan SMS ikkinchi marta ketardi.
+
+### `JOBS_INLINE`
+
+`JOBS_INLINE=true` bo'lsa handler'lar Redis'siz, chaqiruvchi jarayonning
+o'zida bajariladi. Bu qulaylik uchun emas: test «foto siqildimi?» degan savolga
+«broker qanchalik bandligiga bog'liq» deb javob bermasligi kerak, va
+`docker compose up`siz ishlayotgan dasturchi PROCESSING'da abadiy qotib qolgan
+fotolar emas, ishlaydigan ilova olishi kerak. Handler kodi ikkala rejimda ham
+bir xil — farq faqat **qachon** ishlashida.

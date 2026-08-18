@@ -68,7 +68,11 @@ describe('DriverAuthService', () => {
   it('sends a 6-digit code for an active driver and never returns it', async () => {
     usersService.findByIdentifier.mockResolvedValue(driver);
     const result = await service.requestCode(driver.phone);
-    expect(sms.send).toHaveBeenCalledWith(driver.phone, expect.stringMatching(/\d{6}/));
+    expect(sms.send).toHaveBeenCalledWith(
+      driver.phone,
+      expect.stringMatching(/\d{6}/),
+      'DRIVER_LOGIN',
+    );
     // The code only exists in the SMS and in the dev log — never in the response,
     // whatever NODE_ENV says.
     expect(result).toEqual({ sent: true });

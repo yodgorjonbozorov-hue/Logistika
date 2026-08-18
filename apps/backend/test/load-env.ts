@@ -10,3 +10,7 @@ config({ path: join(__dirname, '..', '.env'), quiet: true });
 config({ path: join(__dirname, '..', '..', '..', '.env'), quiet: true });
 
 process.env.NODE_ENV ??= 'test';
+// Jobs run in-process here (TASK-4.3): a test that asks "is the photo compressed
+// yet" should not be answering "depends how busy the broker is". The handler code
+// is the same either way, so what is tested is still the real handler.
+process.env.JOBS_INLINE ??= 'true';

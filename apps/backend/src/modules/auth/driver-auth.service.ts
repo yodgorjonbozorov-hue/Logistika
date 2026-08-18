@@ -63,7 +63,11 @@ export class DriverAuthService {
         },
       }),
     ]);
-    await this.sms.send(phone, this.i18n.translate('SMS_LOGIN_CODE', 'uz-latn', { code }));
+    await this.sms.send(
+      phone,
+      this.i18n.translate('SMS_LOGIN_CODE', 'uz-latn', { code }),
+      'DRIVER_LOGIN',
+    );
 
     return { sent: true };
   }
