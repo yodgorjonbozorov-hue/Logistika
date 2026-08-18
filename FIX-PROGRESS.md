@@ -512,13 +512,41 @@ Tasdiq kutilmoqda.
   Tuzatishdan **oldin** yozilgan e2e 5 tadan 4 tasi qizil edi — ya'ni testlar aynan shu
   xatoni ushlaydi.
 
-**Keyingi qadam:** TASK-3.9 (`SubscriptionGuard` — obuna muddati tekshiruvi).
-`Company.subscriptionUntil` va `isActive` maydonlari bor, lekin **hech qayerda
-tekshirilmaydi**: to'lamagan yoki o'chirilgan kompaniya foydalanuvchilari hamma
-endpoint'dan bemalol foydalanaveradi. Global guard kerak (JWT'dan keyin), o'qish
-uchun ogohlantirish, yozish uchun 402 `SUBSCRIPTION_EXPIRED` (yangi kod, i18n × 3);
-SUPERADMIN va `/auth/*` chetda qoladi. Test: muddati o'tgan kompaniya yozolmaydi,
-o'qiy oladi; `isActive = false` — umuman kira olmaydi.
+- **TASK-3.9 (H-9)** · Obuna tekshiruvi. `Company.isActive` va `subscriptionUntil`
+  birinchi migratsiyadan beri bor va SUPERADMIN ularni to'ldiradi, lekin **hech kim
+  o'qimasdi** — to'lashni to'xtatgan yoki butunlay o'chirilgan kompaniya har bir
+  endpoint'dan to'liq foydalanaverardi.
+  `SubscriptionGuard` global guard sifatida qo'shildi (JWT'dan **keyin**, rollardan
+  **oldin** — o'chirilgan kompaniya qanday rol bo'lishidan qat'i nazar rad etiladi).
+  Ikki holat, ataylab har xil javob: `isActive = false` → 403 `COMPANY_INACTIVE`,
+  hech narsa mumkin emas (bu ma'muriy qaror, to'lov holati emas); muddati o'tgan →
+  **o'qish ishlaydi, yozish yo'q** (402 `SUBSCRIPTION_EXPIRED`). Muddati o'tgan firmani
+  o'z ma'lumotidan uzish jazo bo'lardi, undiruv emas — u o'z reyslarini ocholmaydi va
+  yozuvlarini eksport qilolmaydi; to'xtashi kerak bo'lgan narsa faqat **yangi** yozuv.
+  `subscriptionUntil = NULL` cheklov emas (sinov davri va eski tenantlar).
+  SUPERADMIN va `@Public()` marshrutlar chetda — aks holda muddati o'tgan kompaniya
+  nega o'tganini bilish uchun ham kira olmasdi.
+  O'qish o'tib ketgani uchun javob buni aytadi: `meta.subscription = { expired, until }`
+  (aks holda ofis hamma narsa yuklanayotganini ko'radi va muammoni faqat birinchi
+  saqlash yiqilganda biladi). Kesh 60 s (tekshiruv har so'rovda kerak), SUPERADMIN
+  o'zgartirsa **darhol** tozalanadi, `expired` esa keshdan qayta hisoblanadi — obuna
+  o'z sanasidan bir daqiqa ortiq yashay olmaydi. Mavjud bo'lmagan kompaniya
+  `isActive: false` (bu yerda «ochiq» yiqilish o'chirilgan tenantni eng imtiyozli
+  qilib qo'yardi). Yangi kodlar `SUBSCRIPTION_EXPIRED` (402) va `COMPANY_INACTIVE`
+  (403) — i18n × 3. ·
+  `common/subscription/*` (service + guard + module, +21 unit test), `app.module.ts`,
+  `api-response.interceptor.ts` (+spec), `companies.service.ts` (kesh invalidatsiyasi),
+  `packages/shared`, i18n × 3, `test/subscription.e2e-spec.ts` (+11 e2e) ·
+  unit 261 → 288, e2e 147 → 158. Uch yangi fayl 100% statement/line qamrov.
+
+**Keyingi qadam:** TASK-3.10 (deaktivatsiya guard'lari + ikki marta band qilish).
+Haydovchi yoki texnika `isActive = false` qilinsa, uning **faol reysi** bilan nima
+bo'lishi tekshirilmaydi — o'chirilgan haydovchi IN_PROGRESS reysda qolaveradi va
+mobil ilova ishlashda davom etadi. Shuningdek bitta texnika (yoki haydovchi) bir
+vaqtning o'zida bir nechta faol reysga biriktirilishi mumkin — hech kim tekshirmaydi.
+Kerak: deaktivatsiyada faol reys bo'lsa `RESOURCE_IN_USE`, `assign`da esa
+`DRIVER_BUSY`/`VEHICLE_BUSY` (yangi kodlar, i18n × 3). Test: faol reysli haydovchini
+o'chirib bo'lmaydi; band texnikani ikkinchi reysga biriktirib bo'lmaydi.
 
 PHASE 3 qolgan bog'liqliklar:
 

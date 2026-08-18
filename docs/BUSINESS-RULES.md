@@ -442,3 +442,57 @@ Migratsiya `20260818070000_event_idempotency_key`: `NULL` kalitlar generatsiya
 qilingan UUID bilan to'ldiriladi (hech bir telefon navbatiga mos kelmaydi,
 ya'ni ular allaqachon qanday bo'lsa shunday qoladi), kompaniyalar orasidagi
 takroriy kalitlar ham qayta yoziladi, keyin `NOT NULL` va yangi indeks.
+
+## 9. Obuna va kompaniya holati (TASK-3.9)
+
+### Muammo
+
+`Company.isActive` va `subscriptionUntil` birinchi migratsiyadan beri bor va
+SUPERADMIN ularni to'ldiradi, lekin **hech kim o'qimasdi**. To'lashni to'xtatgan
+— yoki butunlay o'chirilgan — kompaniya mahsulotning har bir endpoint'idan
+to'liq foydalanaverardi.
+
+### Ikki holat, ataylab har xil javob
+
+| Holat                                      | Javob                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `isActive = false` — kompaniya o'chirilgan | **Hech narsa mumkin emas** (403 `COMPANY_INACTIVE`). Bu ma'muriy qaror, to'lov holati emas. |
+| `subscriptionUntil` o'tib ketgan           | **O'qish ishlaydi, yozish yo'q** (402 `SUBSCRIPTION_EXPIRED`).                              |
+| `subscriptionUntil = NULL`                 | Muddat qo'yilmagan — sinov davri yoki eski tenant. Cheklov yo'q.                            |
+
+Muddati o'tgan kompaniyani o'z ma'lumotidan butunlay uzish — **jazo, undiruv
+emas**: firma o'z reyslarini ocholmaydi, kimdan qancha olishini ko'rolmaydi va
+yozuvlarini eksport qilolmaydi. To'xtaydigan narsa — pul to'lanmayotgan tizimga
+**yangi** ma'lumot yozish.
+
+`GET`/`HEAD`/`OPTIONS` — o'qish, qolgani yozish.
+
+### Chetda qoladiganlar
+
+- **SUPERADMIN** — obunani aynan o'sha hisob tuzatadi.
+- **`@Public()` marshrutlar** — muddati o'tgan kompaniya kira olmasa, nima
+  uchun muddati o'tganini hech qachon bilmaydi.
+
+### Ogohlantirish
+
+O'qish o'tib ketgani uchun javob buni **aytishi kerak**, aks holda ofis hamma
+narsa odatdagidek yuklanayotganini ko'radi va muammoni faqat birinchi saqlash
+yiqilganda biladi:
+
+```json
+{ "success": true, "data": [...], "error": null,
+  "meta": { "subscription": { "expired": true, "until": "2026-07-31T00:00:00.000Z" } } }
+```
+
+### Kesh
+
+Tekshiruv **har bir so'rovda** kerak, shuning uchun kompaniya qatori 60 soniya
+keshlanadi — to'lov holati ikki bosish orasida o'zgarmaydi. Ikki muhim nuqta:
+
+- SUPERADMIN kompaniyani o'zgartirsa kesh **darhol** tozalanadi, ya'ni
+  o'chirish bir daqiqa kutmaydi;
+- `expired` keshdan **qayta hisoblanadi**, ya'ni obuna o'z sanasidan bir
+  daqiqa ortiq yashay olmaydi.
+
+Mavjud bo'lmagan kompaniya `isActive: false` deb hisoblanadi — bu yerda
+«ochiq» yiqilish o'chirilgan tenantni eng imtiyozli qilib qo'yardi.

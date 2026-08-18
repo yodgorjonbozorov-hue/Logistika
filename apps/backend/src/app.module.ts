@@ -10,6 +10,8 @@ import { IdempotencyCleanup } from './common/idempotency/idempotency.cleanup';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { LoggingModule } from './common/observability/logging.module';
+import { SubscriptionGuard } from './common/subscription/subscription.guard';
+import { SubscriptionModule } from './common/subscription/subscription.module';
 import { ThrottlingModule } from './common/throttling/throttling.module';
 import { validateEnv } from './config/env.validation';
 import { I18nModule } from './i18n/i18n.module';
@@ -44,6 +46,7 @@ import { PrismaModule } from './prisma/prisma.module';
     LoggingModule,
     ThrottlingModule,
     PrismaModule,
+    SubscriptionModule,
     I18nModule,
     AuditModule,
     UsersModule,
@@ -63,6 +66,9 @@ import { PrismaModule } from './prisma/prisma.module';
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // After the token is verified (it needs the tenant) and before roles: a
+    // switched-off company is refused whatever role the user holds.
+    { provide: APP_GUARD, useClass: SubscriptionGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     // Runs before the response envelope is built, so what gets stored and
     // replayed is the handler's own payload.

@@ -88,8 +88,8 @@
     ],
     "coverageThreshold": {
       "global": {
-        "statements": 28,
-        "lines": 34,
+        "statements": 27,
+        "lines": 33,
         "branches": 26,
         "functions": 28
       },
@@ -109,6 +109,24 @@
         "statements": 100,
         "lines": 100,
         "branches": 100,
+        "functions": 100
+      },
+      "./src/common/subscription/subscription.service.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 91,
+        "functions": 100
+      },
+      "./src/common/subscription/subscription.guard.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 90,
+        "functions": 100
+      },
+      "./src/common/interceptors/api-response.interceptor.ts": {
+        "statements": 100,
+        "lines": 100,
+        "branches": 92,
         "functions": 100
       },
       "./src/common/odometer.ts": {

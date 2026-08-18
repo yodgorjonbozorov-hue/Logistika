@@ -6,6 +6,7 @@ import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { SubscriptionService } from '../../common/subscription/subscription.service';
 import { AdminCreateCompanyDto, AdminUpdateCompanyDto } from './dto/admin-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
@@ -14,6 +15,7 @@ export class CompaniesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly subscriptions: SubscriptionService,
   ) {}
 
   async getOwn(companyId: string | null): Promise<Company> {
@@ -103,6 +105,9 @@ export class CompaniesService {
           isActive: dto.isActive,
         },
       });
+      // Switching a company off has to take effect now, not when the guard's
+      // one-minute cache happens to expire.
+      this.subscriptions.invalidate(id);
       this.audit.log({
         companyId: id,
         userId: adminUserId,

@@ -17,6 +17,8 @@
   "FILE_TYPE_NOT_ALLOWED": "Bu turdagi faylni yuklash mumkin emas",
   "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang",
   "RATE_LIMIT_EXCEEDED": "Juda ko'p so'rov yuborildi. Biroz kutib, qayta urinib ko'ring",
+  "SUBSCRIPTION_EXPIRED": "Obuna muddati {until} sanasida tugagan. Ma'lumotlarni ko'rish mumkin, yangi yozuv qo'shish uchun obunani yangilang",
+  "COMPANY_INACTIVE": "Kompaniya hisobi o'chirilgan. Administrator bilan bog'laning",
   "SMS_DAILY_LIMIT": "Bugun uchun SMS kod chegarasi tugadi. Ertaga urinib ko'ring yoki logistga murojaat qiling",
   "SERVICE_UNAVAILABLE": "Xizmat vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring",
   "AUTH_REFRESH_REUSED": "Xavfsizlik sababli barcha sessiyalar yopildi. Qaytadan kiring",
