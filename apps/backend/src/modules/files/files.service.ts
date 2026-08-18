@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Prisma, type StoredFile } from '@prisma/client';
+import type { StoredFile } from '@prisma/client';
 import * as Minio from 'minio';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -263,16 +263,30 @@ export class FilesService implements OnModuleInit {
     }
   }
 
-  /** File ids referenced by a trip event photo list. */
+  /**
+   * Which of these file ids a trip event still points at (TASK-4.2).
+   *
+   * This used to read every trip event that had a photo — in every tenant,
+   * across all history — and filter the candidate ids in JavaScript. The
+   * question is answered by the database instead: jsonb's `?|` asks "does this
+   * array contain any of these keys", so only the matching rows are read, and
+   * the table's growth stops being this job's problem.
+   */
   private async referencedFileIds(ids: string[]): Promise<Set<string>> {
-    const events = await this.prisma.tripEvent.findMany({
-      where: { photoFileIds: { not: Prisma.DbNull } },
-      select: { photoFileIds: true },
-    });
+    if (ids.length === 0) return new Set();
+
+    const rows = await this.prisma.$queryRaw<Array<{ photo_file_ids: string[] }>>`
+      SELECT photo_file_ids
+      FROM trip_events
+      WHERE photo_file_ids IS NOT NULL
+        AND photo_file_ids ?| ${ids}::text[]
+    `;
+
+    const candidates = new Set(ids);
     const referenced = new Set<string>();
-    for (const event of events) {
-      for (const value of (event.photoFileIds as string[] | null) ?? []) {
-        if (ids.includes(value)) referenced.add(value);
+    for (const row of rows) {
+      for (const value of row.photo_file_ids ?? []) {
+        if (candidates.has(value)) referenced.add(value);
       }
     }
     return referenced;

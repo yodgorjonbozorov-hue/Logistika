@@ -36,8 +36,8 @@ export class AdminCompaniesController {
 
   @Get()
   async list(@Query() pagination: PaginationDto) {
-    const { data, total } = await this.companiesService.adminList(pagination);
-    return paginated(data, pagination, total);
+    const page = await this.companiesService.adminList(pagination);
+    return paginated(page, pagination);
   }
 
   @Post()

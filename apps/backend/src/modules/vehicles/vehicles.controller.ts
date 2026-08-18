@@ -24,8 +24,8 @@ export class VehiclesController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: CatalogueListDto) {
-    const { data, total } = await this.vehiclesService.list(user, pagination);
-    return paginated(data, pagination, total);
+    const page = await this.vehiclesService.list(user, pagination);
+    return paginated(page, pagination);
   }
 
   @Post()

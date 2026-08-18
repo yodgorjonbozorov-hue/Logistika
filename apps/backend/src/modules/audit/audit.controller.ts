@@ -18,7 +18,7 @@ export class AuditController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListAuditLogsDto) {
-    const { data, total } = await this.auditService.list(user, filter);
-    return paginated(data, filter, total);
+    const page = await this.auditService.list(user, filter);
+    return paginated(page, filter);
   }
 }

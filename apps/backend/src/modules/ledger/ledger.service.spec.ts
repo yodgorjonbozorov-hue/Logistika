@@ -1,6 +1,7 @@
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { LedgerService } from './ledger.service';
 import type { TenantActor } from 'shared';
+import { ListLedgerDto } from './dto/ledger.dto';
 
 const TENANT = ACTOR as TenantActor;
 
@@ -17,15 +18,14 @@ describe('LedgerService.record', () => {
     return { service: new LedgerService(prisma), db, tx: db as never };
   }
 
-  const invoice = (amount: bigint) =>
-    ({
-      clientId: 'c1',
-      tripId: 't1',
-      direction: 'DEBIT' as const,
-      reason: 'TRIP_INVOICED' as const,
-      amount,
-      amountBase: amount,
-    });
+  const invoice = (amount: bigint) => ({
+    clientId: 'c1',
+    tripId: 't1',
+    direction: 'DEBIT' as const,
+    reason: 'TRIP_INVOICED' as const,
+    amount,
+    amountBase: amount,
+  });
 
   it('writes the entry and moves the cached balance atomically', async () => {
     const { service, db, tx } = setup();
@@ -150,7 +150,7 @@ describe('LedgerService.reverse', () => {
     });
   });
 
-  it('copies the original exchange rate rather than using today\'s', async () => {
+  it("copies the original exchange rate rather than using today's", async () => {
     const { service, db, tx } = setup({
       ...original,
       currency: 'USD',
@@ -203,8 +203,21 @@ describe('LedgerService.balanceOf', () => {
         },
       })),
     );
-    db.ledgerEntry!.findMany!.mockResolvedValue(entries);
-    return { service: new LedgerService(prisma) };
+    // The overdue walk now reads only the debits and takes the credits as one
+    // sum (TASK-4.2), so the stubs answer per direction.
+    db.ledgerEntry!.findMany!.mockImplementation(({ where }: { where: { direction?: string } }) =>
+      Promise.resolve(entries.filter((entry) => entry.direction === where.direction)),
+    );
+    db.ledgerEntry!.aggregate = jest.fn(({ where }: { where: { direction?: string } }) =>
+      Promise.resolve({
+        _sum: {
+          amountBase: entries
+            .filter((entry) => entry.direction === where.direction)
+            .reduce((sum, entry) => sum + entry.amountBase, 0n),
+        },
+      }),
+    );
+    return { service: new LedgerService(prisma), db };
   }
 
   const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
@@ -264,9 +277,7 @@ describe('LedgerService.balanceOf', () => {
     // Exactly on the due date the client still has the day to pay.
     const { service } = setup({
       paymentTermsDays: 14,
-      entries: [
-        { direction: 'DEBIT', amountBase: som(1_000_000), createdAt: daysAgo(14 - 0.01) },
-      ],
+      entries: [{ direction: 'DEBIT', amountBase: som(1_000_000), createdAt: daysAgo(14 - 0.01) }],
     });
     expect((await service.balanceOf(ACTOR, 'c1')).overdue).toBe(0n);
   });
@@ -299,11 +310,94 @@ describe('LedgerService.balanceOf', () => {
     expect(balance.overdue).toBe(0n);
   });
 
+  it("never loads a client's whole ledger to compute what is late (TASK-4.2)", async () => {
+    const { service, db } = setup({
+      paymentTermsDays: 14,
+      entries: [
+        { direction: 'DEBIT', amountBase: som(1_000_000), createdAt: daysAgo(20) },
+        { direction: 'CREDIT', amountBase: som(400_000), createdAt: daysAgo(2) },
+      ],
+    });
+
+    await service.balanceOf(ACTOR, 'c1');
+
+    // Only the debits are walked row by row; the credits arrive as one sum.
+    // Reading both meant loading years of history on every balance request.
+    const walked = db.ledgerEntry!.findMany!.mock.calls.map(
+      (call: [{ where: { direction?: string } }]) => call[0].where.direction,
+    );
+    expect(walked).toEqual(['DEBIT']);
+    expect(db.ledgerEntry!.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ direction: 'CREDIT' }) }),
+    );
+  });
+
   it('reports an unknown client as not found', async () => {
     const { prisma, db } = createTenantDbMock(['ledgerEntry', 'client']);
     db.client!.findUnique!.mockResolvedValue(null);
     await expect(new LedgerService(prisma).balanceOf(ACTOR, 'gone')).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
+  });
+});
+
+describe('LedgerService.list (TASK-4.2)', () => {
+  const listDto = (over: Partial<ListLedgerDto> = {}): ListLedgerDto =>
+    Object.assign(new ListLedgerDto(), { page: 1, limit: 2, withTotal: true }, over);
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['ledgerEntry', 'client']);
+    db.client!.findUnique!.mockResolvedValue({ id: 'c1', paymentTermsDays: 14 });
+    return { service: new LedgerService(prisma), db };
+  }
+
+  it('over-fetches by one to answer hasMore without a second count', async () => {
+    const { service, db } = setup();
+    db.ledgerEntry!.findMany!.mockResolvedValue([{ id: 'l1' }, { id: 'l2' }, { id: 'l3' }]);
+    db.ledgerEntry!.count!.mockResolvedValue(7);
+
+    const page = await service.list(ACTOR, 'c1', listDto());
+
+    // Three rows came back for a page of two: the extra row is the answer to
+    // "is there a next page?", and it must not reach the client.
+    expect(db.ledgerEntry!.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 3 }),
+    );
+    expect(page.data).toHaveLength(2);
+    expect(page.hasMore).toBe(true);
+    expect(page.total).toBe(7);
+  });
+
+  it('skips the count when the caller does not ask for a total', async () => {
+    const { service, db } = setup();
+    db.ledgerEntry!.findMany!.mockResolvedValue([{ id: 'l1' }]);
+
+    const page = await service.list(ACTOR, 'c1', listDto({ withTotal: false }));
+
+    expect(db.ledgerEntry!.count).not.toHaveBeenCalled();
+    expect(page.total).toBeNull();
+    expect(page.hasMore).toBe(false);
+  });
+
+  it('narrows the query by the requested date range', async () => {
+    const { service, db } = setup();
+    const from = new Date('2026-01-01T00:00:00Z');
+    const to = new Date('2026-02-01T00:00:00Z');
+
+    await service.list(ACTOR, 'c1', listDto({ from, to }));
+
+    expect(db.ledgerEntry!.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { clientId: 'c1', createdAt: { gte: from, lte: to } } }),
+    );
+  });
+
+  it('refuses to list the ledger of a client this company cannot see', async () => {
+    const { service, db } = setup();
+    db.client!.findUnique!.mockResolvedValue(null);
+
+    await expect(service.list(ACTOR, 'other-company-client', listDto())).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(db.ledgerEntry!.findMany).not.toHaveBeenCalled();
   });
 });

@@ -6,12 +6,13 @@ import { isOdometerOrderValid, odometerDistanceKm } from '../../common/odometer'
 import { requireTenantActor } from '../../common/tenant-actor';
 import { busyIndexError, inProgressElsewhere } from '../../common/trip-availability';
 import { canTransition } from '../../common/trip-transitions';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CurrencyService } from '../currency/currency.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { invoiceCompletedTrip } from '../ledger/trip-invoicing';
 import { DriverEventDto, EventBatchDto, ListEventsDto } from './dto/event.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 export interface BatchResult {
   accepted: string[];
@@ -32,9 +33,6 @@ const STATUS_BY_EVENT: Partial<Record<DriverEventDto['eventType'], TripStatus>> 
 
 /** Thrown inside the per-event transaction so the event and the status move together. */
 class TransitionConflict extends Error {}
-
-/** At least one photo id does not belong to this tenant. */
-const UNKNOWN_FILE = Symbol('unknown-file');
 
 /**
  * True when the insert lost the race for a client event id.
@@ -90,13 +88,21 @@ export class EventsService {
     });
     const seen = new Set(existing.map((e) => e.clientEventId));
 
+    // The trips and the receipt files this batch refers to, read once each
+    // (TASK-4.2). Both used to be looked up inside the loop, so a hundred
+    // events was a hundred round trips before any of them was stored.
+    const trips = await this.loadTrips(db, dto);
+    const knownFiles = await this.loadPhotoFileIds(db, dto);
+
     for (const event of dto.events) {
       if (seen.has(event.clientEventId)) {
         result.duplicates.push(event.clientEventId);
         continue;
       }
-      // Trip must exist in this tenant and belong to this driver.
-      const trip = await db.trip.findUnique({ where: { id: event.tripId } });
+      // Trip must exist in this tenant and belong to this driver. The map is
+      // kept up to date as transitions land, so a LOADED following a START in
+      // the same batch sees the status that START just wrote.
+      const trip = trips.get(event.tripId);
       if (!trip || trip.driverId !== driver.id) {
         result.rejected.push({ clientEventId: event.clientEventId, code: 'NOT_FOUND' });
         continue;
@@ -139,8 +145,8 @@ export class EventsService {
 
       // A receipt id that is not this tenant's is a rejected event, not an
       // event stored without its receipt: the photo is the proof.
-      const photoFileIds = await this.resolvePhotoFileIds(actor, event);
-      if (photoFileIds === UNKNOWN_FILE) {
+      const photoFileIds = event.photoFileIds?.length ? event.photoFileIds : undefined;
+      if (photoFileIds?.some((id) => !knownFiles.has(id))) {
         result.rejected.push({ clientEventId: event.clientEventId, code: 'NOT_FOUND' });
         continue;
       }
@@ -234,6 +240,15 @@ export class EventsService {
 
       seen.add(event.clientEventId);
       result.accepted.push(event.clientEventId);
+      if (movesTrip) {
+        // The row moved; the next event for this trip must see the new status
+        // rather than the one this batch started with.
+        trips.set(trip.id, {
+          ...trip,
+          status: target!,
+          ...this.transitionData(target!, trip, event),
+        } as Trip);
+      }
     }
 
     this.audit.log({
@@ -281,10 +296,7 @@ export class EventsService {
    * event rows carry positions, comments and receipt photos, so an unrestricted
    * list would hand every driver their colleagues' whole day.
    */
-  async listByTrip(
-    actor: CurrentUserPayload,
-    filter: ListEventsDto,
-  ): Promise<{ data: TripEvent[]; total: number }> {
+  async listByTrip(actor: CurrentUserPayload, filter: ListEventsDto): Promise<Page<TripEvent>> {
     const db = this.prisma.forCompany(actor.companyId);
 
     const trip = await db.trip.findUnique({ where: { id: filter.tripId } });
@@ -301,37 +313,45 @@ export class EventsService {
       tripId: filter.tripId,
       eventTime: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
-    const [data, total] = await Promise.all([
-      db.tripEvent.findMany({
-        where,
-        orderBy: { eventTime: 'asc' },
-        skip: filter.skip,
-        take: filter.limit,
-      }),
-      db.tripEvent.count({ where }),
-    ]);
-    return { data, total };
+    return readPage(
+      filter,
+      (page) =>
+        db.tripEvent.findMany({
+          where,
+          orderBy: { eventTime: 'asc' },
+          ...page,
+        }),
+      () => db.tripEvent.count({ where }),
+    );
   }
 
   /** Photo file ids → stored keys; foreign/unknown ids are dropped silently-safe (tenant scope). */
   /**
-   * The StoredFile ids this event's photos refer to.
+   * Every trip this batch refers to, in one query (TASK-4.2).
    *
-   * Named for what it returns: the column it feeds was called `photo_urls` and
-   * has only ever held ids (M-4). Ids the tenant cannot see are not silently
-   * dropped — an unknown id means the event refers to a file from somewhere
-   * else, and storing the event without its receipt loses the proof.
+   * Read through the tenant-scoped client, so a trip id from another company
+   * is simply absent — indistinguishable from one that does not exist.
    */
-  private async resolvePhotoFileIds(
-    actor: CurrentUserPayload,
-    event: DriverEventDto,
-  ): Promise<string[] | undefined | typeof UNKNOWN_FILE> {
-    if (!event.photoFileIds?.length) return undefined;
-    const files = await this.prisma.forCompany(actor.companyId).storedFile.findMany({
-      where: { id: { in: event.photoFileIds } },
+  private async loadTrips(db: TenantScopedClient, dto: EventBatchDto): Promise<Map<string, Trip>> {
+    const ids = [...new Set(dto.events.map((e) => e.tripId))];
+    const trips = await db.trip.findMany({ where: { id: { in: ids } } });
+    return new Map(trips.map((trip) => [trip.id, trip]));
+  }
+
+  /**
+   * The StoredFile ids in this batch that really belong to this tenant.
+   *
+   * The column this feeds was called `photo_urls` and has only ever held ids
+   * (M-4). An id that is not in this set means the event refers to a file from
+   * somewhere else, and storing the event without its receipt loses the proof.
+   */
+  private async loadPhotoFileIds(db: TenantScopedClient, dto: EventBatchDto): Promise<Set<string>> {
+    const ids = [...new Set(dto.events.flatMap((e) => e.photoFileIds ?? []))];
+    if (ids.length === 0) return new Set();
+    const files = await db.storedFile.findMany({
+      where: { id: { in: ids } },
       select: { id: true },
     });
-    if (files.length !== event.photoFileIds.length) return UNKNOWN_FILE;
-    return files.map((f) => f.id);
+    return new Set(files.map((f) => f.id));
   }
 }

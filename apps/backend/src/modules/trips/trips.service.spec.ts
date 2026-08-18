@@ -87,6 +87,59 @@ describe('TripsService', () => {
     });
   });
 
+  describe('list (TASK-4.2)', () => {
+    const filter = (over: Record<string, unknown> = {}) =>
+      ({ page: 1, limit: 20, withTotal: true, ...over }) as never;
+
+    it('reads one row beyond the page', async () => {
+      const { service, db } = setup();
+
+      await service.list(ACTOR, filter());
+
+      expect(db.trip!.findMany!.mock.calls[0][0].take).toBe(21);
+    });
+
+    it('skips the count when the caller does not want a total', async () => {
+      const { service, db } = setup();
+
+      const page = await service.list(ACTOR, filter({ withTotal: false }));
+
+      expect(db.trip!.count).not.toHaveBeenCalled();
+      expect(page.total).toBeNull();
+    });
+
+    it('narrows by status and by date range', async () => {
+      const { service, db } = setup();
+      const from = new Date('2026-01-01T00:00:00Z');
+
+      await service.list(ACTOR, filter({ status: 'IN_PROGRESS', from }));
+
+      const { where } = db.trip!.findMany!.mock.calls[0][0];
+      expect(where.status).toBe('IN_PROGRESS');
+      expect(where.createdAt).toEqual({ gte: from, lte: undefined });
+    });
+
+    it('gives a driver only their own running trips', async () => {
+      const { service, db } = setup();
+      db.driver!.findFirst!.mockResolvedValue({ id: 'd1' });
+
+      await service.listMine(ACTOR);
+
+      expect(db.trip!.findMany!.mock.calls[0][0].where).toEqual({
+        driverId: 'd1',
+        status: { in: ['ASSIGNED', 'IN_PROGRESS'] },
+      });
+    });
+
+    it('gives nothing to a user with no driver profile', async () => {
+      const { service, db } = setup();
+      db.driver!.findFirst!.mockResolvedValue(null);
+
+      expect(await service.listMine(ACTOR)).toEqual([]);
+      expect(db.trip!.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('lifecycle', () => {
     it('allows ASSIGNED → IN_PROGRESS and stamps startedAt', async () => {
       const { service, db } = setup();

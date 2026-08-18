@@ -3,7 +3,7 @@ import type { Company, Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { AppException } from '../../common/exceptions/app.exception';
 import { rethrowPrismaError } from '../../common/prisma-errors';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { PaginationDto, readPage, type Page } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { SubscriptionService } from '../../common/subscription/subscription.service';
@@ -46,16 +46,12 @@ export class CompaniesService {
 
   // ---------- SUPERADMIN ----------
 
-  async adminList(pagination: PaginationDto): Promise<{ data: Company[]; total: number }> {
-    const [data, total] = await this.prisma.$transaction([
-      this.prisma.company.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
-      }),
-      this.prisma.company.count(),
-    ]);
-    return { data, total };
+  async adminList(pagination: PaginationDto): Promise<Page<Company>> {
+    return readPage(
+      pagination,
+      (args) => this.prisma.company.findMany({ orderBy: { createdAt: 'desc' }, ...args }),
+      () => this.prisma.company.count(),
+    );
   }
 
   /** Creates a tenant together with its first OWNER user (one transaction). */

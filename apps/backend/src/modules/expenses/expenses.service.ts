@@ -17,6 +17,7 @@ import {
   UpdateExpenseDto,
   UpdateIncomeDto,
 } from './dto/expense.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 /**
  * Create needs the required fields typed as present; the shared converter below
@@ -95,26 +96,23 @@ export class ExpensesService {
 
   // ---------- Expenses ----------
 
-  async listExpenses(
-    actor: CurrentUserPayload,
-    filter: ListExpensesDto,
-  ): Promise<{ data: Expense[]; total: number }> {
+  async listExpenses(actor: CurrentUserPayload, filter: ListExpensesDto): Promise<Page<Expense>> {
     const db = this.prisma.forCompany(actor.companyId);
     const where: Prisma.ExpenseWhereInput = {
       tripId: filter.tripId,
       vehicleId: filter.vehicleId,
       category: filter.category,
     };
-    const [data, total] = await Promise.all([
-      db.expense.findMany({
-        where,
-        orderBy: { expenseDate: 'desc' },
-        skip: filter.skip,
-        take: filter.limit,
-      }),
-      db.expense.count({ where }),
-    ]);
-    return { data, total };
+    return readPage(
+      filter,
+      (page) =>
+        db.expense.findMany({
+          where,
+          orderBy: { expenseDate: 'desc' },
+          ...page,
+        }),
+      () => db.expense.count({ where }),
+    );
   }
 
   async createExpense(actor: CurrentUserPayload, dto: CreateExpenseDto): Promise<Expense> {
@@ -332,22 +330,19 @@ export class ExpensesService {
 
   // ---------- Incomes ----------
 
-  async listIncomes(
-    actor: CurrentUserPayload,
-    pagination: ListExpensesDto,
-  ): Promise<{ data: Income[]; total: number }> {
+  async listIncomes(actor: CurrentUserPayload, pagination: ListExpensesDto): Promise<Page<Income>> {
     const db = this.prisma.forCompany(actor.companyId);
     const where: Prisma.IncomeWhereInput = { tripId: pagination.tripId };
-    const [data, total] = await Promise.all([
-      db.income.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
-      }),
-      db.income.count({ where }),
-    ]);
-    return { data, total };
+    return readPage(
+      pagination,
+      (page) =>
+        db.income.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => db.income.count({ where }),
+    );
   }
 
   async createIncome(actor: CurrentUserPayload, dto: CreateIncomeDto): Promise<Income> {

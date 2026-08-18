@@ -23,8 +23,8 @@ export class UsersController {
   @Get()
   @Roles(UserRole.OWNER, UserRole.LOGIST)
   async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {
-    const { data, total } = await this.usersService.list(user, pagination);
-    return paginated(data, pagination, total);
+    const page = await this.usersService.list(user, pagination);
+    return paginated(page, pagination);
   }
 
   @Post()

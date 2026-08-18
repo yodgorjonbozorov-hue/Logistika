@@ -3,7 +3,7 @@ import type { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { PaginationDto, readPage, type Page } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -61,17 +61,14 @@ export class UsersService {
   async list(
     actor: CurrentUserPayload,
     pagination: PaginationDto,
-  ): Promise<{ data: SafeUser[]; total: number }> {
+  ): Promise<Page<SafeUser>> {
     const db = this.prisma.forCompany(actor.companyId);
-    const [data, total] = await Promise.all([
-      db.user.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
-      }),
-      db.user.count(),
-    ]);
-    return { data: data.map(stripHash), total };
+    const page = await readPage(
+      pagination,
+      (args) => db.user.findMany({ orderBy: { createdAt: 'desc' }, ...args }),
+      () => db.user.count(),
+    );
+    return { ...page, data: page.data.map(stripHash) };
   }
 
   async create(actor: CurrentUserPayload, dto: CreateUserDto): Promise<SafeUser> {

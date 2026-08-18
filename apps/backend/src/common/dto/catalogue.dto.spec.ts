@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CatalogueListDto } from './catalogue.dto';
+import { skipOf } from './pagination.dto';
 
 const parse = (query: Record<string, unknown>) => plainToInstance(CatalogueListDto, query);
 
@@ -28,6 +29,6 @@ describe('CatalogueListDto', () => {
 
   it('still paginates', () => {
     const dto = parse({ page: 3, limit: 20 });
-    expect(dto.skip).toBe(40);
+    expect(skipOf(dto)).toBe(40);
   });
 });

@@ -3,6 +3,7 @@ import type { AuditLog, Prisma } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ListAuditLogsDto } from './dto/list-audit.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 export interface AuditEntry {
   companyId?: string | null;
@@ -98,7 +99,7 @@ export class AuditService {
   async list(
     actor: CurrentUserPayload,
     filter: ListAuditLogsDto,
-  ): Promise<{ data: AuditLog[]; total: number }> {
+  ): Promise<Page<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = {
       // SUPERADMIN has no tenant of its own and reads the platform-wide trail.
       companyId: actor.companyId ?? undefined,
@@ -108,16 +109,15 @@ export class AuditService {
       action: filter.action,
       createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
-    const [data, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
+    return readPage(
+      filter,
+      (page) => this.prisma.auditLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: filter.skip,
-        take: filter.limit,
+        ...page,
       }),
-      this.prisma.auditLog.count({ where }),
-    ]);
-    return { data, total };
+      () => this.prisma.auditLog.count({ where }),
+    );
   }
 
   private toRow(entry: AuditEntry): Prisma.AuditLogUncheckedCreateInput {

@@ -8,6 +8,7 @@ import { ACTIVE_TRIP_STATUSES } from '../../common/trip-transitions';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateClientDto, UpdateClientDto } from './dto/client.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class ClientsService {
@@ -19,21 +20,20 @@ export class ClientsService {
   async list(
     actor: CurrentUserPayload,
     pagination: CatalogueListDto,
-  ): Promise<{ data: Client[]; total: number }> {
+  ): Promise<Page<Client>> {
     const db = this.prisma.forCompany(actor.companyId);
     // Retired records leave the working list but stay reachable with
     // ?includeInactive=true — the history is the reason they were kept.
     const where = { isActive: pagination.activeFilter };
-    const [data, total] = await Promise.all([
-      db.client.findMany({
+    return readPage(
+      pagination,
+      (page) => db.client.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
+        ...page,
       }),
-      db.client.count({ where }),
-    ]);
-    return { data, total };
+      () => db.client.count({ where }),
+    );
   }
 
   async create(actor: CurrentUserPayload, dto: CreateClientDto): Promise<Client> {

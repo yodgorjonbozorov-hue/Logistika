@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, toAuditJson } from '../audit/audit.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 import { ACTIVE_TRIP_STATUSES } from '../../common/trip-transitions';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 function toData<T extends UpdateVehicleDto>(dto: T) {
   const { insuranceExpiry, techInspectionExpiry, ...rest } = dto;
@@ -29,21 +30,20 @@ export class VehiclesService {
   async list(
     actor: CurrentUserPayload,
     pagination: CatalogueListDto,
-  ): Promise<{ data: Vehicle[]; total: number }> {
+  ): Promise<Page<Vehicle>> {
     const db = this.prisma.forCompany(actor.companyId);
     // Retired records leave the working list but stay reachable with
     // ?includeInactive=true — the history is the reason they were kept.
     const where = { isActive: pagination.activeFilter };
-    const [data, total] = await Promise.all([
-      db.vehicle.findMany({
+    return readPage(
+      pagination,
+      (page) => db.vehicle.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
+        ...page,
       }),
-      db.vehicle.count({ where }),
-    ]);
-    return { data, total };
+      () => db.vehicle.count({ where }),
+    );
   }
 
   async create(actor: CurrentUserPayload, dto: CreateVehicleDto): Promise<Vehicle> {

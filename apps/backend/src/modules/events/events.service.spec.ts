@@ -39,6 +39,12 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
       startedAt: null,
     });
     db.tripEvent!.findMany!.mockResolvedValue([]);
+    // The batch reads every trip it refers to in one query now (TASK-4.2), so
+    // the tests keep configuring findUnique and this turns it into that list.
+    db.trip!.findMany!.mockImplementation(async () => {
+      const trip = await db.trip!.findUnique!({});
+      return trip ? [trip] : [];
+    });
     db.tripEvent!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
       Promise.resolve({ id: 'e1', ...data }),
     );
@@ -385,6 +391,57 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     expect(db.tripEvent!.create!.mock.calls[0][0].data.photoFileIds).toEqual(['f1']);
   });
 
+  it('reads the trips once, not once per event (TASK-4.2)', async () => {
+    const { service, db } = setup();
+
+    await service.ingestBatch(DRIVER_ACTOR, {
+      events: Array.from({ length: 50 }, (_, i) => event(`c-${i}`)),
+    });
+
+    // Fifty events used to be fifty round trips before anything was stored.
+    expect(db.trip!.findMany).toHaveBeenCalledTimes(1);
+    expect(db.trip!.findMany!.mock.calls[0][0].where.id.in).toEqual(['trip-1']);
+  });
+
+  it('reads the receipt files once for the whole batch', async () => {
+    const { service, db } = setup();
+    db.storedFile!.findMany!.mockResolvedValue([{ id: 'f1' }, { id: 'f2' }]);
+
+    await service.ingestBatch(DRIVER_ACTOR, {
+      events: [
+        { ...event('c-1'), photoFileIds: ['f1'] },
+        { ...event('c-2'), photoFileIds: ['f2'] },
+        { ...event('c-3'), photoFileIds: ['f1', 'f2'] },
+      ],
+    });
+
+    expect(db.storedFile!.findMany).toHaveBeenCalledTimes(1);
+    // Asked for each distinct id once, not once per mention.
+    expect(db.storedFile!.findMany!.mock.calls[0][0].where.id.in.sort()).toEqual(['f1', 'f2']);
+  });
+
+  it('asks for no files at all when the batch carries no photos', async () => {
+    const { service, db } = setup();
+    await service.ingestBatch(DRIVER_ACTOR, { events: [event('c-1')] });
+    expect(db.storedFile!.findMany).not.toHaveBeenCalled();
+  });
+
+  it('lets a later event in the batch see the status an earlier one wrote', async () => {
+    const { service, db } = setup();
+
+    const result = await service.ingestBatch(DRIVER_ACTOR, {
+      events: [
+        { ...tripEvent(TripEventType.START), clientEventId: 'c-1' },
+        { ...tripEvent(TripEventType.LOADED), clientEventId: 'c-2' },
+      ],
+    });
+
+    // Reading the trip once means the loop has to keep its own copy current:
+    // LOADED after START is a no-op, not a second transition.
+    expect(result.accepted).toEqual(['c-1', 'c-2']);
+    expect(db.trip!.updateMany).toHaveBeenCalledTimes(1);
+  });
+
   it('requires an active driver profile', async () => {
     const { service, db } = setup();
     db.driver!.findFirst!.mockResolvedValue(null);
@@ -406,18 +463,47 @@ describe('EventsService.listByTrip (TASK-2.3)', () => {
     return { service: new EventsService(prisma, audit, ledgerStub, currencyStub), db };
   }
 
+  // No hand-fed `skip`: it is derived from page and limit, the way a real
+  // request derives it. Supplying it here would have hidden the very bug
+  // TASK-4.2 found — a lost accessor that made every page serve page 1.
   const filter = (overrides: Record<string, unknown> = {}) =>
-    ({ tripId: 'trip-1', page: 1, limit: 20, skip: 0, ...overrides }) as never;
+    ({ tripId: 'trip-1', page: 1, limit: 20, withTotal: true, ...overrides }) as never;
 
   it('always scopes the query to one trip and paginates it', async () => {
     const { service, db } = setup();
-    const result = await service.listByTrip(ACTOR, filter({ limit: 50, skip: 100 }));
+    const result = await service.listByTrip(ACTOR, filter({ page: 3, limit: 50 }));
 
     const args = db.tripEvent!.findMany!.mock.calls[0][0];
     expect(args.where.tripId).toBe('trip-1');
-    expect(args.take).toBe(50);
+    // One beyond the page: that extra row is what answers "is there more"
+    // without a second count (TASK-4.2).
+    expect(args.take).toBe(51);
     expect(args.skip).toBe(100);
     expect(result.total).toBe(1);
+  });
+
+  it('skips the count when the caller does not want a total (TASK-4.2)', async () => {
+    const { service, db } = setup();
+
+    const result = await service.listByTrip(ACTOR, filter({ withTotal: false }));
+
+    // Counting a table that grows without bound is a scan, paid on every page.
+    expect(db.tripEvent!.count).not.toHaveBeenCalled();
+    expect(result.total).toBeNull();
+    expect(result.hasMore).toBe(false);
+  });
+
+  it('reports another page without counting anything', async () => {
+    const { service, db } = setup();
+    db.tripEvent!.findMany!.mockResolvedValue(
+      Array.from({ length: 21 }, (_, i) => ({ id: `e${i}` })),
+    );
+
+    const result = await service.listByTrip(ACTOR, filter({ withTotal: false }));
+
+    expect(result.hasMore).toBe(true);
+    // The extra row answered the question; it is not handed to the caller.
+    expect(result.data).toHaveLength(20);
   });
 
   it('narrows by the requested time window when one is given', async () => {

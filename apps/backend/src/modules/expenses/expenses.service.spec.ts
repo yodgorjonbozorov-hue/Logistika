@@ -98,6 +98,59 @@ describe('ExpensesService', () => {
   });
 });
 
+describe('ExpensesService lists (TASK-4.2)', () => {
+  const audit = { log: jest.fn(), logInTx: jest.fn() } as unknown as AuditService;
+
+  function setup() {
+    const { prisma, db } = createTenantDbMock(['expense', 'income']);
+    return { service: new ExpensesService(prisma, audit, ledgerStub, currencyStub), db };
+  }
+
+  const filter = (over: Record<string, unknown> = {}) =>
+    ({ page: 1, limit: 20, withTotal: true, ...over }) as never;
+
+  it('reads one row beyond the page so it can say whether there is more', async () => {
+    const { service, db } = setup();
+
+    await service.listExpenses(ACTOR, filter({ limit: 20 }));
+
+    expect(db.expense!.findMany!.mock.calls[0][0].take).toBe(21);
+    expect(db.expense!.count).toHaveBeenCalled();
+  });
+
+  it('narrows expenses by trip, vehicle and category', async () => {
+    const { service, db } = setup();
+
+    await service.listExpenses(ACTOR, filter({ tripId: 't1', vehicleId: 'v1', category: 'FUEL' }));
+
+    expect(db.expense!.findMany!.mock.calls[0][0].where).toEqual({
+      tripId: 't1',
+      vehicleId: 'v1',
+      category: 'FUEL',
+    });
+  });
+
+  it('skips the count on expenses when the caller does not want a total', async () => {
+    const { service, db } = setup();
+
+    const page = await service.listExpenses(ACTOR, filter({ withTotal: false }));
+
+    // Expenses grow without bound; counting them is a scan on every page.
+    expect(db.expense!.count).not.toHaveBeenCalled();
+    expect(page.total).toBeNull();
+  });
+
+  it('skips the count on incomes too', async () => {
+    const { service, db } = setup();
+
+    const page = await service.listIncomes(ACTOR, filter({ withTotal: false }));
+
+    expect(db.income!.count).not.toHaveBeenCalled();
+    expect(page.total).toBeNull();
+    expect(page.hasMore).toBe(false);
+  });
+});
+
 describe('ExpensesService tenant references (TASK-2.2)', () => {
   const audit = {
     log: jest.fn(),

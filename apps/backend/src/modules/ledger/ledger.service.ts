@@ -4,6 +4,7 @@ import type { CurrentUserPayload, TenantActor } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService, type TenantScopedClient } from '../../prisma/prisma.service';
 import type { ListLedgerDto } from './dto/ledger.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 /**
  * What a client owes, and why.
@@ -158,7 +159,7 @@ export class LedgerService {
     actor: CurrentUserPayload,
     clientId: string,
     filter: ListLedgerDto,
-  ): Promise<{ data: LedgerEntry[]; total: number }> {
+  ): Promise<Page<LedgerEntry>> {
     const db = this.prisma.forCompany(actor.companyId);
     await this.requireClient(db, clientId);
 
@@ -166,16 +167,16 @@ export class LedgerService {
       clientId,
       createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
-    const [data, total] = await Promise.all([
-      db.ledgerEntry.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: filter.skip,
-        take: filter.limit,
-      }),
-      db.ledgerEntry.count({ where }),
-    ]);
-    return { data, total };
+    return readPage(
+      filter,
+      (page) =>
+        db.ledgerEntry.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => db.ledgerEntry.count({ where }),
+    );
   }
 
   /**
@@ -224,20 +225,26 @@ export class LedgerService {
     // No agreed term means nothing can be late yet.
     if (paymentTermsDays === null) return 0n;
 
-    const entries = await db.ledgerEntry.findMany({
-      where: { clientId },
-      orderBy: { createdAt: 'asc' },
-      select: { direction: true, amountBase: true, createdAt: true },
-    });
+    // Only the debits are walked, and the credits arrive as one sum (TASK-4.2).
+    // Reading both directions row by row meant loading a client's whole ledger
+    // history on every balance request, most of it only to be added up.
+    const [debits, credited] = await Promise.all([
+      db.ledgerEntry.findMany({
+        where: { clientId, direction: 'DEBIT' },
+        orderBy: { createdAt: 'asc' },
+        select: { amountBase: true, createdAt: true },
+      }),
+      db.ledgerEntry.aggregate({
+        where: { clientId, direction: 'CREDIT' },
+        _sum: { amountBase: true },
+      }),
+    ]);
 
-    let credit = entries
-      .filter((entry) => entry.direction === 'CREDIT')
-      .reduce((sum, entry) => sum + entry.amountBase, 0n);
+    let credit = credited._sum.amountBase ?? 0n;
 
     const dueBefore = new Date(Date.now() - paymentTermsDays * 24 * 60 * 60 * 1000);
     let overdue = 0n;
-    for (const entry of entries) {
-      if (entry.direction !== 'DEBIT') continue;
+    for (const entry of debits) {
       const unpaid = entry.amountBase > credit ? entry.amountBase - credit : 0n;
       credit = credit > entry.amountBase ? credit - entry.amountBase : 0n;
       if (unpaid > 0n && entry.createdAt < dueBefore) overdue += unpaid;

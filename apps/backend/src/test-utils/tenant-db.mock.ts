@@ -7,6 +7,8 @@ export function createTenantDbMock(models: string[]) {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       count: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn().mockResolvedValue({ _sum: {} }),
+      groupBy: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),

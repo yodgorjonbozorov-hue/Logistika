@@ -32,19 +32,32 @@ export function useTripFinance(tripId: string) {
   return { expenses, incomes };
 }
 
-/** Reference lists for form selects (first 100 is plenty for 5–40 vehicle fleets). */
+/**
+ * Reference lists for form selects (first 100 is plenty for 5–40 vehicle fleets).
+ *
+ * Cached for five minutes (TASK-4.2): every form that opens used to fire three
+ * requests, so opening the trip dialog four times in a minute was twelve
+ * queries for a fleet list that changes a few times a year. `withTotal: false`
+ * on top — a picker never shows "1–100 of 137", so the count is pure cost.
+ */
+const REF_LIST_STALE_MS = 5 * 60 * 1000;
+const REF_LIST_QUERY = { limit: 100, withTotal: false };
+
 export function useRefLists() {
   const vehicles = useQuery({
     queryKey: ['vehicles', 'ref'],
-    queryFn: async () => (await api<Vehicle[]>('/vehicles', { query: { limit: 100 } })).data,
+    staleTime: REF_LIST_STALE_MS,
+    queryFn: async () => (await api<Vehicle[]>('/vehicles', { query: REF_LIST_QUERY })).data,
   });
   const drivers = useQuery({
     queryKey: ['drivers', 'ref'],
-    queryFn: async () => (await api<Driver[]>('/drivers', { query: { limit: 100 } })).data,
+    staleTime: REF_LIST_STALE_MS,
+    queryFn: async () => (await api<Driver[]>('/drivers', { query: REF_LIST_QUERY })).data,
   });
   const clients = useQuery({
     queryKey: ['clients', 'ref'],
-    queryFn: async () => (await api<Client[]>('/clients', { query: { limit: 100 } })).data,
+    staleTime: REF_LIST_STALE_MS,
+    queryFn: async () => (await api<Client[]>('/clients', { query: REF_LIST_QUERY })).data,
   });
   return { vehicles, drivers, clients };
 }

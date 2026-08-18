@@ -305,6 +305,22 @@ revokedAt: null } })` + `count === 0` → 401 (avval `findUnique` → tekshir �
 
 (audit hisobotida yo'q, ish davomida topilgan)
 
+- **N-11 (MEDIUM, ochiq)**: `tracking.service.ts` — jonli xaritaga oxirgi hodisani
+  qo'shadigan qidiruv faol reyslarning **barcha** hodisalarini o'qib, Prisma'ning
+  klient tomonidagi `distinct`i bilan siyraklashtiradi. TASK-4.1 dagi `gps_tracks`
+  muammosining kichik nusxasi: hozir zararsiz (faol reys kam), lekin uzoq reyslarda
+  o'sadi. TASK-4.2 doirasida **ataylab tegilmadi** — yarim tuzatish o'rniga alohida
+  task bo'lishi kerak (denormalizatsiya yoki `DISTINCT ON` raw so'rov).
+- **N-10 (HIGH, tuzatildi — TASK-4.2)**: **sahifalash umuman ishlamagan.**
+  `PaginationDto.skip` **getter** edi, `IntersectionType(PaginationDto, DateRangeDto)`
+  esa sinfni uning o'z xossalaridan qayta quradi — prototip getter'i o'z xossasi emas.
+  Shu sababli `ListTripsDto`, `ListEventsDto`, `ListLedgerDto`, `ListAuditLogsDto`
+  getter'ni yo'qotgan va Prisma `skip: undefined` olgan; Prisma uni e'tiborsiz
+  qoldiradi, ya'ni `?page=2`, `?page=7` — hammasi **1-sahifani** qaytargan. Hech qanday
+  xato otilmagan, `total` ham to'g'ri ko'ringan. Baseline'dan beri mavjud edi.
+  Getter → `skipOf(dto)` funksiyasiga aylantirildi (`readPage()` — yagona chaqiruv
+  nuqtasi). Testlarda `skip` endi qo'lda berilmaydi: aynan qo'lda berilgan `skip`
+  bu xatoni yashirib turgan edi.
 - **N-9 (info)**: `flutter analyze` har ishga tushganda `analysis_options.yaml`ga
   `analyzer.exclude` blokini o'zi qo'shadi (build/android/ios/... papkalari). Bu Flutter
   tool'ining o'zgarishi, qo'lda yozilgani emas — qayta-qayta paydo bo'lmasligi uchun
@@ -673,15 +689,39 @@ Tasdiq kutilmoqda.
   `test/tracking-perf.e2e-spec.ts` (+8 e2e), `tenant-isolation`/`query-validation` e2e
   (yangi javob shakli) · unit 375 → 393, e2e 200 → 208. `tracking.service` 90%.
 
+- **TASK-4.2 (H-9, M-19)** · `count()`lar, N+1 va — yo'l-yo'lakay — **sahifalashning o'zi**.
+  Ish davomida ma'lum bo'ldiki `PaginationDto.skip` getter'i `IntersectionType` bilan
+  yig'ilgan har bir DTO'da yo'qolgan va `?page=2` **1-sahifani** qaytargan (N-10, HIGH,
+  baseline'dan beri). Getter → `skipOf(dto)`; `readPage()` yagona chaqiruv nuqtasi.
+  **`count()` endi opsional**: `?withTotal=false` bo'lsa `count()` umuman bajarilmaydi va
+  `total: null` qaytadi. `hasMore` har doim to'g'ri, chunki u sahifadan **bitta ortiq**
+  qator o'qishdan keladi (`take = limit + 1`), `count()`dan emas — «keyingi sahifa»
+  tugmasiga kerak bo'lgani ham shu. 11 ta ro'yxat servisi va 9 ta controller
+  `readPage()`/`paginated()`ga o'tkazildi; `PaginationMeta.total` endi `number | null`,
+  `hasMore` qo'shildi (`packages/shared`).
+  **N+1 lar**: `events.batch` har hodisa uchun alohida `trip` va `file` so'rovi yuborardi
+  (TASK-3.8 tuzatgan deb faraz qilingan edi — tekshirilganda **hali ham bor** edi) →
+  reyslar va fayl id'lari bittadan so'rov bilan oldindan o'qiladi, status o'zgargan
+  hodisadan keyin xotiradagi nusxa yangilanadi; `files.referencedFileIds` butun
+  `trip_events`ni o'qish o'rniga jsonb `?|` bilan bazada (jonli bazada tekshirildi:
+  mos 1, mos emas 0); `ledger.overdueFor` butun tarix o'rniga faqat DEBIT qatorlari +
+  bitta CREDIT yig'indisi.
+  Web: `useRefLists()` — `staleTime` 5 daqiqa va `withTotal: false` (picker hech qachon
+  «1–100, jami 137» yozmaydi). ·
+  `common/dto/pagination.dto.ts` (+spec 15 test), `packages/shared`, 11 servis + 9
+  controller, `events.service.ts`, `files.service.ts`, `ledger.service.ts` (+4 test),
+  `expenses.service.spec.ts` (+4), `trips.service.spec.ts` (+5),
+  `test/pagination.e2e-spec.ts` (+6 e2e), web `features/trips/api.ts` ·
+  unit 393 → 428, e2e 208 → 214. `ledger.service` 100%, `events.service` 100%.
+  Ratchet ko'tarildi: events 100, ledger 100/90/100/100, expenses 95, trips 85,
+  `pagination.dto` yangi.
+
 **PHASE 3 tugadi (12/12).**
 
-**Keyingi qadam:** TASK-4.2 (`count()`lar va N+1). `events.service`dagi N+1 TASK-3.8 da
-allaqachon `findMany`ga o'tkazilgan — tasdiqlab o'tish kerak; `listByTrip` pagination
-TASK-2.3 da tuzatilgan. Qoladi: katta jadvallarda `count()` sekin (`expense.count`,
-`income.count`, `gpsTrack`) — `meta.pagination.total`ni opsional qilish
-(`?withTotal=false`) yoki cursor/`hasNextPage` naqshiga o'tish; frontend
-`useRefLists()` har form ochilishida 3 so'rov yuboradi → `staleTime`; barcha
-`findMany`larni ko'rib chiqib `take`siz joylarni cheklash.
+**Keyingi qadam:** TASK-4.3 (fon ishlari / BullMQ). Hozir og'ir ishlar — hisobot
+yig'ish, arxivlash, fayl tozalash — so'rov oqimida bajariladi. Redis allaqachon bor,
+navbat yo'q. Shuningdek N-11 (jonli xaritadagi oxirgi hodisa qidiruvi) mustaqil task
+sifatida ochiq.
 
 PHASE 3 qolgan bog'liqliklar:
 

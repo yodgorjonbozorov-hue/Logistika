@@ -29,8 +29,8 @@ export class ClientsController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: CatalogueListDto) {
-    const { data, total } = await this.clientsService.list(user, pagination);
-    return paginated(data, pagination, total);
+    const page = await this.clientsService.list(user, pagination);
+    return paginated(page, pagination);
   }
 
   @Post()
@@ -50,8 +50,8 @@ export class ClientsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query() filter: ListLedgerDto,
   ) {
-    const { data, total } = await this.ledgerService.list(user, id, filter);
-    return paginated(data, filter, total);
+    const page = await this.ledgerService.list(user, id, filter);
+    return paginated(page, filter);
   }
 
   /** What the client owes right now, and how much of it is late. */

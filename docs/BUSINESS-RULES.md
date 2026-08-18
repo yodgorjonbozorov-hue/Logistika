@@ -761,3 +761,72 @@ siyraklashtirilganini biladi.
 
 `gps_tracks (vehicle_id, recorded_at DESC)` va `gps_tracks (trip_id)` —
 ikkinchisi arxivlash job'i va ochiq kuzatuv havolasi uchun (L-5).
+
+---
+
+## 14. Ro'yxatlar: sahifalash, `count()` va N+1 (TASK-4.2)
+
+### Sahifalash haqiqatan sahifalar edi deb o'ylangan (yangi topilgan: N-10)
+
+`PaginationDto` da `skip` **getter** edi:
+
+```ts
+get skip(): number {
+  return (this.page - 1) * this.limit;
+}
+```
+
+`IntersectionType(PaginationDto, DateRangeDto)` esa sinfni uning **o'z**
+xossalaridan qayta quradi, prototip getter'i esa o'z xossasi emas. Shu sababli
+shu tarzda yig'ilgan har bir DTO — `ListTripsDto`, `ListEventsDto`,
+`ListLedgerDto`, `ListAuditLogsDto` — getter'ni yo'qotgan va Prisma'ga
+`skip: undefined` yetib borgan. Prisma `undefined` `skip`ni e'tiborsiz
+qoldiradi, ya'ni **`?page=2`, `?page=3`, `?page=7` — barchasi 1-sahifani
+qaytargan.** Hech qayerda xato otilmagan, `total` ham to'g'ri ko'ringan; shuning
+uchun bu shu paytgacha sezilmay kelgan.
+
+Yechim — getter emas, funksiya:
+
+```ts
+export function skipOf(dto: PaginationDto): number {
+  return (dto.page - 1) * dto.limit;
+}
+```
+
+`readPage()` faqat shuni chaqiradi, ya'ni yagona nuqta. Testlarda ham
+`skip` endi **qo'lda berilmaydi** — u `page` va `limit`dan chiqariladi, chunki
+qo'lda berilgan `skip` aynan shu xatoni yashirgan edi.
+
+### `count()` endi majburiy emas
+
+Har ro'yxat so'rovi ikkita so'rov edi: sahifa va `count()`. Katta jadvalda
+`count()` — to'liq skan, va u **har sahifada** to'lanadi. Endi:
+
+| Parametr          | Ma'nosi                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `withTotal=true`  | (default) `meta.pagination.total` — «1–20, jami 347» uchun |
+| `withTotal=false` | `total: null`, `count()` umuman bajarilmaydi               |
+
+`hasMore` **har doim** to'g'ri, chunki u `count()`dan emas, sahifadan bitta
+ortiq qator o'qishdan keladi (`take = limit + 1`, ortiqchasi klientga
+bermaydi). «Keyingi sahifa» tugmasiga kerak bo'lgani ham aynan shu.
+
+Frontend'da forma select'lari (`useRefLists()`) `withTotal: false` bilan
+so'raydi — picker hech qachon «1–100, jami 137» yozmaydi — va `staleTime`
+5 daqiqa. Ilgari har forma ochilishida 3 ta so'rov ketardi: bir daqiqada
+to'rt marta ochilgan reys oynasi — 12 ta so'rov, yiliga bir necha marta
+o'zgaradigan avtopark ro'yxati uchun.
+
+### N+1 lar
+
+- **`events.service`** — `batch` ichida har hodisa uchun alohida `trip` va
+  `file` so'rovi ketardi. Endi reyslar va fayl id'lari **bittadan so'rov**
+  bilan oldindan o'qiladi; reys statusi o'zgargan hodisadan keyin xotiradagi
+  nusxa yangilanadi, ya'ni ketma-ket hodisalar to'g'ri zanjirda ko'riladi.
+- **`files.referencedFileIds`** — `trip_events` ni to'liq o'qib, `photoFileIds`
+  ni kodda solishtirardi. Endi jsonb `?|` operatori bilan bazada:
+  `WHERE photo_file_ids ?| $1::text[]`.
+- **`ledger.overdueFor`** — mijozning butun ledger tarixini (DEBIT ham, CREDIT
+  ham) qator-baqator o'qirdi. Endi faqat DEBIT'lar qator sifatida, CREDIT'lar
+  esa **bitta yig'indi** bo'lib keladi; natija o'zgarmaydi, chunki to'lovlar
+  baribir eng eski hisob-fakturadan boshlab yopiladi.

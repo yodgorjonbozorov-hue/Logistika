@@ -33,8 +33,8 @@ export class TripsController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListTripsDto) {
-    const { data, total } = await this.tripsService.list(user, filter);
-    return paginated(data, filter, total);
+    const page = await this.tripsService.list(user, filter);
+    return paginated(page, filter);
   }
 
   @Post()

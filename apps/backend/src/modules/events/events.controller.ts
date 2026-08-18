@@ -23,7 +23,7 @@ export class EventsController {
   @Get()
   @Roles(UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT, UserRole.DRIVER)
   async listByTrip(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListEventsDto) {
-    const { data, total } = await this.eventsService.listByTrip(user, filter);
-    return paginated(data, filter, total);
+    const page = await this.eventsService.listByTrip(user, filter);
+    return paginated(page, filter);
   }
 }

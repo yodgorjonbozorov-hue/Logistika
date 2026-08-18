@@ -33,8 +33,8 @@ export class ExpensesController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListExpensesDto) {
-    const { data, total } = await this.expensesService.listExpenses(user, filter);
-    return paginated(data, filter, total);
+    const page = await this.expensesService.listExpenses(user, filter);
+    return paginated(page, filter);
   }
 
   @Post()
@@ -90,8 +90,8 @@ export class IncomesController {
 
   @Get()
   async list(@CurrentUser() user: CurrentUserPayload, @Query() filter: ListExpensesDto) {
-    const { data, total } = await this.expensesService.listIncomes(user, filter);
-    return paginated(data, filter, total);
+    const page = await this.expensesService.listIncomes(user, filter);
+    return paginated(page, filter);
   }
 
   @Post()

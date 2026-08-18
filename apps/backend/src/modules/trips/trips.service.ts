@@ -23,6 +23,7 @@ import {
   StartTripDto,
   UpdateTripDto,
 } from './dto/trip.dto';
+import { readPage, type Page } from '../../common/dto/pagination.dto';
 
 const EDITABLE_STATUSES: TripStatus[] = ['DRAFT', 'ASSIGNED'];
 
@@ -46,10 +47,7 @@ export class TripsService {
     private readonly currency: CurrencyService,
   ) {}
 
-  async list(
-    actor: CurrentUserPayload,
-    filter: ListTripsDto,
-  ): Promise<{ data: Trip[]; total: number }> {
+  async list(actor: CurrentUserPayload, filter: ListTripsDto): Promise<Page<Trip>> {
     const db = this.prisma.forCompany(actor.companyId);
     const where: Prisma.TripWhereInput = {
       status: filter.status,
@@ -58,17 +56,17 @@ export class TripsService {
       clientId: filter.clientId,
       createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
-    const [data, total] = await Promise.all([
-      db.trip.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: filter.skip,
-        take: filter.limit,
-        include: { client: true, vehicle: true, driver: true },
-      }),
-      db.trip.count({ where }),
-    ]);
-    return { data, total };
+    return readPage(
+      filter,
+      (page) =>
+        db.trip.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: { client: true, vehicle: true, driver: true },
+          ...page,
+        }),
+      () => db.trip.count({ where }),
+    );
   }
 
   /** Driver app: the logged-in driver's active trips (resolved via their profile). */

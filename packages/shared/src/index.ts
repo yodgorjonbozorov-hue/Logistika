@@ -12,7 +12,17 @@ export interface ApiError {
 export interface PaginationMeta {
   page: number;
   limit: number;
-  total: number;
+  /**
+   * How many rows match, or null when the count was skipped.
+   *
+   * Counting a large table means scanning it, and the two tables that grow
+   * without bound — expenses and driver events — pay that on every page. A
+   * client that only needs "is there another page" asks for `withTotal=false`
+   * and reads `hasMore` instead.
+   */
+  total: number | null;
+  /** Whether a further page exists. Always present, never needs a count. */
+  hasMore: boolean;
 }
 
 export interface ApiMeta {
