@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -13,7 +12,8 @@ import {
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { PositionBatchDto } from './dto/position.dto';
+import { ThrottleIngest } from '../../common/throttle/throttle';
+import { PositionBatchDto, TrackHistoryDto } from './dto/position.dto';
 import { TrackingService } from './tracking.service';
 
 @Controller('tracking')
@@ -22,6 +22,7 @@ export class TrackingController {
 
   @Post('positions')
   @Roles(UserRole.DRIVER)
+  @ThrottleIngest()
   @HttpCode(HttpStatus.OK)
   ingestPositions(@CurrentUser() user: CurrentUserPayload, @Body() dto: PositionBatchDto) {
     return this.trackingService.ingestPositions(user, dto);
@@ -38,19 +39,8 @@ export class TrackingController {
   history(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id', ParseUUIDPipe) vehicleId: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
+    @Query() query: TrackHistoryDto,
   ) {
-    const fromDate = from ? new Date(from) : undefined;
-    const toDate = to ? new Date(to) : undefined;
-    if (
-      !fromDate ||
-      Number.isNaN(fromDate.getTime()) ||
-      !toDate ||
-      Number.isNaN(toDate.getTime())
-    ) {
-      throw new BadRequestException(['from and to must be valid ISO dates']);
-    }
-    return this.trackingService.history(user, vehicleId, fromDate, toDate);
+    return this.trackingService.history(user, vehicleId, query);
   }
 }

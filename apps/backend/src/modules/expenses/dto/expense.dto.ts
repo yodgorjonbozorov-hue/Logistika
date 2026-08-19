@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import {
   IsDateString,
   IsEnum,
@@ -6,11 +6,12 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
 import { Currency, ExpenseCategory, PaymentStatus } from 'shared';
-import { IsTiyin } from '../../../common/dto/money';
+import { IsPositiveTiyin, IsTiyin } from '../../../common/dto/money';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class CreateExpenseDto {
@@ -29,7 +30,7 @@ export class CreateExpenseDto {
   @IsEnum(ExpenseCategory)
   category!: ExpenseCategory;
 
-  @IsTiyin()
+  @IsPositiveTiyin()
   amount!: string;
 
   @IsOptional()
@@ -62,9 +63,22 @@ export class CreateExpenseDto {
 
   @IsDateString()
   expenseDate!: string;
+
+  /**
+   * Client-generated idempotency key. Re-sending the same key returns the
+   * original row instead of booking the money a second time (H-3).
+   */
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_:-]{8,64}$/, {
+    message: 'clientTxId must be 8-64 chars of [A-Za-z0-9_:-]',
+  })
+  clientTxId?: string;
 }
 
-export class UpdateExpenseDto extends PartialType(CreateExpenseDto) {}
+/** The idempotency key belongs to the creating request only — it is not editable. */
+export class UpdateExpenseDto extends PartialType(
+  OmitType(CreateExpenseDto, ['clientTxId'] as const),
+) {}
 
 export class ListExpensesDto extends PaginationDto {
   @IsOptional()
@@ -89,7 +103,7 @@ export class CreateIncomeDto {
   @IsUUID()
   clientId?: string;
 
-  @IsTiyin()
+  @IsPositiveTiyin()
   amount!: string;
 
   @IsOptional()
@@ -113,6 +127,18 @@ export class CreateIncomeDto {
   @IsOptional()
   @IsEnum(PaymentStatus)
   status?: PaymentStatus;
+
+  /**
+   * Client-generated idempotency key. Re-sending the same key returns the
+   * original row instead of booking the money a second time (H-3).
+   */
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_:-]{8,64}$/, {
+    message: 'clientTxId must be 8-64 chars of [A-Za-z0-9_:-]',
+  })
+  clientTxId?: string;
 }
 
-export class UpdateIncomeDto extends PartialType(CreateIncomeDto) {}
+export class UpdateIncomeDto extends PartialType(
+  OmitType(CreateIncomeDto, ['clientTxId'] as const),
+) {}

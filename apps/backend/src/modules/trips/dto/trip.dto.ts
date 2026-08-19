@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import {
+  IsDate,
   IsDateString,
   IsEnum,
   IsInt,
@@ -153,11 +154,18 @@ export class ListTripsDto extends PaginationDto {
   @IsUUID()
   clientId?: string;
 
+  /**
+   * `@Type(() => Date)` alone turns `?from=abc` into an Invalid Date, which
+   * reached PostgreSQL and came back as a 500. `@IsDate` rejects it as a 400
+   * before the query is ever built (M-6).
+   */
   @IsOptional()
   @Type(() => Date)
+  @IsDate()
   from?: Date;
 
   @IsOptional()
   @Type(() => Date)
+  @IsDate()
   to?: Date;
 }

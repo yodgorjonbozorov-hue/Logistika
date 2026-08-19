@@ -1,9 +1,24 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": "..",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
-  "transform": { "^.+\\.ts$": "ts-jest" },
-  "moduleNameMapper": { "^shared$": "<rootDir>/../../../packages/shared/src/index.ts" },
-  "passWithNoTests": true
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "setupFiles": [
+    "<rootDir>/test/setup-env.ts",
+    "<rootDir>/src/common/serialization.ts"
+  ],
+  "moduleNameMapper": {
+    "^shared$": "<rootDir>/../../packages/shared/src/index.ts",
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "testTimeout": 60000,
+  "globalSetup": "<rootDir>/test/global-setup.ts",
+  "maxWorkers": 1
 }

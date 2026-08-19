@@ -126,6 +126,9 @@ model Company {
   tariffPlan        String?   @map("tariff_plan")
   subscriptionUntil DateTime? @map("subscription_until")
   isActive          Boolean   @default(true) @map("is_active")
+  // Per-tenant trip counter — allocated with an atomic UPDATE ... RETURNING
+  // instead of count()+1, which raced and rescanned the table (H-6).
+  nextTripNumber    Int       @default(1) @map("next_trip_number")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   users         User[]
@@ -177,6 +180,9 @@ model RefreshToken {
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
   tokenHash String    @unique @map("token_hash")
+  // Rotation chain id: every refresh keeps the family, so replaying a token
+  // that was already rotated lets us revoke the whole family (M-5).
+  familyId  String    @map("family_id")
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -184,6 +190,7 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([familyId])
   @@map("refresh_tokens")
 }
 
@@ -207,12 +214,12 @@ model Driver {
   isActive      Boolean     @default(true) @map("is_active")
   createdAt     DateTime    @default(now()) @map("created_at")
 
-  company      Company       @relation(fields: [companyId], references: [id])
-  user         User?         @relation(fields: [userId], references: [id])
-  trips        Trip[]
-  tripEvents   TripEvent[]
-  expenses     Expense[]
-  fuelLogs     FuelLog[]
+  company    Company     @relation(fields: [companyId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+  trips      Trip[]
+  tripEvents TripEvent[]
+  expenses   Expense[]
+  fuelLogs   FuelLog[]
 
   @@index([companyId])
   @@map("drivers")
@@ -251,16 +258,16 @@ model Vehicle {
 }
 
 model Client {
-  id               String  @id @default(uuid())
-  companyId        String  @map("company_id")
+  id               String   @id @default(uuid())
+  companyId        String   @map("company_id")
   name             String
   inn              String?
-  contactPerson    String? @map("contact_person")
+  contactPerson    String?  @map("contact_person")
   phone            String?
   email            String?
   address          String?
-  paymentTermsDays Int?    @map("payment_terms_days")
-  balance          BigInt  @default(0)
+  paymentTermsDays Int?     @map("payment_terms_days")
+  balance          BigInt   @default(0)
   createdAt        DateTime @default(now()) @map("created_at")
 
   company Company  @relation(fields: [companyId], references: [id])
@@ -305,12 +312,12 @@ model Trip {
   createdById       String?    @map("created_by")
   createdAt         DateTime   @default(now()) @map("created_at")
 
-  company   Company    @relation(fields: [companyId], references: [id])
-  client    Client?    @relation(fields: [clientId], references: [id])
-  vehicle   Vehicle?   @relation("TripVehicle", fields: [vehicleId], references: [id])
-  trailer   Vehicle?   @relation("TripTrailer", fields: [trailerId], references: [id])
-  driver    Driver?    @relation(fields: [driverId], references: [id])
-  createdBy User?      @relation("TripCreatedBy", fields: [createdById], references: [id])
+  company       Company        @relation(fields: [companyId], references: [id])
+  client        Client?        @relation(fields: [clientId], references: [id])
+  vehicle       Vehicle?       @relation("TripVehicle", fields: [vehicleId], references: [id])
+  trailer       Vehicle?       @relation("TripTrailer", fields: [trailerId], references: [id])
+  driver        Driver?        @relation(fields: [driverId], references: [id])
+  createdBy     User?          @relation("TripCreatedBy", fields: [createdById], references: [id])
   events        TripEvent[]
   expenses      Expense[]
   fuelLogs      FuelLog[]
@@ -320,6 +327,8 @@ model Trip {
 
   @@unique([companyId, tripNumber])
   @@index([companyId, status])
+  @@index([companyId, driverId, status])
+  @@index([companyId, vehicleId, status])
   @@map("trips")
 }
 
@@ -337,7 +346,7 @@ model TripEvent {
   comment       String?
   photoUrls     Json?         @map("photo_urls")
   // Client-generated UUID for idempotent offline batch sync (TZ §3.1).
-  clientEventId String?       @unique @map("client_event_id")
+  clientEventId String?       @map("client_event_id")
   isSynced      Boolean       @default(true) @map("is_synced")
   createdAt     DateTime      @default(now()) @map("created_at")
 
@@ -345,7 +354,11 @@ model TripEvent {
   trip    Trip    @relation(fields: [tripId], references: [id])
   driver  Driver? @relation(fields: [driverId], references: [id])
 
+  // Tenant-scoped: a global unique key let one company's client UUID collide
+  // with another's, which surfaced as a 500 instead of a clean duplicate.
+  @@unique([companyId, clientEventId])
   @@index([companyId, tripId, eventTime])
+  @@index([companyId, driverId, eventTime])
   @@map("trip_events")
 }
 
@@ -366,6 +379,8 @@ model Expense {
   receiptPhoto  String?         @map("receipt_photo")
   paymentMethod String?         @map("payment_method")
   expenseDate   DateTime        @map("expense_date")
+  /// Client-supplied idempotency key: a retried POST returns the first row (H-3).
+  clientTxId    String?         @map("client_tx_id")
   createdById   String?         @map("created_by")
   isApproved    Boolean         @default(false) @map("is_approved")
   createdAt     DateTime        @default(now()) @map("created_at")
@@ -375,7 +390,9 @@ model Expense {
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
   driver  Driver?  @relation(fields: [driverId], references: [id])
 
+  @@unique([companyId, clientTxId])
   @@index([companyId, expenseDate])
+  @@index([companyId, tripId])
   @@map("expenses")
 }
 
@@ -416,13 +433,18 @@ model Income {
   paymentMethod String?       @map("payment_method")
   invoiceNumber String?       @map("invoice_number")
   status        PaymentStatus @default(PENDING)
+  /// Client-supplied idempotency key: a retried POST returns the first row (H-3).
+  clientTxId    String?       @map("client_tx_id")
   createdAt     DateTime      @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
   trip    Trip?   @relation(fields: [tripId], references: [id])
   client  Client? @relation(fields: [clientId], references: [id])
 
+  @@unique([companyId, clientTxId])
   @@index([companyId, status])
+  @@index([companyId, tripId])
+  @@index([companyId, clientId, status])
   @@map("incomes")
 }
 
@@ -445,7 +467,12 @@ model GpsTrack {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   trip    Trip?   @relation(fields: [tripId], references: [id])
 
-  @@index([companyId, vehicleId, recordedAt])
+  // recorded_at DESC on purpose: the two hot reads are "latest fix per vehicle"
+  // (DISTINCT ON … ORDER BY vehicle_id, recorded_at DESC) and a bounded route
+  // window. An ASC index cannot produce that mixed ordering, so PostgreSQL fell
+  // back to sorting the whole table; a backward scan still serves ASC ranges.
+  @@index([companyId, vehicleId, recordedAt(sort: Desc)])
+  @@index([companyId, tripId, recordedAt(sort: Desc)])
   @@map("gps_tracks")
 }
 
@@ -573,6 +600,7 @@ model SmsCode {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([phone])
+  @@index([expiresAt])
   @@map("sms_codes")
 }
 
@@ -592,5 +620,6 @@ model AuditLog {
   company Company? @relation(fields: [companyId], references: [id])
 
   @@index([companyId, entityType, createdAt])
+  @@index([companyId, entityType, entityId])
   @@map("audit_logs")
 }

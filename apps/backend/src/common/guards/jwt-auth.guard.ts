@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import type { CurrentUserPayload, UserRole } from 'shared';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AppException } from '../exceptions/app.exception';
+import { SessionStateService } from './session-state.service';
 
 interface AccessTokenPayload {
   sub: string;
@@ -19,6 +20,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly reflector: Reflector,
+    private readonly sessionState: SessionStateService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,21 +36,28 @@ export class JwtAuthGuard implements CanActivate {
       throw new AppException('AUTH_TOKEN_INVALID', HttpStatus.UNAUTHORIZED);
     }
 
+    let payload: AccessTokenPayload;
     try {
-      const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
+      payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
-      request.user = {
-        userId: payload.sub,
-        companyId: payload.companyId,
-        role: payload.role,
-      };
-      return true;
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         throw new AppException('AUTH_TOKEN_EXPIRED', HttpStatus.UNAUTHORIZED);
       }
       throw new AppException('AUTH_TOKEN_INVALID', HttpStatus.UNAUTHORIZED);
     }
+
+    // M-17: a valid signature is not the same as a valid session. A deactivated
+    // user, a suspended company or a lapsed subscription must stop working now,
+    // not whenever the access token happens to expire.
+    await this.sessionState.assertUsable(payload.sub);
+
+    request.user = {
+      userId: payload.sub,
+      companyId: payload.companyId,
+      role: payload.role,
+    };
+    return true;
   }
 }

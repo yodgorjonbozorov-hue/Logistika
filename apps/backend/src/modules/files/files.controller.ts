@@ -12,16 +12,17 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AppException } from '../../common/exceptions/app.exception';
+import { ThrottleUpload } from '../../common/throttle/throttle';
 import { FilesService } from './files.service';
-
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 @Controller('files')
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
+  @ThrottleUpload()
+  // Limits are configured centrally in FilesModule's MulterModule factory.
+  @UseInterceptors(FileInterceptor('file'))
   upload(@CurrentUser() user: CurrentUserPayload, @UploadedFile() file?: Express.Multer.File) {
     if (!file) {
       throw new AppException('VALIDATION_FAILED', HttpStatus.BAD_REQUEST, undefined, [

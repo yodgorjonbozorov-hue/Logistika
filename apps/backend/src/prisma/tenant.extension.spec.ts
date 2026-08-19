@@ -65,6 +65,65 @@ describe('applyTenantScope', () => {
   });
 });
 
+/**
+ * C-4 — the tenant pointer in a WRITE PAYLOAD is attacker input.
+ *
+ * The scope used to be applied to `where` only, so an authenticated user of
+ * company A could hand company B one of A's rows simply by putting
+ * `companyId` in the body: the row was found (A's scope) and then updated to
+ * B's id. Every write path is checked here.
+ */
+describe('applyTenantScope — tenant pointer injection (C-4)', () => {
+  const HOSTILE = { companyId: 'company-b', company: { connect: { id: 'company-b' } } };
+
+  it('refuses to move a row to another tenant via update data', () => {
+    const result = applyTenantScope(
+      'update',
+      { where: { id: 'trip-1' }, data: { cargoName: 'x', ...HOSTILE } },
+      COMPANY_A,
+    );
+    expect(result.where).toEqual({ id: 'trip-1', companyId: COMPANY_A });
+    expect(result.data).toEqual({ cargoName: 'x' });
+  });
+
+  it.each(['updateMany', 'updateManyAndReturn'])('sanitises %s data', (operation) => {
+    const result = applyTenantScope(
+      operation,
+      { where: { status: 'DRAFT' }, data: { status: 'CANCELLED', ...HOSTILE } },
+      COMPANY_A,
+    );
+    expect(result.where).toEqual({ status: 'DRAFT', companyId: COMPANY_A });
+    expect(result.data).toEqual({ status: 'CANCELLED' });
+  });
+
+  it('sanitises both branches of an upsert', () => {
+    const result = applyTenantScope(
+      'upsert',
+      { where: { id: 'x' }, create: { name: 'n', ...HOSTILE }, update: { name: 'n', ...HOSTILE } },
+      COMPANY_A,
+    );
+    expect(result.create).toEqual({ name: 'n', companyId: COMPANY_A });
+    expect(result.update).toEqual({ name: 'n' });
+  });
+
+  it('ignores a nested company relation on create', () => {
+    const result = applyTenantScope('create', { data: { name: 'X', ...HOSTILE } }, COMPANY_A);
+    expect(result.data).toEqual({ name: 'X', companyId: COMPANY_A });
+  });
+
+  it('sanitises every row of createManyAndReturn', () => {
+    const result = applyTenantScope(
+      'createManyAndReturn',
+      { data: [{ name: 'a', ...HOSTILE }, { name: 'b' }] },
+      COMPANY_A,
+    );
+    expect(result.data).toEqual([
+      { name: 'a', companyId: COMPANY_A },
+      { name: 'b', companyId: COMPANY_A },
+    ]);
+  });
+});
+
 describe('TENANT_MODELS completeness', () => {
   it('covers every schema model that has a companyId column (except intentional exclusions)', () => {
     const intentionallyUnscoped = new Set(['Company', 'RefreshToken', 'AuditLog', 'TrackingLink']);

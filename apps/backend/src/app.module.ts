@@ -3,11 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
+import { ThrottleModule } from './common/throttle/throttle.module';
+import { AppThrottlerGuard } from './common/throttle/throttle';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { SessionStateService } from './common/guards/session-state.service';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { validateEnv } from './config/env.validation';
-import { HealthController } from './health.controller';
+import { HealthModule } from './health/health.module';
 import { I18nModule } from './i18n/i18n.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -28,6 +31,7 @@ import { PrismaModule } from './prisma/prisma.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     ScheduleModule.forRoot(),
+    ThrottleModule,
     PrismaModule,
     I18nModule,
     AuditModule,
@@ -43,11 +47,15 @@ import { PrismaModule } from './prisma/prisma.module';
     ExpensesModule,
     FilesModule,
     PublicLinkModule,
+    HealthModule,
   ],
-  controllers: [HealthController],
   providers: [
+    SessionStateService,
+    // Order matters: authentication first so the throttler can bucket per user
+    // instead of per shared office IP, then roles, then the rate limiter.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ApiResponseInterceptor },
     { provide: APP_FILTER, useClass: AppExceptionFilter },
   ],

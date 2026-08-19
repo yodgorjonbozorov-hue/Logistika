@@ -14,5 +14,11 @@
   "TRIP_INVALID_STATUS": "Reys holatini bu tartibda o'zgartirib bo'lmaydi",
   "SMS_CODE_INVALID": "Tasdiqlash kodi noto'g'ri yoki muddati tugagan",
   "FILE_TYPE_NOT_ALLOWED": "Bu turdagi faylni yuklash mumkin emas",
+  "DRIVER_PROFILE_MISSING": "Hisobingizga haydovchi profili biriktirilmagan. Logistga murojaat qiling",
+  "RATE_LIMITED": "Juda ko'p urinish. Biroz kutib qayta urinib ko'ring",
+  "CONFLICT": "Ma'lumot shu orada o'zgardi, sahifani yangilab qayta urinib ko'ring",
+  "ODOMETER_INVALID": "Yakuniy spidometr ko'rsatkichi boshlang'ichdan kichik bo'lishi mumkin emas",
+  "RESOURCE_BUSY": "Bu haydovchi yoki texnika allaqachon boshqa faol reysda",
+  "SERVICE_UNAVAILABLE": "Xizmat vaqtincha mavjud emas. Birozdan so'ng qayta urinib ko'ring",
   "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang"
 }

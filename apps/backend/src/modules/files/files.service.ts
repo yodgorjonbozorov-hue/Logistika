@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { StoredFile } from '@prisma/client';
 import * as Minio from 'minio';
@@ -7,13 +7,18 @@ import sharp from 'sharp';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  detectFileType,
+  EXTENSION_BY_TYPE,
+  sanitizeOriginalName,
+  type DetectedType,
+} from './file-type';
 
 /** Photos are downscaled before storage — 1500px is enough for OCR (TZ §8.3). */
 const MAX_IMAGE_DIMENSION = 1500;
 const SIGNED_URL_TTL_SECONDS = 15 * 60;
 
-const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const ALLOWED_MIMES = new Set([...IMAGE_MIMES, 'application/pdf']);
+const IMAGE_TYPES: ReadonlySet<DetectedType> = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export interface UploadedFileInput {
   buffer: Buffer;
@@ -22,7 +27,7 @@ export interface UploadedFileInput {
 }
 
 @Injectable()
-export class FilesService {
+export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
   private readonly client: Minio.Client;
   private readonly bucket: string;
@@ -36,27 +41,52 @@ export class FilesService {
     this.client = new Minio.Client({
       endPoint: config.get<string>('MINIO_ENDPOINT') ?? 'localhost',
       port: Number(config.get<string>('MINIO_PORT') ?? 9000),
-      useSSL: config.get<string>('MINIO_USE_SSL') === 'true',
+      // The config schema coerces this to a real boolean, so the old
+      // `=== 'true'` string comparison was ALWAYS false — TLS would have been
+      // silently off against a remote object store, sending the access key in
+      // cleartext. Accept both shapes and default to off only when unset.
+      useSSL:
+        config.get<boolean | string>('MINIO_USE_SSL') === true ||
+        config.get<boolean | string>('MINIO_USE_SSL') === 'true',
       accessKey: config.get<string>('MINIO_ROOT_USER') ?? 'truckcontrol',
       secretKey: config.get<string>('MINIO_ROOT_PASSWORD') ?? '',
     });
   }
 
+  /**
+   * Provision the bucket at boot rather than on the first upload.
+   *
+   * Lazily creating it meant a freshly deployed instance reported "storage
+   * down" on the readiness probe until somebody happened to upload a photo.
+   * A failure here is logged, not fatal: the API is still useful without
+   * uploads, and readiness will keep saying so until storage recovers.
+   */
+  async onModuleInit(): Promise<void> {
+    await this.ensureBucket().catch((error: unknown) => {
+      this.logger.warn(
+        `Object storage not ready at boot: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+  }
+
   async upload(actor: CurrentUserPayload, file: UploadedFileInput): Promise<StoredFile> {
-    if (!ALLOWED_MIMES.has(file.mimetype)) {
+    // M-10: the whitelist is checked against the SNIFFED type, never against
+    // the client-declared Content-Type, which is free text an attacker picks.
+    const detected = detectFileType(file.buffer);
+    if (!detected) {
       throw new AppException(
         'FILE_TYPE_NOT_ALLOWED',
         HttpStatus.UNSUPPORTED_MEDIA_TYPE,
         undefined,
-        {
-          mimeType: file.mimetype,
-        },
+        { declared: file.mimetype },
       );
     }
 
     let body = file.buffer;
-    let mimeType = file.mimetype;
-    if (IMAGE_MIMES.has(file.mimetype)) {
+    let mimeType: DetectedType = detected;
+    if (IMAGE_TYPES.has(detected)) {
+      // Re-encoding is also a sanitiser: it drops EXIF (including GPS), any
+      // trailing polyglot payload, and anything sharp itself refuses to parse.
       body = await sharp(file.buffer)
         .rotate() // respect EXIF orientation
         .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
@@ -68,11 +98,16 @@ export class FilesService {
       mimeType = 'image/jpeg';
     }
 
-    // Object keys are tenant-prefixed so bucket listings can never cross companies.
-    const key = `${actor.companyId}/${randomUUID()}${mimeType === 'application/pdf' ? '.pdf' : '.jpg'}`;
+    // Object keys are tenant-prefixed so bucket listings can never cross
+    // companies, and every component is server-generated — no client string
+    // ever reaches the key (path traversal).
+    const key = `${actor.companyId}/${randomUUID()}${EXTENSION_BY_TYPE[mimeType]}`;
     await this.ensureBucket();
     await this.client.putObject(this.bucket, key, body, body.length, {
       'Content-Type': mimeType,
+      // Belt and braces for anything that later serves the object directly.
+      'X-Amz-Meta-Original-Type': detected,
+      'Content-Disposition': 'attachment',
     });
 
     return this.prisma.forCompany(actor.companyId).storedFile.create({
@@ -81,7 +116,7 @@ export class FilesService {
         key,
         mimeType,
         size: body.length,
-        originalName: file.originalname,
+        originalName: sanitizeOriginalName(file.originalname),
         createdById: actor.userId,
       },
     });

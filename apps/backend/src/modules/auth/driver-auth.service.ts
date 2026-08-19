@@ -47,8 +47,11 @@ export class DriverAuthService {
     ]);
     await this.sms.send(phone, this.i18n.translate('SMS_LOGIN_CODE', 'uz-latn', { code }));
 
-    const isDev = this.config.get<string>('NODE_ENV') !== 'production';
-    return isDev ? { sent: true, devCode: code } : { sent: true };
+    // M-4: POSITIVE check. The old `!== 'production'` meant any typo or unset
+    // NODE_ENV (staging, PRODUCTION, empty) leaked the login code in the HTTP
+    // response. Only an explicit development build ever sees it.
+    const isDevelopment = this.config.get<string>('NODE_ENV') === 'development';
+    return isDevelopment ? { sent: true, devCode: code } : { sent: true };
   }
 
   async verify(phone: string, code: string): Promise<AuthTokens> {

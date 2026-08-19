@@ -29,6 +29,14 @@ const config = {
   get: (key: string) => ({ MINIO_BUCKET: 'test-bucket' })[key],
 } as unknown as ConfigService;
 
+/** Real signatures — uploads are now classified by content, not by header. */
+const PNG_BYTES = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('rest-of-a-png'),
+]);
+const PDF_BYTES = Buffer.from('%PDF-1.4 rest-of-a-pdf');
+const WINDOWS_EXE_BYTES = Buffer.concat([Buffer.from('MZ'), Buffer.from('\x90\x00\x03payload')]);
+
 describe('FilesService', () => {
   function setup() {
     const { prisma, db } = createTenantDbMock(['storedFile']);
@@ -46,6 +54,34 @@ describe('FilesService', () => {
     expect(putObject).not.toHaveBeenCalled();
   });
 
+  it('rejects a payload whose CONTENT is not an allowed type, whatever it claims (M-10)', async () => {
+    const { service } = setup();
+    await expect(
+      service.upload(ACTOR, {
+        buffer: WINDOWS_EXE_BYTES,
+        mimetype: 'image/jpeg', // the attacker picks this header freely
+        originalname: 'invoice.jpg',
+      }),
+    ).rejects.toMatchObject({ code: 'FILE_TYPE_NOT_ALLOWED' });
+    expect(putObject).not.toHaveBeenCalled();
+  });
+
+  it('strips path components from the stored original name (path traversal)', async () => {
+    const { service, db } = setup();
+    db.storedFile!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+      Promise.resolve({ id: 'f1', ...data }),
+    );
+
+    await service.upload(ACTOR, {
+      buffer: PDF_BYTES,
+      mimetype: 'application/pdf',
+      originalname: '../../../etc/passwd',
+    });
+
+    expect(db.storedFile!.create!.mock.calls[0][0].data.originalName).toBe('passwd');
+    expect(putObject.mock.calls[0][1]).toMatch(/^company-a\/[0-9a-f-]{36}\.pdf$/);
+  });
+
   it('compresses images and stores them under a tenant-prefixed key', async () => {
     const { service, db } = setup();
     db.storedFile!.create!.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
@@ -53,7 +89,7 @@ describe('FilesService', () => {
     );
 
     await service.upload(ACTOR, {
-      buffer: Buffer.from('raw-image'),
+      buffer: PNG_BYTES,
       mimetype: 'image/png',
       originalname: 'check.png',
     });
@@ -72,11 +108,11 @@ describe('FilesService', () => {
       Promise.resolve({ id: 'f1', ...data }),
     );
 
-    await service.upload(ACTOR, { buffer: Buffer.from('%PDF-1.4'), mimetype: 'application/pdf' });
+    await service.upload(ACTOR, { buffer: PDF_BYTES, mimetype: 'application/pdf' });
 
     const key = putObject.mock.calls[0][1] as string;
     expect(key.endsWith('.pdf')).toBe(true);
-    expect(putObject.mock.calls[0][2].toString()).toBe('%PDF-1.4');
+    expect(putObject.mock.calls[0][2].toString()).toBe(PDF_BYTES.toString());
   });
 
   it('signed URL lookup is tenant-scoped (missing file → NOT_FOUND)', async () => {

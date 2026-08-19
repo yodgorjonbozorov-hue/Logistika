@@ -3,7 +3,9 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsDate,
   IsDateString,
+  IsInt,
   IsNumber,
   IsOptional,
   IsUUID,
@@ -49,4 +51,37 @@ export class PositionBatchDto {
   @ValidateNested({ each: true })
   @Type(() => PositionDto)
   positions!: PositionDto[];
+}
+
+/**
+ * Route history window (H-8).
+ *
+ * `from`/`to` used to be unbounded strings: a single request could ask for a
+ * whole year of 5-second GPS fixes and stream millions of rows into memory.
+ * The window is now capped, validated, and paged with a hard `take`.
+ */
+export const MAX_HISTORY_RANGE_DAYS = 31;
+export const MAX_HISTORY_POINTS = 5000;
+
+export class TrackHistoryDto {
+  @Type(() => Date)
+  @IsDate()
+  from!: Date;
+
+  @Type(() => Date)
+  @IsDate()
+  to!: Date;
+
+  /** Opaque forward cursor: the `recordedAt` of the last point already seen. */
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  after?: Date;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_HISTORY_POINTS)
+  limit: number = 1000;
 }

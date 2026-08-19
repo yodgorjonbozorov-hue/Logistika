@@ -52,6 +52,12 @@ export class TripsController {
     return this.tripsService.getById(user, id);
   }
 
+  /** Per-trip P&L, aggregated in the database (M-9). */
+  @Get(':id/finance')
+  finance(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
+    return this.tripsService.finance(user, id);
+  }
+
   @Patch(':id')
   @Roles(UserRole.OWNER, UserRole.LOGIST)
   update(

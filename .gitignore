@@ -34,3 +34,6 @@ mobile/**/.dart_tool/
 mobile/**/.flutter-plugins*
 mobile/**/ios/Pods/
 mobile/**/*.iml
+
+# TypeScript incremental build info (L-1)
+*.tsbuildinfo

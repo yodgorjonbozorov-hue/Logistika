@@ -125,20 +125,70 @@ describe('AuthService', () => {
       usersService.findById.mockResolvedValue(user);
       const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
       const storedHash = prisma.refreshToken.create.mock.calls[0][0].data.tokenHash;
+      const familyId = prisma.refreshToken.create.mock.calls[0][0].data.familyId;
       prisma.refreshToken.findUnique.mockResolvedValue({
         id: 'rt-1',
+        userId: 'user-1',
         tokenHash: storedHash,
+        familyId,
         revokedAt: null,
         expiresAt: new Date(Date.now() + 86_400_000),
       });
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
 
       const newTokens = await service.refresh(refreshToken);
 
       expect(newTokens.accessToken).toBeTruthy();
-      expect(prisma.refreshToken.update).toHaveBeenCalledWith({
-        where: { id: 'rt-1' },
+      // Rotation is a conditional update so two parallel refreshes cannot both win.
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rt-1', revokedAt: null },
         data: { revokedAt: expect.any(Date) },
       });
+      // The replacement token stays in the same family (M-5).
+      expect(prisma.refreshToken.create.mock.calls[1][0].data.familyId).toBe(familyId);
+    });
+
+    it('revokes the whole family when an already-rotated token is replayed (M-5)', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'family-1',
+        revokedAt: new Date(), // already rotated → replay
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_INVALID',
+      });
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { familyId: 'family-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'REFRESH_REUSE_DETECTED' }),
+      );
+    });
+
+    it('loses a concurrent rotation race without minting a second pair', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'family-1',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+      prisma.refreshToken.updateMany.mockResolvedValue({ count: 0 }); // somebody else won
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_INVALID',
+      });
+      expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1); // login only
     });
 
     it('rejects a revoked refresh token', async () => {
@@ -146,6 +196,8 @@ describe('AuthService', () => {
       const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
       prisma.refreshToken.findUnique.mockResolvedValue({
         id: 'rt-1',
+        userId: 'user-1',
+        familyId: 'family-1',
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 86_400_000),
       });

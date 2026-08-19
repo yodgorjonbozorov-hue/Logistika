@@ -66,6 +66,12 @@ export class DriverEventDto {
   photoFileIds?: string[];
 }
 
+/** GET /events — tripId is REQUIRED so the endpoint can never dump a whole company (H-1). */
+export class ListEventsDto {
+  @IsUUID()
+  tripId!: string;
+}
+
 export class EventBatchDto {
   @IsArray()
   @ArrayMinSize(1)

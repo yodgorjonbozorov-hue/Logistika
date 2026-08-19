@@ -1,5 +1,4 @@
-import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
-import type { EventsService } from '../events/events.service';
+import { ACTOR, createDriversStub, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { TrackingService } from './tracking.service';
 
 const DRIVER_ACTOR = { ...ACTOR, role: 'DRIVER' } as typeof ACTOR;
@@ -8,10 +7,7 @@ describe('TrackingService.ingestPositions', () => {
   function setup() {
     const { prisma, db } = createTenantDbMock(['trip', 'gpsTrack']);
     db.gpsTrack!.createMany = jest.fn().mockResolvedValue({ count: 0 });
-    const eventsService = {
-      requireDriverProfile: jest.fn().mockResolvedValue({ id: 'd1' }),
-    } as unknown as EventsService;
-    const service = new TrackingService(prisma, eventsService);
+    const service = new TrackingService(prisma, createDriversStub({ id: 'd1' }));
     return { service, db };
   }
 

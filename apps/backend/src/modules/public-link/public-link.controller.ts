@@ -3,6 +3,7 @@ import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ThrottlePublic } from '../../common/throttle/throttle';
 import { PublicLinkService } from './public-link.service';
 
 @Controller()
@@ -17,6 +18,7 @@ export class PublicLinkController {
   }
 
   @Public()
+  @ThrottlePublic()
   @Get('public/track/:token')
   publicView(@Param('token') token: string) {
     return this.publicLinkService.publicView(token);
