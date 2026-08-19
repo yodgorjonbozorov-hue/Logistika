@@ -11,6 +11,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Repo-darajasidagi build skriptlari Node muhitida ishlaydi.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+  },
+  {
     rules: {
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],

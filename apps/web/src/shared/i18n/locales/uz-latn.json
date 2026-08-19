@@ -26,7 +26,9 @@
     "password": "Parol",
     "submit": "Kirish",
     "loggingIn": "Kirilmoqda…",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "demoNotice": "Backend ulanmagan — bu faqat interfeys ko'rinishi.",
+    "demoLink": "Namoyish rejimini ochish"
   },
   "common": {
     "actions": "Amallar",

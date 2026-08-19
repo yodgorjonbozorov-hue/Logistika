@@ -27,6 +27,13 @@ function RouteGraphic() {
   );
 }
 
+/**
+ * A build without `VITE_API_URL` cannot reach an API, so a hosted preview of
+ * the web app alone would strand visitors on a login form that can never
+ * succeed. Point them at the self-contained demo instead.
+ */
+const HAS_API = Boolean(import.meta.env.VITE_API_URL);
+
 export function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
@@ -100,6 +107,18 @@ export function LoginPage() {
           <Button type="submit" size="lg" block loading={busy}>
             {busy ? t('auth.loggingIn') : t('auth.submit')}
           </Button>
+
+          {HAS_API ? null : (
+            <p className="pt-2 text-center text-footnote text-ink-tertiary">
+              {t('auth.demoNotice')}{' '}
+              <a
+                href="/demo"
+                className="font-medium text-brand-primary underline-offset-2 hover:underline"
+              >
+                {t('auth.demoLink')}
+              </a>
+            </p>
+          )}
         </form>
       </div>
     </div>

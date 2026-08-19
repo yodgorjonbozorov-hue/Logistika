@@ -134,3 +134,56 @@ Docker healthcheck yoqilgan. Tashqi monitoring uchun shu ikki manzilni ishlating
   `*` emas.
 - Yangilanishlardan keyin `docker image prune -f` bilan eski image'larni
   tozalang.
+
+## 8. Vercel (faqat frontend)
+
+Vercel statik saytlarni xosting qiladi — NestJS backend, PostgreSQL, Redis va
+MinIO baribir yuqoridagi Compose stack'da qoladi. Vercel'ga faqat `apps/web`
+chiqadi va u ikki manzilni beradi:
+
+| Manzil  | Nima            | Talab                                 |
+| ------- | --------------- | ------------------------------------- |
+| `/`     | Haqiqiy ilova   | `VITE_API_URL` ishlaydigan backend'ga |
+| `/demo` | Namoyish (mock) | Yo'q — brauzerda mustaqil ishlaydi    |
+
+Sozlamalar `vercel.json` da yozilgan, dashboard'da qo'lda kiritish shart emas:
+
+| Sozlama          | Qiymat                           |
+| ---------------- | -------------------------------- |
+| Framework        | Other (`null`)                   |
+| Root Directory   | `.` (repo ildizi)                |
+| Install Command  | `pnpm install --frozen-lockfile` |
+| Build Command    | `pnpm build:vercel`              |
+| Output Directory | `apps/web/dist`                  |
+
+### Qadamlar
+
+1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → shu repo.
+2. **Environment Variables** → `VITE_API_URL` = `https://api.<domen>/api/v1`
+   (Production va Preview uchun ham). Bu qiymat build vaqtida bundle ichiga
+   kiradi — o'zgartirgandan keyin qayta deploy qilish kerak.
+3. Deploy. Birinchi build ~2 daqiqa.
+4. Backend `.env.production` da `WEB_URL` ni Vercel domeniga o'zgartiring
+   (CORS shu qiymatni tekshiradi) va backend'ni qayta ishga tushiring:
+
+   ```bash
+   WEB_URL=https://<loyiha>.vercel.app
+   docker compose -f docker-compose.prod.yml --env-file .env.production up -d backend
+   ```
+
+5. Backend HTTPS ostida bo'lishi shart — Vercel sahifasi `https://`, shuning
+   uchun `http://` API'ga so'rov brauzer tomonidan bloklanadi (mixed content).
+
+`VITE_API_URL` berilmasa build baribir o'tadi, lekin `/` dagi kirish formasi
+API'ni topa olmaydi — shu holatda forma ostida `/demo` ga havola ko'rsatiladi.
+
+### CLI orqali (ixtiyoriy)
+
+```bash
+pnpm dlx vercel@latest link          # loyihani bog'lash
+pnpm dlx vercel@latest env add VITE_API_URL production
+pnpm dlx vercel@latest --prod        # deploy
+```
+
+CI'dan chiqarish uchun `VERCEL_TOKEN` kerak (Vercel → Account Settings →
+Tokens); token faqat CI secret'ida saqlanadi, repoda emas.

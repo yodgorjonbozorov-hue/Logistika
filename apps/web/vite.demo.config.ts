@@ -3,8 +3,12 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import path from 'node:path';
 
-/** Self-contained preview build — see src/demo/main.tsx. */
+/**
+ * Self-contained preview build — see src/demo/main.tsx. It is served from
+ * `/demo` on the deployment, so its asset URLs carry that prefix.
+ */
 export default defineConfig({
+  base: '/demo/',
   plugins: [react()],
   resolve: {
     alias: {

@@ -61,4 +61,12 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 Migratsiyalar, birinchi superadmin, HTTPS va backup — [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
+### Frontend Vercel'da
+
+Web ilovani alohida Vercel'ga chiqarish mumkin — sozlamalar `vercel.json` da:
+repo'ni [vercel.com/new](https://vercel.com/new) da import qiling va
+`VITE_API_URL` ni backend manziliga qo'ying. `/demo` manzili API'siz,
+mock ma'lumot bilan ishlaydigan namoyish rejimini beradi.
+Batafsil — [`docs/DEPLOY.md` §8](docs/DEPLOY.md).
+
 Batafsil — [`CLAUDE.md`](CLAUDE.md).
