@@ -5,6 +5,7 @@
   "description": "TruckControl AI \u2014 NestJS API",
   "scripts": {
     "dev": "nest start --watch",
+    "prebuild": "pnpm --filter shared build",
     "build": "nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",

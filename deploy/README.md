@@ -137,3 +137,94 @@ a client can forge `X-Forwarded-For` and walk straight past the IP rate limits.
 Put real certificates in `deploy/certs/{fullchain.pem,privkey.pem}`. For
 Let's Encrypt, point certbot's webroot at the `/.well-known/acme-challenge/`
 location already configured in `deploy/nginx.conf`.
+
+## Web build configuration
+
+`VITE_API_URL` is baked into the bundle at build time and **must** be set for a
+production build:
+
+```
+VITE_API_URL=https://api.truckcontrol.uz/api/v1
+```
+
+On Vercel it belongs in the project's environment variables. The build refuses
+to run without it (`apps/web/vite.config.ts`) — the client's fallback is
+`http://localhost:3000/api/v1`, so a bundle built without it asks each
+visitor's own machine for data over plain HTTP, fails for everyone, and looks
+perfectly healthy from the build log.
+
+The origin in `VITE_API_URL` must also appear in the `connect-src` directive of
+the CSP in `apps/web/vercel.json`, and in the API's `WEB_URL` (which is the only
+origin CORS allows).
+
+## Staging
+
+`deploy/staging/` brings up a complete, production-shaped environment on one
+host: PostgreSQL, Redis, MinIO, the built API (`node dist/main.js`, not
+`nest start`), the built web bundle, and nginx with TLS in front of both.
+
+```bash
+# hostnames used by the staging vhosts
+echo "127.0.0.1 staging.truckcontrol.local api.staging.truckcontrol.local" >> /etc/hosts
+
+SUPERADMIN_EMAIL=admin@staging.local SUPERADMIN_PASSWORD="$(openssl rand -base64 24)" \
+  bash deploy/staging/up.sh          # generates secrets on first run
+bash deploy/staging/down.sh
+```
+
+`up.sh` refuses to run against a database whose name does not end in
+`_staging`, checks every dependency is genuinely reachable before building,
+applies migrations, verifies there is no drift, and waits for the API's own
+readiness probe before starting nginx.
+
+## Smoke tests
+
+`deploy/smoke-test.sh` verifies a **running deployment**, which is a different
+question from whether the tests pass. It covers PostgreSQL (connectivity,
+migration state, every tenant table scoped), Redis, object storage, the TLS
+edge (protocol versions, HTTP/2, security headers, the redirect), the web
+bundle (SPA fallback, cache policy, no secrets), API health and readiness,
+authentication (including the httpOnly/Secure/SameSite refresh cookie), CORS,
+tenant isolation and RBAC over the wire, the finance figures, file upload
+through to the object store, payload limits and rate limiting.
+
+```bash
+# against the local staging stack
+SUPERADMIN_EMAIL=… SUPERADMIN_PASSWORD=… bash deploy/smoke-test.sh
+
+# against any other deployment
+BASE_URL=https://api.example.uz WEB_BASE_URL=https://app.example.uz \
+  bash deploy/smoke-test.sh
+```
+
+The exit code is the number of failed checks. A plain-HTTP `BASE_URL` means the
+API is being exercised directly, and the edge/bundle sections announce
+themselves as skipped rather than failing checks that do not apply — that is how
+the `deployment-smoke` CI job runs it against the built artefacts.
+
+For the browser half — the shipped bundle actually reaching the shipped API
+across origins, with the CSP and the refresh cookie in play — run:
+
+```bash
+STAGING_WEB_URL=https://staging.truckcontrol.local \
+STAGING_EMAIL=… STAGING_PASSWORD=… STAGING_BROWSER_DIRECT=1 \
+  pnpm --filter web exec playwright test --project=staging
+```
+
+## Migration and rollback drill
+
+Rehearsed on staging, not assumed:
+
+1. Restore the previous release's backup into a scratch database.
+2. `prisma migrate deploy` — confirm every pre-existing row is unchanged.
+3. Roll back by restoring the pre-migration backup: the migration history goes
+   back to its previous length and the new tables disappear.
+4. `prisma migrate deploy` again to roll forward.
+
+Prisma has no down-migrations, so **restore-from-backup is the rollback path**.
+That is only true if the backup is fresh, which is why the migrate job warns
+when a pending migration contains `DROP TABLE`, `DROP COLUMN` or `TRUNCATE`.
+
+An additive migration (a new table, nullable columns) is rollback-safe in a
+second sense: the previous application version keeps running against the new
+schema, so the code can be rolled back without touching the database at all.

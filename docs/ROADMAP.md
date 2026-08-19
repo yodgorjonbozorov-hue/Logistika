@@ -93,17 +93,32 @@
 
 ## 7-bosqich — Moliya yadrosi
 
-- [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
-      (faqat deterministik kod, BigInt)
-- [ ] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
-      chegara oshsa signal (default 7%, `ai_settings.fuel_deviation_threshold`)
+- [x] `finance`: TZ §6 formulalari — reys foydasi, 1 km tannarxi, marja (bp), oylik
+      dinamika (faqat deterministik kod, butun sonli BigInt arifmetikasi)
+- [x] `routes`: yo'nalish ma'lumotnomasi (soft delete — tarixiy hisobotlar buzilmasin),
+      reysga `routeId`, yo'nalish bo'yicha foyda
+- [x] `fuel`: jurnal (idempotent, audit bilan), norma-taqqoslash, W-8 nazorat jadvali,
+      chegara oshsa belgi (default 7%)
 - [ ] `maintenance`: TO tarixi, keyingi TO rejasi
 - [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
 - [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
-- [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
-      xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
-- [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
+- [ ] `reports`: Excel/PDF eksport (dashboard va hisobot ko'rinishlari tayyor)
+- [x] Web: W-1 dashboard (daromad/xarajat/foyda, reys, mashina, yo'nalish, yoqilg'i,
+      oylar taqqoslash), W-7 moliya, W-8 yoqilg'i
+- [ ] Web: W-9 eksport, W-10 ogohlantirishlar
+- [x] Moliya testlari: 35 unit (yaxlitlash, chegara, BigInt aniqligi) + 47 e2e
+      (haqiqiy PostgreSQL: har son qo'lda hisoblangan, tenant izolyatsiyasi,
+      RBAC, idempotentlik, audit)
+
+### Deployment (7-bosqich bilan birga)
+
+- [x] Real staging muhiti: PostgreSQL 16 + Redis + MinIO + build qilingan API
+      (`node dist/main.js`) + web bundle + nginx TLS (`deploy/staging/`)
+- [x] `deploy/smoke-test.sh` — har servis uchun smoke test (89 tekshiruv)
+- [x] Migratsiya + rollback mashqi: to'ldirilgan bazada migratsiya, backup'dan
+      qaytarish, qayta oldinga surish
+- [x] CI: `deployment-smoke` job (build qilingan artefaktlar ustida), migratsiya
+      job'idagi drift tekshiruvi tuzatildi
 
 ## 8-bosqich — AI funksiyalari (TZ §8)
 

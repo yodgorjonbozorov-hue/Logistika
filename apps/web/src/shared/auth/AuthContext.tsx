@@ -1,5 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import type { AuthTokens } from 'shared';
 import { api, restoreSession, tokenStore } from '../api/client';
 import type { User } from '../api/entities';
@@ -22,6 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // before any request can succeed.
   const [restoring, setRestoring] = useState(() => tokenStore.hasSession);
 
+  // Subscribed, not read once: `login()` and the silent refresh both write the
+  // token from outside React, and without a subscription this component never
+  // re-rendered — the query below stayed disabled and the route guard kept
+  // seeing a logged-out user immediately after a successful login.
+  const session = useSyncExternalStore(
+    tokenStore.subscribe,
+    tokenStore.getSnapshot,
+    tokenStore.getSnapshot,
+  );
+
   useEffect(() => {
     if (!restoring) return;
     let cancelled = false;
@@ -36,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user = null, isLoading } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api<User>('/auth/me')).data,
-    enabled: !restoring && Boolean(tokenStore.access),
+    enabled: !restoring && session.hasAccess,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -80,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading: restoring || isLoading,
-        hasSession: tokenStore.hasSession,
+        hasSession: session.hasSession,
         login,
         logout,
       }}

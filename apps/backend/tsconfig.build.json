@@ -1,0 +1,32 @@
+{
+  // Build configuration — what `nest build` and the Docker image compile with.
+  //
+  // It differs from tsconfig.json in one respect that matters enormously: the
+  // `shared` package resolves to its BUILT declaration file rather than to its
+  // source.
+  //
+  // tsconfig.json points `shared` at `packages/shared/src/index.ts` so that a
+  // clean clone typechecks and tests before anything has been built. But that
+  // pulls a file from outside `apps/backend` into the program, tsc widens the
+  // inferred rootDir to the repository root to accommodate it, and the emit
+  // lands in `dist/apps/backend/src/main.js` with `dist/packages/...` beside
+  // it. Every `node dist/main.js` in the repo — the `start` script, the
+  // Dockerfile CMD, deploy/README.md — then points at a file that does not
+  // exist, and the production container exits immediately on boot.
+  //
+  // Resolving `shared` through its declarations keeps the program inside
+  // `src/`, so the emit is flat and `dist/main.js` is where everything expects
+  // it. At runtime the import resolves through the pnpm workspace link to
+  // `packages/shared/dist/index.js`, which the image already carries.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "declaration": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "shared": ["../../packages/shared/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "prisma", "**/*.spec.ts"]
+}

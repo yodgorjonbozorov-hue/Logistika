@@ -87,14 +87,26 @@ export class FilesService implements OnModuleInit {
     if (IMAGE_TYPES.has(detected)) {
       // Re-encoding is also a sanitiser: it drops EXIF (including GPS), any
       // trailing polyglot payload, and anything sharp itself refuses to parse.
-      body = await sharp(file.buffer)
-        .rotate() // respect EXIF orientation
-        .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 82 })
-        .toBuffer();
+      try {
+        body = await sharp(file.buffer)
+          .rotate() // respect EXIF orientation
+          .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: 82 })
+          .toBuffer();
+      } catch (error) {
+        // A photo truncated by a dropped mobile connection has the right magic
+        // bytes and a corrupt body, so it passes the sniff and then makes sharp
+        // throw. Left unhandled that is a 500, and the driver app's offline
+        // queue re-sends the same broken bytes forever. It is the client's
+        // problem, so it gets a 4xx it can act on.
+        this.logger.warn(
+          `Rejected an unreadable image upload: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw new AppException('FILE_CORRUPT', HttpStatus.BAD_REQUEST);
+      }
       mimeType = 'image/jpeg';
     }
 

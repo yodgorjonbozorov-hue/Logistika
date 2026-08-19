@@ -157,6 +157,22 @@ describe('File upload security (M-10)', () => {
     await api(app).post('/api/v1/files/upload').set(auth(owner.accessToken)).expect(400);
   });
 
+  it('rejects a truncated image as a client error, not a 500', async () => {
+    // The magic bytes are a valid PNG header and the body is not: exactly what
+    // a photo interrupted by a dropped mobile connection looks like. Sharp
+    // throws on it, and an unhandled throw here is a 500 the driver app's
+    // offline queue would retry forever.
+    const truncated = Buffer.concat([REAL_PNG.subarray(0, 16), Buffer.alloc(64, 0xff)]);
+    const response = await api(app)
+      .post('/api/v1/files/upload')
+      .set(auth(owner.accessToken))
+      .attach('file', truncated, { filename: 'broken.png', contentType: 'image/png' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('FILE_CORRUPT');
+    expect(await prisma.storedFile.count()).toBe(0);
+  });
+
   it('refuses a file beyond the configured size ceiling', async () => {
     const oversized = Buffer.concat([REAL_PDF, Buffer.alloc(16 * 1024 * 1024, 0x20)]);
     const response = await api(app)

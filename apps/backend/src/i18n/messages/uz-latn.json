@@ -20,5 +20,7 @@
   "ODOMETER_INVALID": "Yakuniy spidometr ko'rsatkichi boshlang'ichdan kichik bo'lishi mumkin emas",
   "RESOURCE_BUSY": "Bu haydovchi yoki texnika allaqachon boshqa faol reysda",
   "SERVICE_UNAVAILABLE": "Xizmat vaqtincha mavjud emas. Birozdan so'ng qayta urinib ko'ring",
-  "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang"
+  "SMS_LOGIN_CODE": "TruckControl: kirish kodi {code}. Uni hech kimga bermang",
+  "FILE_CORRUPT": "Fayl buzilgan yoki rasm emas. Boshqa foto yuklang",
+  "PAYLOAD_TOO_LARGE": "So'rov hajmi juda katta"
 }

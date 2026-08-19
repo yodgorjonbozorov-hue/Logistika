@@ -33,21 +33,63 @@ export class ApiError extends Error {
  */
 let accessToken: string | null = null;
 
+/**
+ * The store is observable, and that is not a refinement — it is what makes
+ * logging in work at all.
+ *
+ * `AuthProvider` reads the session out of here to decide whether to fetch the
+ * current user and whether the route guard should let anyone through. While
+ * this was a plain module variable, `login()` wrote the token and NOTHING
+ * re-rendered: the `/auth/me` query stayed disabled, the context kept handing
+ * out `hasSession: false`, and `ProtectedRoute` bounced the freshly
+ * authenticated user straight back to /login. React's own
+ * `useSyncExternalStore` is the supported way to read mutable external state,
+ * so the store publishes a snapshot and notifies on every change.
+ */
+export interface SessionSnapshot {
+  /** An access token is held in memory, so requests can be made right now. */
+  hasAccess: boolean;
+  /** A refresh cookie is expected to exist — the session may still be restoring. */
+  hasSession: boolean;
+}
+
+const readFlag = (): boolean =>
+  typeof localStorage !== 'undefined' && localStorage.getItem(SESSION_FLAG) === '1';
+
+// Cached: getSnapshot must return a referentially stable value between changes,
+// or useSyncExternalStore re-renders forever.
+let snapshot: SessionSnapshot = { hasAccess: false, hasSession: readFlag() };
+const listeners = new Set<() => void>();
+
+function publish(): void {
+  snapshot = { hasAccess: accessToken !== null, hasSession: readFlag() };
+  for (const listener of listeners) listener();
+}
+
 export const tokenStore = {
   get access(): string | null {
     return accessToken;
   },
   /** True when a refresh cookie is expected to exist — not a credential. */
   get hasSession(): boolean {
-    return localStorage.getItem(SESSION_FLAG) === '1';
+    return readFlag();
   },
   set(access: string) {
     accessToken = access;
     localStorage.setItem(SESSION_FLAG, '1');
+    publish();
   },
   clear() {
     accessToken = null;
     localStorage.removeItem(SESSION_FLAG);
+    publish();
+  },
+  subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  },
+  getSnapshot(): SessionSnapshot {
+    return snapshot;
   },
 };
 

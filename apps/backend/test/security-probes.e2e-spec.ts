@@ -201,13 +201,19 @@ describe('Security probes', () => {
   });
 
   describe('oversized payloads', () => {
-    it('refuses a body beyond the configured JSON limit', async () => {
+    it('refuses a body beyond the configured JSON limit with a 413, not a 500', async () => {
       const response = await api(app)
         .post('/api/v1/clients')
         .set(auth(owner.accessToken))
         .send({ name: 'x', address: 'A'.repeat(5 * 1024 * 1024) });
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
+      // This used to assert only `>= 400`, and body-parser's
+      // PayloadTooLargeError reached the filter as an unmapped Error — so the
+      // real answer was 500 INTERNAL_ERROR and the assertion happily passed.
+      // A client cannot tell "you sent too much" from "the server is broken",
+      // and the mobile queue retries the latter forever.
+      expect(response.status).toBe(413);
+      expect(response.body.error.code).toBe('PAYLOAD_TOO_LARGE');
       expect(await prisma.client.count()).toBe(0);
     });
 

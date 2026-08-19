@@ -154,7 +154,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter shared build
       - run: pnpm --filter web exec playwright install --with-deps chromium
+      # A production build refuses to guess where the API lives. These tests
+      # never call it, so the origin is deliberately unreachable rather than
+      # absent — an absent one used to silently bake in http://localhost:3000.
       - run: pnpm --filter web build
+        env:
+          VITE_API_URL: https://api.example.invalid/api/v1
       - name: Responsive smoke tests
         run: pnpm --filter web exec playwright test
         env:
@@ -219,6 +224,19 @@ jobs:
       - run: pnpm --filter shared build
       - run: pnpm --filter backend exec prisma generate
       - run: pnpm build
+        env:
+          VITE_API_URL: https://api.example.invalid/api/v1
+
+      # The Dockerfile's CMD is `node dist/main.js`. When the backend's build
+      # config lets a file outside `src/` into the program, tsc widens the
+      # rootDir and the emit lands in `dist/apps/backend/src/` instead — the
+      # image then exits immediately on boot with MODULE_NOT_FOUND, and nothing
+      # in the build says so.
+      - name: Assert the API entrypoint is where the image expects it
+        run: |
+          test -f apps/backend/dist/main.js \
+            || { echo "::error::apps/backend/dist/main.js is missing — the Docker CMD would fail"; \
+                 find apps/backend/dist -name main.js; exit 1; }
 
       - name: Build the API image
         uses: docker/build-push-action@v6
@@ -231,6 +249,110 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ---------------------------------------------------------------------------
+  # Deployment smoke test — the BUILT artefacts, not the source.
+  #
+  # Every other job tests code. This one starts `node dist/main.js` exactly as
+  # the container does, against real PostgreSQL, Redis and MinIO, applies the
+  # migrations with `migrate deploy`, seeds, and then runs deploy/smoke-test.sh
+  # against it. It exists because a deployment can be broken in ways no unit or
+  # e2e test can see: a build that emits the entrypoint somewhere else, a config
+  # the process refuses to boot with, a probe that never turns green.
+  # ---------------------------------------------------------------------------
+  deployment-smoke:
+    name: deployment smoke (built artefacts)
+    runs-on: ubuntu-latest
+    needs: static
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: truckcontrol
+          POSTGRES_PASSWORD: truckcontrol
+          POSTGRES_DB: truckcontrol_staging
+          TZ: UTC
+          PGTZ: UTC
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U truckcontrol"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ROOT_USER: truckcontrol
+          MINIO_ROOT_PASSWORD: truckcontrol-minio-ci-password
+          MINIO_DEFAULT_BUCKETS: truckcontrol-staging
+        ports: ['9000:9000']
+        options: >-
+          --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    env:
+      NODE_ENV: production
+      API_PORT: '3000'
+      DATABASE_URL: postgresql://truckcontrol:truckcontrol@127.0.0.1:5432/truckcontrol_staging?schema=public
+      REDIS_URL: redis://127.0.0.1:6379
+      # Throwaway values generated for this run only; production secrets live in
+      # the environment, never here.
+      JWT_ACCESS_SECRET: ci-deployment-access-secret-at-least-32-chars
+      JWT_REFRESH_SECRET: ci-deployment-refresh-secret-at-least-32-chars
+      WEB_URL: https://staging.example.invalid
+      TRUST_PROXY: '0'
+      MINIO_ENDPOINT: 127.0.0.1
+      MINIO_PORT: '9000'
+      MINIO_ROOT_USER: truckcontrol
+      MINIO_ROOT_PASSWORD: truckcontrol-minio-ci-password
+      MINIO_BUCKET: truckcontrol-staging
+      MINIO_USE_SSL: 'false'
+      SUPERADMIN_EMAIL: admin@staging.example.invalid
+      SUPERADMIN_PASSWORD: ci-superadmin-password-2026
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter shared build
+      - run: pnpm --filter backend exec prisma generate
+      - run: pnpm --filter backend build
+
+      - name: Migrate and seed
+        run: |
+          pnpm --filter backend exec prisma migrate deploy
+          pnpm --filter backend exec prisma db seed
+
+      - name: Start the API the way the container does
+        working-directory: apps/backend
+        run: |
+          node dist/main.js > /tmp/api.log 2>&1 &
+          echo $! > /tmp/api.pid
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3000/api/v1/health/ready >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "::error::the API never became ready"; cat /tmp/api.log; exit 1
+
+      - name: Smoke test
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          # The API is configured to allow this origin, so the CORS checks
+          # assert what the deployment was actually told.
+          WEB_BASE_URL: https://staging.example.invalid
+        run: bash deploy/smoke-test.sh
+
+      - name: API log
+        if: always()
+        run: tail -100 /tmp/api.log || true
+
+  # ---------------------------------------------------------------------------
   # Migrations run in their own environment-gated job, NEVER as part of a build.
   #
   # This is the rule the audit is most emphatic about: a frontend build must not
@@ -240,9 +362,25 @@ jobs:
   migrate:
     name: migrate production database
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, deployment-smoke]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production-database # requires a reviewer approval to proceed
+
+    # A throwaway database to replay the migration history into. It never sees
+    # production data — it exists so the migrations can be validated against the
+    # model BEFORE the production database is touched.
+    services:
+      shadow:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: shadow
+          POSTGRES_PASSWORD: shadow
+          POSTGRES_DB: shadow
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U shadow"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -253,20 +391,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter backend exec prisma generate
 
-      # Fail loudly if the live schema has drifted from the migration history:
-      # applying migrations on top of an unexpected schema is how data is lost.
-      - name: Check for schema drift
+      # What is actually pending, and has anything failed halfway before?
+      # `migrate status` exits non-zero on a failed or unrecognised migration.
+      - name: Migration status
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: pnpm --filter backend exec prisma migrate status
+
+      # Replay the whole history into the shadow database and compare the
+      # result with schema.prisma. A migration that does not produce the model
+      # it claims to is caught here, without production being involved at all.
+      #
+      # This replaces a check that compared the LIVE database with
+      # schema.prisma *before* applying anything: with a pending migration the
+      # live schema differs by definition, so that gate failed every deployment
+      # that had migrations to apply — which is every deployment this job runs
+      # for. Verified against a database one release behind.
+      - name: Migrations must produce exactly schema.prisma
         run: |
           cd apps/backend
           npx prisma migrate diff \
-            --from-schema-datasource prisma/schema.prisma \
+            --from-migrations prisma/migrations \
             --to-schema-datamodel prisma/schema.prisma \
-            --script > /tmp/drift.sql
-          if ! grep -q "This is an empty migration" /tmp/drift.sql; then
-            echo "::error::Live schema differs from schema.prisma — resolve the drift before deploying."
-            cat /tmp/drift.sql
+            --shadow-database-url postgresql://shadow:shadow@127.0.0.1:5433/shadow \
+            --script > /tmp/history-vs-model.sql
+          if ! grep -q "This is an empty migration" /tmp/history-vs-model.sql; then
+            echo "::error::The migration history does not produce schema.prisma."
+            cat /tmp/history-vs-model.sql
             exit 1
           fi
 
@@ -281,3 +432,21 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: pnpm --filter backend exec prisma migrate deploy
+
+      # Now the comparison against the live database is meaningful: after
+      # applying, anything still different is drift somebody introduced by hand,
+      # and the exact SQL to reconcile it is printed.
+      - name: Confirm the live schema now matches schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          cd apps/backend
+          npx prisma migrate diff \
+            --from-schema-datasource prisma/schema.prisma \
+            --to-schema-datamodel prisma/schema.prisma \
+            --script > /tmp/drift.sql
+          if ! grep -q "This is an empty migration" /tmp/drift.sql; then
+            echo "::error::Live schema still differs from schema.prisma after applying migrations — someone changed it by hand."
+            cat /tmp/drift.sql
+            exit 1
+          fi

@@ -16,7 +16,24 @@ const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   [HttpStatus.UNAUTHORIZED]: 'AUTH_TOKEN_INVALID',
   [HttpStatus.FORBIDDEN]: 'AUTH_FORBIDDEN',
   [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'PAYLOAD_TOO_LARGE',
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'FILE_TYPE_NOT_ALLOWED',
 };
+
+/**
+ * Express middleware throws plain Errors carrying an HTTP status, not
+ * HttpExceptions — body-parser's PayloadTooLargeError is the one that matters
+ * in practice. Without this, posting a body over the limit answered 500
+ * INTERNAL_ERROR, so a mobile client could not tell "you sent too much" from
+ * "the server is broken" and kept retrying a request that can never succeed.
+ */
+function statusFromMiddlewareError(exception: unknown): number | null {
+  if (typeof exception !== 'object' || exception === null) return null;
+  const candidate = exception as { status?: unknown; statusCode?: unknown; type?: unknown };
+  const status = typeof candidate.status === 'number' ? candidate.status : candidate.statusCode;
+  if (typeof status !== 'number' || status < 400 || status > 599) return null;
+  return status;
+}
 
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
@@ -50,10 +67,22 @@ export class AppExceptionFilter implements ExceptionFilter {
         if (Array.isArray(message)) details = message;
       }
     } else {
-      this.logger.error(
-        `Unhandled exception on ${request.method} ${request.url}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+      const middlewareStatus = statusFromMiddlewareError(exception);
+      if (middlewareStatus !== null) {
+        status = middlewareStatus;
+        code = STATUS_CODES[status] ?? 'INTERNAL_ERROR';
+        // Expected client-side failures; logged at warn so they do not read as
+        // application faults in the error budget.
+        this.logger.warn(
+          `${request.method} ${request.url} rejected with ${status}: ` +
+            (exception instanceof Error ? exception.message : String(exception)),
+        );
+      } else {
+        this.logger.error(
+          `Unhandled exception on ${request.method} ${request.url}`,
+          exception instanceof Error ? exception.stack : String(exception),
+        );
+      }
     }
 
     const body: ApiResponse<null> = {

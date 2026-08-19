@@ -19,7 +19,9 @@ export function LoginPage() {
     setError(null);
     try {
       await login(identifier, password);
-      navigate('/trips', { replace: true });
+      // "/" so the index route decides where a session lands; hard-coding a
+      // page here means two places to change and one of them gets forgotten.
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err);
     } finally {
