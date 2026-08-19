@@ -8,6 +8,7 @@ import type { Company } from '../shared/api/entities';
 import { useAuth } from '../shared/auth/AuthContext';
 import { setLocale } from '../shared/i18n';
 import { Avatar, Button, Icon, PageSkeleton, Sheet, initialsOf } from '../shared/ui';
+import { standing } from '../shared/utils/subscription';
 import { AccountMenu } from './AccountMenu';
 import { cn } from '../shared/utils/cn';
 
@@ -107,6 +108,7 @@ export function AppLayout() {
         <MobileTopBar companyName={company?.name ?? null} />
         {/* The bottom padding clears the tab bar plus the home indicator. */}
         <main className="flex-1 overflow-y-auto px-4 pb-[calc(76px+env(safe-area-inset-bottom))] pt-4 md:px-[26px] md:pb-10 md:pt-[22px]">
+          <SubscriptionBanner company={company ?? null} />
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
           </Suspense>
@@ -114,6 +116,45 @@ export function AppLayout() {
       </div>
       <TabBar openTrips={openTrips} />
       <span className="sr-only">{t('app.title')}</span>
+    </div>
+  );
+}
+
+/**
+ * Counts the last days of a subscription down in the app itself. Sign-in stops
+ * working the moment it lapses, so the only humane place to say so is before
+ * that happens — and the owner needs enough notice to renew.
+ */
+function SubscriptionBanner({ company }: { company: Company | null }) {
+  const { t } = useTranslation();
+  if (!company) return null;
+
+  const state = standing({
+    isActive: company.isActive,
+    subscriptionUntil: company.subscriptionUntil,
+  });
+  if (state.key !== 'expiring' || state.days === null) return null;
+
+  const urgent = state.days <= 2;
+  return (
+    <div
+      role="status"
+      className="mb-3 flex items-start gap-2.5 rounded-md px-3.5 py-2.5 text-[12.5px]"
+      style={{
+        color: urgent ? 'var(--color-danger-text)' : 'var(--color-warning-text)',
+        border: `1px solid color-mix(in srgb, ${
+          urgent ? 'var(--color-danger)' : 'var(--color-warning)'
+        } 45%, transparent)`,
+        background: `color-mix(in srgb, ${
+          urgent ? 'var(--color-danger)' : 'var(--color-warning)'
+        } 8%, transparent)`,
+      }}
+    >
+      <Icon name="clock-countdown" size={15} className="mt-px shrink-0" />
+      <span>
+        {t('subscription.expiring', { count: state.days })}{' '}
+        <span className="text-neutral-400">{t('subscription.expiringHint')}</span>
+      </span>
     </div>
   );
 }

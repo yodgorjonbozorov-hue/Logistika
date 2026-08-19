@@ -7,6 +7,7 @@ import { DriverAuthService } from './driver-auth.service';
 import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RegistrationService } from './registration.service';
 
@@ -65,5 +66,13 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.me(user.userId);
+  }
+
+  /** Changing your own password; every other session of yours is signed out. */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(@CurrentUser() user: CurrentUserPayload, @Body() dto: ChangePasswordDto) {
+    await this.authService.changePassword(user.userId, dto.currentPassword, dto.newPassword);
+    return { changed: true };
   }
 }

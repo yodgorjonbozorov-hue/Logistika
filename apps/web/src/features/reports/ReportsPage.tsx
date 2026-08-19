@@ -23,6 +23,7 @@ import {
   Spinner,
   Table,
 } from '../../shared/ui';
+import { exportCsv } from '../../shared/utils/csv';
 import { formatMillionsTiyin, formatTiyin } from '../../shared/utils/money';
 import { expensesByCategory, sumAmounts } from '../overview/metrics';
 
@@ -143,7 +144,39 @@ export function ReportsPage() {
                 label: t(`reports.periods.${value}`),
               }))}
             />
-            <Button variant="secondary" icon="export" className="hidden md:inline-flex">
+            <Button
+              variant="secondary"
+              icon="export"
+              className="hidden md:inline-flex"
+              disabled={isLoading}
+              onClick={() =>
+                exportCsv(
+                  `hisobot-${period}`,
+                  [
+                    { label: t('reports.revenue'), value: formatTiyin(report.revenue) },
+                    { label: t('reports.cost'), value: formatTiyin(report.cost) },
+                    { label: t('reports.netProfit'), value: formatTiyin(report.profit) },
+                    { label: t('status.COMPLETED'), value: String(report.completed) },
+                    ...report.categories.map((share) => ({
+                      label: `${t('reports.costBreakdown')}: ${t(`finance.categories.${share.category}`)}`,
+                      value: formatTiyin(share.amount),
+                    })),
+                    ...report.fleet.map((row) => ({
+                      label: `${t('reports.fleetUtilisation')}: ${row.label}`,
+                      value: `${row.km} km`,
+                    })),
+                    ...report.topDrivers.map((driver) => ({
+                      label: `${t('reports.driverPerformance')}: ${driver.label}`,
+                      value: `${driver.trips} / ${driver.km} km / ${formatTiyin(driver.revenue)}`,
+                    })),
+                  ],
+                  [
+                    { header: t('reports.title'), value: (row) => row.label },
+                    { header: t('finance.amountShort'), value: (row) => row.value },
+                  ],
+                )
+              }
+            >
               {t('reports.export')}
             </Button>
           </>

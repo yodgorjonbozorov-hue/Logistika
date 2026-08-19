@@ -17,6 +17,7 @@ import { CronModule } from './modules/cron/cron.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { FilesModule } from './modules/files/files.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
@@ -44,6 +45,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CronModule,
     ExpensesModule,
     FilesModule,
+    DocumentsModule,
     PublicLinkModule,
   ],
   controllers: [HealthController],

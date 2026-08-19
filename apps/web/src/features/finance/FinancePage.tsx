@@ -27,6 +27,7 @@ import {
   StatusChip,
   Table,
 } from '../../shared/ui';
+import { exportCsv } from '../../shared/utils/csv';
 import { formatDate } from '../../shared/utils/date';
 import { formatMillionsTiyin, formatTiyin, somToTiyin } from '../../shared/utils/money';
 import { PAYMENT_STATUS_TONE } from '../../shared/utils/status';
@@ -65,9 +66,6 @@ export function FinancePage() {
         subtitle={t('finance.subtitle')}
         actions={
           <>
-            <Button variant="secondary" icon="export" className="hidden md:inline-flex">
-              {t('common.export')}
-            </Button>
             <Button
               icon="plus"
               onClick={() =>
@@ -148,6 +146,32 @@ function IncomesTab() {
 
   return (
     <>
+      <div className="mb-3 hidden justify-end md:flex">
+        <Button
+          variant="secondary"
+          icon="export"
+          disabled={rows.length === 0}
+          onClick={() =>
+            exportCsv('kirimlar', rows, [
+              {
+                header: t('finance.date'),
+                value: (income) => formatDate(income.paymentDate ?? income.createdAt),
+              },
+              { header: t('trips.title'), value: (income) => tripNumber(income.tripId) },
+              { header: t('trips.client'), value: (income) => clientName(income.clientId) },
+              { header: t('finance.amountShort'), value: (income) => formatTiyin(income.amount) },
+              {
+                header: t('trips.status'),
+                value: (income) => t(`finance.paymentStatuses.${income.status}`),
+              },
+              { header: t('finance.method'), value: (income) => income.paymentMethod },
+              { header: t('finance.invoice'), value: (income) => income.invoiceNumber },
+            ])
+          }
+        >
+          {t('common.export')}
+        </Button>
+      </div>
       <div className="md:hidden">
         <ErrorMessage error={error ?? update.error} />
         <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
@@ -280,6 +304,33 @@ function ExpensesTab() {
 
   return (
     <>
+      <div className="mb-3 hidden justify-end md:flex">
+        <Button
+          variant="secondary"
+          icon="export"
+          disabled={rows.length === 0}
+          onClick={() =>
+            exportCsv('chiqimlar', rows, [
+              { header: t('finance.date'), value: (expense) => formatDate(expense.expenseDate) },
+              {
+                header: t('finance.category'),
+                value: (expense) => t(`finance.categories.${expense.category}`),
+              },
+              { header: t('trips.title'), value: (expense) => tripNumber(expense.tripId) },
+              { header: t('finance.amountShort'), value: (expense) => formatTiyin(expense.amount) },
+              { header: t('finance.method'), value: (expense) => expense.paymentMethod },
+              {
+                header: t('trips.status'),
+                value: (expense) =>
+                  t(expense.isApproved ? 'finance.approved' : 'finance.notApproved'),
+              },
+              { header: t('finance.description'), value: (expense) => expense.description },
+            ])
+          }
+        >
+          {t('common.export')}
+        </Button>
+      </div>
       <div className="md:hidden">
         <ErrorMessage error={error ?? post.error} />
         <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>

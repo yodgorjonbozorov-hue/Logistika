@@ -3,8 +3,8 @@
  * the product decision here, so they are pinned rather than left to the eye.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Company } from '../../shared/api/entities';
-import { daysLeft, standing } from './CompaniesPage';
+import type { Company } from '../api/entities';
+import { daysLeft, EXPIRY_WARNING_DAYS, standing } from './subscription';
 
 const NOW = new Date('2026-08-19T12:00:00.000Z');
 
@@ -53,6 +53,7 @@ describe('standing', () => {
   });
 
   it('warns from a week out', () => {
+    expect(EXPIRY_WARNING_DAYS).toBe(7);
     expect(standing(company({ subscriptionUntil: inDays(8) })).key).toBe('active');
     expect(standing(company({ subscriptionUntil: inDays(7) })).key).toBe('expiring');
     expect(standing(company({ subscriptionUntil: inDays(1) })).key).toBe('expiring');

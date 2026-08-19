@@ -39,6 +39,7 @@ describe('AuthService', () => {
       update: jest.Mock;
       updateMany: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let usersService: { findByIdentifier: jest.Mock; findById: jest.Mock };
   let audit: { log: jest.Mock };
@@ -63,13 +64,16 @@ describe('AuthService', () => {
     prisma = {
       user: { update: jest.fn() },
       // Every test tenant is in good standing unless a test says otherwise.
-      company: { findUnique: jest.fn().mockResolvedValue({ isActive: true }) },
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ isActive: true, subscriptionUntil: null }),
+      },
       refreshToken: {
         create: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
       },
+      $transaction: jest.fn().mockResolvedValue([]),
     };
     usersService = { findByIdentifier: jest.fn(), findById: jest.fn() };
     audit = { log: jest.fn() };
@@ -102,7 +106,7 @@ describe('AuthService', () => {
 
     it('refuses a suspended company, and never issues it a token', async () => {
       usersService.findByIdentifier.mockResolvedValue(user);
-      prisma.company.findUnique.mockResolvedValue({ isActive: false });
+      prisma.company.findUnique.mockResolvedValue({ isActive: false, subscriptionUntil: null });
 
       await expect(service.login('owner@test.uz', 'correct-password')).rejects.toMatchObject({
         code: 'AUTH_COMPANY_INACTIVE',
@@ -110,6 +114,40 @@ describe('AuthService', () => {
       });
       expect(prisma.refreshToken.create).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a lapsed subscription', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      prisma.company.findUnique.mockResolvedValue({
+        isActive: true,
+        subscriptionUntil: new Date(Date.now() - 60_000),
+      });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).rejects.toMatchObject({
+        code: 'AUTH_SUBSCRIPTION_EXPIRED',
+        httpStatus: 403,
+      });
+    });
+
+    it('lets a subscription that has not run out through', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      prisma.company.findUnique.mockResolvedValue({
+        isActive: true,
+        subscriptionUntil: new Date(Date.now() + 60_000),
+      });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).resolves.toEqual(
+        expect.objectContaining({ accessToken: expect.any(String) }),
+      );
+    });
+
+    it('treats an unset subscription date as "not billed yet", not as expired', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      prisma.company.findUnique.mockResolvedValue({ isActive: true, subscriptionUntil: null });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).resolves.toEqual(
+        expect.objectContaining({ accessToken: expect.any(String) }),
+      );
     });
 
     it('does not look for a company when the account has none (platform staff)', async () => {
@@ -194,7 +232,7 @@ describe('AuthService', () => {
         revokedAt: null,
         expiresAt: new Date(Date.now() + 86_400_000),
       });
-      prisma.company.findUnique.mockResolvedValue({ isActive: false });
+      prisma.company.findUnique.mockResolvedValue({ isActive: false, subscriptionUntil: null });
 
       await expect(service.refresh(refreshToken)).rejects.toMatchObject({
         code: 'AUTH_COMPANY_INACTIVE',
@@ -203,6 +241,53 @@ describe('AuthService', () => {
 
     it('rejects garbage tokens', async () => {
       await expect(service.refresh('not-a-jwt')).rejects.toBeInstanceOf(AppException);
+    });
+  });
+
+  describe('changePassword', () => {
+    it('rehashes the password and revokes every other session', async () => {
+      usersService.findById.mockResolvedValue(user);
+
+      await service.changePassword('user-1', 'correct-password', 'a-new-password');
+
+      // Both writes go through one transaction: a rehash without the revoke
+      // would leave the old sessions alive.
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect((prisma.$transaction.mock.calls[0][0] as unknown[]).length).toBe(2);
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'user-1' } }),
+      );
+      const hash = (prisma.user.update.mock.calls[0][0] as { data: { passwordHash: string } }).data
+        .passwordHash;
+      await expect(argon2.verify(hash, 'a-new-password')).resolves.toBe(true);
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ entityType: 'User' }));
+    });
+
+    it('refuses without the current password', async () => {
+      usersService.findById.mockResolvedValue(user);
+      await expect(
+        service.changePassword('user-1', 'not-the-password', 'a-new-password'),
+      ).rejects.toMatchObject({ code: 'AUTH_INVALID_CREDENTIALS' });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses to "change" a password to itself', async () => {
+      usersService.findById.mockResolvedValue(user);
+      await expect(
+        service.changePassword('user-1', 'correct-password', 'correct-password'),
+      ).rejects.toMatchObject({ code: 'AUTH_PASSWORD_UNCHANGED' });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses for an account that no longer exists', async () => {
+      usersService.findById.mockResolvedValue(null);
+      await expect(service.changePassword('ghost', 'a', 'b')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
     });
   });
 

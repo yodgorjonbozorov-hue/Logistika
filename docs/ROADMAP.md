@@ -37,6 +37,12 @@
 
 - [x] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
 - [x] `users` CRUD; haydovchi auth (telefon + SMS-kod, 5 daq TTL, 5 urinish, enumeratsiyasiz)
+- [x] `documents` moduli: list/create/update/delete, fayl `files` moduli orqali (signed URL),
+      muddat bo'yicha saralash va «tugayapti» filtri; web arxiv sahifasi to'liq ishlaydi
+- [x] CSV eksport: reyslar, kirim/chiqim, hisobot (formula-injection himoyasi bilan)
+- [x] O'z parolini almashtirish (`/auth/change-password`) — Sozlamalar → Xavfsizlik
+- [x] Obuna/to'xtatish enforcement: kirish va refresh'da tekshiriladi, ilovada
+      tugash haqida ogohlantiruvchi banner
 - [x] Superadmin paneli: `/admin` — kompaniyalar ro'yxati, yangi tenant + birinchi OWNER,
       tarif/obuna muddati/faollik; rol bo'yicha marshrutlash (platforma ↔ tenant)
 - [x] Ommaviy kuzatuv sahifasi (`/track/:token`) Nocturne'ga o'tkazildi va mobil uchun

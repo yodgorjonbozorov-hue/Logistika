@@ -93,6 +93,75 @@ export class CompaniesService {
     }
   }
 
+  /**
+   * Order matters: children before parents, and rows that reference other rows
+   * of the same tenant before the rows they point at. Postgres has no cascade
+   * on these relations — that is deliberate, so nothing can be deleted by
+   * accident — which means the order has to be spelled out here.
+   */
+  private static readonly TENANT_TABLES = [
+    'gps_track_archive',
+    'gps_tracks',
+    'tracking_links',
+    'trip_events',
+    'fuel_logs',
+    'expenses',
+    'incomes',
+    'documents',
+    'notifications',
+    'maintenances',
+    'audit_logs',
+    'stored_files',
+    'trips',
+    'drivers',
+    'vehicles',
+    'clients',
+  ] as const;
+
+  /**
+   * Removes a tenant and everything under it, in one transaction.
+   *
+   * Guarded by the company's own name: the caller has to type it back, so a
+   * mis-clicked row id cannot wipe a live customer. Refresh tokens go first —
+   * they hang off users, which hang off the company.
+   */
+  async adminDelete(
+    adminUserId: string,
+    id: string,
+    confirmName: string,
+  ): Promise<{ deleted: boolean; name: string }> {
+    const company = await this.prisma.company.findUnique({ where: { id } });
+    if (!company) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+    if (confirmName.trim() !== company.name) {
+      throw new AppException('CONFIRMATION_MISMATCH', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const users = await tx.user.findMany({ where: { companyId: id }, select: { id: true } });
+      const userIds = users.map((user) => user.id);
+      if (userIds.length > 0) {
+        await tx.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
+      }
+      for (const table of CompaniesService.TENANT_TABLES) {
+        await tx.$executeRawUnsafe(`DELETE FROM "${table}" WHERE company_id = $1`, id);
+      }
+      await tx.user.deleteMany({ where: { companyId: id } });
+      await tx.company.delete({ where: { id } });
+    });
+
+    // Logged after the fact and without a companyId: the company it referred to
+    // no longer exists, and the audit row must not dangle.
+    this.audit.log({
+      companyId: null,
+      userId: adminUserId,
+      action: 'DELETE',
+      entityType: 'Company',
+      entityId: id,
+      before: { name: company.name },
+    });
+    return { deleted: true, name: company.name };
+  }
+
   async adminUpdate(adminUserId: string, id: string, dto: AdminUpdateCompanyDto): Promise<Company> {
     try {
       const company = await this.prisma.company.update({

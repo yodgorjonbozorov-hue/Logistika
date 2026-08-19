@@ -125,6 +125,12 @@ ro'yxati; modal o'rniga pastdan chiquvchi sheet; tegish maydonlari ≥44px, inpu
 hisobga olinadi. Desktop layout `md` dan yuqorida o'zgarmagan. Marshrutlar `React.lazy`
 bilan bo'linadi, ilova PWA sifatida o'rnatiladi (manifest + offline shell service worker).
 
+**Kompaniya holati kirishga ta'sir qiladi:** `is_active = false` (to'xtatilgan) yoki
+`subscription_until` o'tib ketgan bo'lsa, o'sha tenant xodimlari kira olmaydi
+(`AUTH_COMPANY_INACTIVE` / `AUTH_SUBSCRIPTION_EXPIRED`); tekshiruv login va refresh'da
+bajariladi, ya'ni jonli sessiyalar keyingi yangilanishda uziladi. `subscription_until`
+bo'sh bo'lsa bloklanmaydi — bu «hali hisob-kitob qilinmagan», «muddati tugagan» emas.
+
 **Auth oqimi:**
 
 - Ro'yxatdan o'tish (ochiq): `POST /auth/register` — kompaniya + birinchi OWNER bitta
@@ -147,6 +153,8 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 ### auth
 
 - `POST /auth/register` — o'zi ro'yxatdan o'tish: kompaniya + OWNER, 14 kunlik trial
+- `POST /auth/change-password` — o'z parolini almashtirish (joriy parol talab qilinadi,
+  qolgan sessiyalar bekor qilinadi)
 - `POST /auth/login` — email/parol (ofis) yoki login/parol (haydovchi)
 - `POST /auth/driver/request-code` · `POST /auth/driver/verify` — telefon+SMS (provayder
   ulangandan keyin)
@@ -156,7 +164,8 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 - `GET/PATCH /company` — o'z firmasi, sozlamalar
 - `GET/PATCH /company/ai-settings` — AI sozlamalari (TZ §8.10 ai_settings)
-- `ADMIN: GET/POST/PATCH /admin/companies` — firmalar, obuna
+- `ADMIN: GET/POST/PATCH/DELETE /admin/companies` — firmalar, obuna; DELETE tenantni va
+  uning barcha ma'lumotlarini bitta tranzaksiyada o'chiradi (kompaniya nomi tasdiq sifatida)
 
 ### users (OWNER)
 

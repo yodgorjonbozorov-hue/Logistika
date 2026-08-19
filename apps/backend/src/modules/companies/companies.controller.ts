@@ -1,10 +1,24 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
 import { CompaniesService } from './companies.service';
-import { AdminCreateCompanyDto, AdminUpdateCompanyDto } from './dto/admin-company.dto';
+import {
+  AdminCreateCompanyDto,
+  AdminDeleteCompanyDto,
+  AdminUpdateCompanyDto,
+} from './dto/admin-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @Controller('company')
@@ -46,5 +60,15 @@ export class AdminCompaniesController {
     @Body() dto: AdminUpdateCompanyDto,
   ) {
     return this.companiesService.adminUpdate(user.userId, id, dto);
+  }
+
+  /** Irreversible: the tenant and everything under it. The name is the confirmation. */
+  @Delete(':id')
+  remove(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AdminDeleteCompanyDto,
+  ) {
+    return this.companiesService.adminDelete(user.userId, id, dto.confirmName);
   }
 }

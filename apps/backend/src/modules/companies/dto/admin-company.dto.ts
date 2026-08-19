@@ -53,6 +53,14 @@ export class AdminCreateCompanyDto {
   owner!: AdminCreateOwnerDto;
 }
 
+/** Typing the company's name back is what makes the delete deliberate. */
+export class AdminDeleteCompanyDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(190)
+  confirmName!: string;
+}
+
 export class AdminUpdateCompanyDto {
   @IsOptional()
   @IsString()

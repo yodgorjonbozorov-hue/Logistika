@@ -348,7 +348,8 @@
     "subtitle": "Kirim va xarajatlar",
     "totalRevenue": "Jami daromad",
     "method": "To'lov usuli",
-    "amountShort": "Summa"
+    "amountShort": "Summa",
+    "invoice": "Hisob-faktura"
   },
   "map": {
     "title": "Jonli xarita",
@@ -473,7 +474,23 @@
       "DRIVER": "Haydovchi",
       "COMPANY": "Tashkilot"
     },
-    "emptyTitle": "Hujjat arxivi bo‘sh"
+    "emptyTitle": "Hujjat arxivi bo‘sh",
+    "docType": "Hujjat turi",
+    "docTypeHint": "Masalan: sug‘urta, texko‘rik, litsenziya",
+    "owner": "Kimga tegishli",
+    "ownerRecord": "Yozuv",
+    "number": "Raqami",
+    "issued": "Berilgan",
+    "expiry": "Amal qiladi",
+    "file": "Fayl",
+    "fileHint": "JPG, PNG yoki PDF — 15 MB gacha",
+    "open": "Ochish",
+    "state": {
+      "valid": "Amalda",
+      "soon": "Muddati yaqin",
+      "expired": "Muddati o‘tgan",
+      "noExpiry": "Muddatsiz"
+    }
   },
   "reports": {
     "title": "Hisobotlar",
@@ -543,7 +560,15 @@
     "dangerZone": "Xavfli hudud",
     "archiveWarning": "Tashkilotni arxivlash barcha foydalanuvchilar kirishini to'xtatadi",
     "archive": "Arxivlash",
-    "comingSoon": "Bu bo'lim keyingi bosqichda ochiladi"
+    "comingSoon": "Bu bo'lim keyingi bosqichda ochiladi",
+    "password": {
+      "title": "Parolni o‘zgartirish",
+      "body": "Parolni o‘zgartirsangiz, boshqa barcha qurilmalardagi sessiyalar yopiladi.",
+      "current": "Joriy parol",
+      "next": "Yangi parol",
+      "submit": "Parolni o‘zgartirish",
+      "changed": "Parol o‘zgartirildi."
+    }
   },
   "landing": {
     "signIn": "Kirish",
@@ -698,7 +723,16 @@
         "all": "Jami",
         "trial": "Sinovda",
         "expiring": "7 kun ichida tugaydi"
-      }
+      },
+      "delete": "Kompaniyani o‘chirish",
+      "deleteHint": "Kompaniya va uning barcha ma’lumotlari butunlay o‘chadi. Qaytarib bo‘lmaydi.",
+      "deleteConfirm": "Tasdiqlash uchun «{{name}}» deb yozing",
+      "deleteForever": "Butunlay o‘chirish"
     }
+  },
+  "subscription": {
+    "expiring_one": "Obuna muddati {{count}} kundan keyin tugaydi.",
+    "expiring_other": "Obuna muddati {{count}} kundan keyin tugaydi.",
+    "expiringHint": "Muddati tugagach tizimga kirish to‘xtatiladi — administratoringizga murojaat qiling."
   }
 }

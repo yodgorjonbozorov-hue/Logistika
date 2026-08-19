@@ -25,27 +25,11 @@ import {
   StatCard,
   StatusChip,
   Table,
-  type ChipTone,
 } from '../../shared/ui';
 import { dateInputToIso, formatDate } from '../../shared/utils/date';
+import { daysLeft, standing } from '../../shared/utils/subscription';
 
 const PAGE_SIZE = 20;
-
-/** Days left on a subscription, or null when none is set. */
-export function daysLeft(until: string | null): number | null {
-  if (!until) return null;
-  return Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000);
-}
-
-/** How a tenant's standing reads at a glance. */
-export function standing(company: Company): { tone: ChipTone; key: string; days: number | null } {
-  const days = daysLeft(company.subscriptionUntil);
-  if (!company.isActive) return { tone: 'muted', key: 'suspended', days };
-  if (days === null) return { tone: 'neutral', key: 'noSubscription', days };
-  if (days < 0) return { tone: 'danger', key: 'expired', days };
-  if (days <= 7) return { tone: 'warning', key: 'expiring', days };
-  return { tone: 'positive', key: 'active', days };
-}
 
 /**
  * The platform admin's only workspace: every tenant on the installation, what
@@ -325,10 +309,14 @@ function EditCompanyModal({ company, onClose }: { company: Company | null; onClo
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ tariffPlan: '', subscriptionUntil: '', isActive: true });
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [confirmName, setConfirmName] = useState('');
+  const [confirming, setConfirming] = useState(false);
 
   // Seed the form from the row the admin opened, once per company.
   if (company && loadedFor !== company.id) {
     setLoadedFor(company.id);
+    setConfirmName('');
+    setConfirming(false);
     setForm({
       tariffPlan: company.tariffPlan ?? '',
       subscriptionUntil: company.subscriptionUntil?.slice(0, 10) ?? '',
@@ -339,6 +327,18 @@ function EditCompanyModal({ company, onClose }: { company: Company | null; onClo
   const update = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api<Company>(`/admin/companies/${company?.id}`, { method: 'PATCH', body }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] });
+      onClose();
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: () =>
+      api(`/admin/companies/${company?.id}`, {
+        method: 'DELETE',
+        body: { confirmName },
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] });
       onClose();
@@ -418,6 +418,56 @@ function EditCompanyModal({ company, onClose }: { company: Company | null; onClo
           </Button>
         </div>
       </form>
+
+      {/* Irreversible, so it is folded away until asked for, and then asks the
+          admin to type the tenant's name back. */}
+      <div
+        className="mt-5 rounded-md px-3.5 py-3"
+        style={{ border: '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)' }}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-medium text-danger-text">
+              {t('admin.companies.delete')}
+            </div>
+            <div className="mt-0.5 text-[12px] text-neutral-500">
+              {t('admin.companies.deleteHint')}
+            </div>
+          </div>
+          {confirming ? null : (
+            <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
+              {t('admin.companies.delete')}
+            </Button>
+          )}
+        </div>
+
+        {confirming ? (
+          <div className="mt-3">
+            <Field label={t('admin.companies.deleteConfirm', { name: company?.name ?? '' })}>
+              <Input
+                value={confirmName}
+                onChange={(event) => setConfirmName(event.target.value)}
+                placeholder={company?.name ?? ''}
+                autoComplete="off"
+              />
+            </Field>
+            <ErrorMessage error={remove.error} />
+            <div className="mt-3 flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setConfirming(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                disabled={remove.isPending || confirmName.trim() !== company?.name}
+                onClick={() => void remove.mutateAsync()}
+              >
+                {remove.isPending ? t('common.saving') : t('admin.companies.deleteForever')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </Modal>
   );
 }

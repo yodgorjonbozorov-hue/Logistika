@@ -29,6 +29,17 @@ const LOCALES = {
 const placeholders = (value: string): string[] =>
   [...value.matchAll(/\{\{(\w+)\}\}/g)].map((match) => match[1]!).sort();
 
+/**
+ * i18next appends a plural category to a key, and which categories exist is a
+ * property of the language: Uzbek has one form where Russian has three. Compare
+ * what the key *means* — the stem — so parity does not force a locale to carry
+ * plural forms its grammar has no use for.
+ */
+const stem = (key: string): string => key.replace(/_(zero|one|two|few|many|other)$/, '');
+
+const stems = (locale: keyof typeof LOCALES): Set<string> =>
+  new Set([...LOCALES[locale].keys()].map(stem));
+
 describe('i18n locale files', () => {
   it('uz-latn carries every key the app renders', () => {
     expect(LOCALES['uz-latn'].size).toBeGreaterThan(200);
@@ -36,19 +47,32 @@ describe('i18n locale files', () => {
 
   for (const locale of ['uz-cyrl', 'ru'] as const) {
     it(`${locale} defines every uz-latn key`, () => {
-      const missing = [...LOCALES['uz-latn'].keys()].filter((key) => !LOCALES[locale].has(key));
+      const theirs = stems(locale);
+      const missing = [...stems('uz-latn')].filter((key) => !theirs.has(key));
       expect(missing).toEqual([]);
     });
 
     it(`${locale} defines no keys uz-latn lacks`, () => {
-      const extra = [...LOCALES[locale].keys()].filter((key) => !LOCALES['uz-latn'].has(key));
+      const ours = stems('uz-latn');
+      const extra = [...stems(locale)].filter((key) => !ours.has(key));
       expect(extra).toEqual([]);
+    });
+
+    it(`${locale} spells every plural form it declares`, () => {
+      const blank = [...LOCALES[locale]]
+        .filter(([key, value]) => key !== stem(key) && value.trim() === '')
+        .map(([key]) => key);
+      expect(blank).toEqual([]);
     });
 
     it(`${locale} uses the same interpolation placeholders as uz-latn`, () => {
       const mismatched = [...LOCALES['uz-latn']]
         .filter(([key, value]) => {
-          const translated = LOCALES[locale].get(key);
+          // A plural form may be spelled under any category, so compare against
+          // whichever one this locale actually declares for the stem.
+          const translated =
+            LOCALES[locale].get(key) ??
+            [...LOCALES[locale]].find(([other]) => stem(other) === stem(key))?.[1];
           return (
             translated !== undefined &&
             placeholders(value).join() !== placeholders(translated).join()

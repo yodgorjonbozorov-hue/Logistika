@@ -11,6 +11,7 @@ import {
   Card,
   ErrorMessage,
   Field,
+  Icon,
   Input,
   PageHeader,
   Select,
@@ -29,6 +30,9 @@ const SECTIONS = [
   'billing',
 ] as const;
 type Section = (typeof SECTIONS)[number];
+
+/** Mirrors the DTO's `@MinLength(8)` so the form fails before the round trip. */
+const MIN_PASSWORD = 8;
 
 const LOCALE_LABELS: Record<Locale, string> = {
   'uz-latn': "O'zbek (lotin)",
@@ -73,7 +77,8 @@ export function SettingsPage() {
         <div className="flex flex-col gap-3">
           {section === 'organisation' ? <OrganisationSection /> : null}
           {section === 'profile' ? <ProfileSection /> : null}
-          {section !== 'organisation' && section !== 'profile' ? (
+          {section === 'security' ? <SecuritySection /> : null}
+          {section !== 'organisation' && section !== 'profile' && section !== 'security' ? (
             <Card className="px-5 py-[18px] text-[13px] text-neutral-500">
               {t('settings.comingSoon')}
             </Card>
@@ -217,6 +222,119 @@ function OrganisationSection() {
         </Card>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The only way anyone changes their own password. It matters most for the
+ * platform admin, whose account belongs to no company and so cannot be edited
+ * through any tenant screen.
+ */
+function SecuritySection() {
+  const { t } = useTranslation();
+  const [form, setForm] = useState({ current: '', next: '', repeat: '' });
+  const [show, setShow] = useState(false);
+  const [localError, setLocalError] = useState<Error | null>(null);
+  const [done, setDone] = useState(false);
+  const set = (key: keyof typeof form) => (event: { target: { value: string } }) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  const change = useMutation({
+    mutationFn: (body: { currentPassword: string; newPassword: string }) =>
+      api('/auth/change-password', { method: 'POST', body }),
+    onSuccess: () => {
+      setDone(true);
+      setForm({ current: '', next: '', repeat: '' });
+    },
+  });
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setDone(false);
+    if (form.next.length < MIN_PASSWORD) {
+      setLocalError(new Error(t('auth.register.passwordTooShort')));
+      return;
+    }
+    if (form.next !== form.repeat) {
+      setLocalError(new Error(t('auth.register.passwordMismatch')));
+      return;
+    }
+    setLocalError(null);
+    await change.mutateAsync({ currentPassword: form.current, newPassword: form.next });
+  }
+
+  return (
+    <Card className="px-4 py-[18px] md:px-5">
+      <div className="mb-1 text-[15px] font-medium">{t('settings.password.title')}</div>
+      <div className="mb-4 text-[12.5px] text-neutral-500">{t('settings.password.body')}</div>
+
+      <form onSubmit={(event) => void onSubmit(event)} className="max-w-[420px]">
+        <Field label={t('settings.password.current')} className="mb-3">
+          <Input
+            type={show ? 'text' : 'password'}
+            value={form.current}
+            onChange={set('current')}
+            autoComplete="current-password"
+            required
+          />
+        </Field>
+        <Field
+          label={t('settings.password.next')}
+          hint={t('auth.register.passwordHint')}
+          className="mb-3"
+        >
+          <Input
+            type={show ? 'text' : 'password'}
+            value={form.next}
+            onChange={set('next')}
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD}
+            required
+          />
+        </Field>
+        <Field label={t('auth.register.passwordRepeat')}>
+          <Input
+            type={show ? 'text' : 'password'}
+            value={form.repeat}
+            onChange={set('repeat')}
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD}
+            required
+          />
+        </Field>
+
+        <label className="my-3 flex min-h-[44px] cursor-pointer items-center gap-2.5 text-[12.5px] text-neutral-400">
+          <input
+            type="checkbox"
+            checked={show}
+            onChange={(event) => setShow(event.target.checked)}
+            className="h-[18px] w-[18px]"
+            style={{ accentColor: 'var(--color-accent)' }}
+          />
+          {t('auth.showPassword')}
+        </label>
+
+        <ErrorMessage error={localError ?? change.error} />
+        {done ? (
+          <div
+            role="status"
+            className="mb-3 flex items-start gap-2 rounded-md px-3 py-2.5 text-[12.5px]"
+            style={{
+              color: 'var(--color-positive-text)',
+              border: '1px solid color-mix(in srgb, var(--color-positive) 45%, transparent)',
+              background: 'color-mix(in srgb, var(--color-positive) 8%, transparent)',
+            }}
+          >
+            <Icon name="check-circle" size={15} className="mt-px shrink-0" />
+            <span>{t('settings.password.changed')}</span>
+          </div>
+        ) : null}
+
+        <Button type="submit" disabled={change.isPending} className="w-full md:w-auto">
+          {change.isPending ? t('common.saving') : t('settings.password.submit')}
+        </Button>
+      </form>
+    </Card>
   );
 }
 

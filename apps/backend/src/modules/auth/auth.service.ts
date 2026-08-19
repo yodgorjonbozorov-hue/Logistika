@@ -92,6 +92,46 @@ export class AuthService {
     });
   }
 
+  /**
+   * Any signed-in account can change its own password — including the platform
+   * admin, which belongs to no company and so has no other way to.
+   *
+   * The current password is required (a stolen access token must not be enough
+   * to take an account over), and every other session is revoked so a password
+   * change actually ends whoever else was signed in.
+   */
+  async changePassword(userId: string, current: string, next: string): Promise<void> {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
+
+    if (!(await argon2.verify(user.passwordHash, current))) {
+      throw new AppException('AUTH_INVALID_CREDENTIALS', HttpStatus.UNAUTHORIZED);
+    }
+    if (current === next) {
+      throw new AppException('AUTH_PASSWORD_UNCHANGED', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await argon2.hash(next) },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    this.audit.log({
+      companyId: user.companyId,
+      userId: user.id,
+      action: 'UPDATE',
+      entityType: 'User',
+      entityId: user.id,
+      after: { passwordChanged: true },
+    });
+  }
+
   async me(userId: string): Promise<Omit<User, 'passwordHash'>> {
     const user = await this.usersService.findById(userId);
     if (!user) {
@@ -102,17 +142,23 @@ export class AuthService {
   }
 
   /**
-   * A suspended tenant's staff cannot sign in. Platform accounts have no
-   * company and skip the check.
+   * A tenant has to be in good standing for its staff to sign in: not
+   * suspended, and inside its subscription. A company with no
+   * `subscriptionUntil` is not blocked — that is an unset field, not a lapsed
+   * subscription, and the platform screen shows it as such. Platform accounts
+   * have no company and skip the check entirely.
    */
   private async assertCompanyActive(user: User): Promise<void> {
     if (!user.companyId) return;
     const company = await this.prisma.company.findUnique({
       where: { id: user.companyId },
-      select: { isActive: true },
+      select: { isActive: true, subscriptionUntil: true },
     });
     if (!company?.isActive) {
       throw new AppException('AUTH_COMPANY_INACTIVE', HttpStatus.FORBIDDEN);
+    }
+    if (company.subscriptionUntil && company.subscriptionUntil < new Date()) {
+      throw new AppException('AUTH_SUBSCRIPTION_EXPIRED', HttpStatus.FORBIDDEN);
     }
   }
 

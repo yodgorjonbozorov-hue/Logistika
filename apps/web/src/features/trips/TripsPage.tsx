@@ -27,6 +27,7 @@ import {
   StatusChip,
   Table,
 } from '../../shared/ui';
+import { exportCsv } from '../../shared/utils/csv';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin } from '../../shared/utils/money';
 import { TRIP_STATUS_TONE } from '../../shared/utils/status';
@@ -137,7 +138,30 @@ export function TripsPage() {
         subtitle={t('trips.subtitle', { count: total })}
         actions={
           <>
-            <Button variant="secondary" icon="export" className="hidden md:inline-flex">
+            <Button
+              variant="secondary"
+              icon="export"
+              className="hidden md:inline-flex"
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportCsv('reyslar', rows, [
+                  { header: t('trips.number'), value: (trip) => trip.tripNumber },
+                  {
+                    header: t('finance.date'),
+                    value: (trip) => formatDate(trip.loadingDate ?? trip.createdAt),
+                  },
+                  { header: t('trips.vehicle'), value: (trip) => trip.vehicle?.plateNumber },
+                  { header: t('trips.driver'), value: (trip) => trip.driver?.fullName },
+                  { header: t('trips.client'), value: (trip) => trip.client?.name },
+                  { header: t('trips.loadingAddress'), value: (trip) => trip.loadingAddress },
+                  { header: t('trips.unloadingAddress'), value: (trip) => trip.unloadingAddress },
+                  { header: t('trips.cargoName'), value: (trip) => trip.cargoName },
+                  { header: t('cargo.weight'), value: (trip) => trip.cargoWeight },
+                  { header: t('trips.priceShort'), value: (trip) => formatTiyin(trip.agreedPrice) },
+                  { header: t('trips.status'), value: (trip) => t(`status.${trip.status}`) },
+                ])
+              }
+            >
               {t('common.export')}
             </Button>
             <Button icon="plus" onClick={() => navigate('/trips/new')}>

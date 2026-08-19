@@ -2,6 +2,7 @@
 // tiyin (BigInt is JSON-serialized to string), dates as ISO strings (UTC).
 import type {
   Currency,
+  DocumentOwnerType,
   ExpenseCategory,
   LiveStatus,
   PaymentStatus,
@@ -137,6 +138,22 @@ export interface Company {
   tariffPlan: string | null;
   subscriptionUntil: string | null;
   isActive: boolean;
+  createdAt: string;
+}
+
+/**
+ * A filed paper. `fileUrl` holds the StoredFile id, not a URL — the link is
+ * signed on demand so it cannot be shared past its lifetime.
+ */
+export interface StoredDocument {
+  id: string;
+  ownerType: DocumentOwnerType;
+  ownerId: string;
+  docType: string;
+  docNumber: string | null;
+  issueDate: string | null;
+  expiryDate: string | null;
+  fileUrl: string | null;
   createdAt: string;
 }
 
