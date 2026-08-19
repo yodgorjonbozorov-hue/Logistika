@@ -137,6 +137,9 @@ Docker healthcheck yoqilgan. Tashqi monitoring uchun shu ikki manzilni ishlating
 
 ## 8. Vercel (faqat frontend)
 
+Joriy deployment: **https://logixa-ai.vercel.app** (`/demo` — mock ma'lumotli
+namoyish). Loyiha nomi Vercel'da `logixa-ai`.
+
 Vercel statik saytlarni xosting qiladi — NestJS backend, PostgreSQL, Redis va
 MinIO baribir yuqoridagi Compose stack'da qoladi. Vercel'ga faqat `apps/web`
 chiqadi va u ikki manzilni beradi:
@@ -177,12 +180,20 @@ Sozlamalar `vercel.json` da yozilgan, dashboard'da qo'lda kiritish shart emas:
 `VITE_API_URL` berilmasa build baribir o'tadi, lekin `/` dagi kirish formasi
 API'ni topa olmaydi — shu holatda forma ostida `/demo` ga havola ko'rsatiladi.
 
+### Git bilan avtomatik deploy
+
+Loyiha GitHub repo'ga bog'langan. Production faqat Vercel'dagi **Production
+Branch** ga push qilinganda yangilanadi; boshqa branch'lar preview deployment
+beradi. Ish branch'idan production chiqarish uchun yo Vercel → Settings → Git →
+Production Branch ni o'sha branch'ga qo'ying, yo quyidagi CLI buyrug'ini
+ishlating.
+
 ### CLI orqali (ixtiyoriy)
 
 ```bash
-pnpm dlx vercel@latest link          # loyihani bog'lash
-pnpm dlx vercel@latest env add VITE_API_URL production
-pnpm dlx vercel@latest --prod        # deploy
+vercel link --yes --project logixa-ai --token "$VERCEL_TOKEN"
+vercel env add VITE_API_URL production --token "$VERCEL_TOKEN"
+vercel deploy --prod --yes --token "$VERCEL_TOKEN"
 ```
 
 CI'dan chiqarish uchun `VERCEL_TOKEN` kerak (Vercel → Account Settings →
