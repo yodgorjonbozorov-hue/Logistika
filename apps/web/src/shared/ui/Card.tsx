@@ -19,7 +19,7 @@ export function Card({
       className={cn(
         'rounded-lg shadow-sm',
         tone === 'navy'
-          ? 'bg-brand-secondary text-white ring-1 ring-white/10'
+          ? 'bg-brand-secondary text-white ring-1 ring-brand-primary/30'
           : 'border border-line bg-surface',
         padded && 'p-4 sm:p-5',
         className,

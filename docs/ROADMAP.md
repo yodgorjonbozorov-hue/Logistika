@@ -109,17 +109,22 @@
 
 ## 7-bosqich — Moliya yadrosi
 
-- [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
-      (faqat deterministik kod, BigInt)
-- [ ] `fuel`: jurnal, norma-taqqoslash, W-8 nazorat jadvali, AZS tahlili,
-      chegara oshsa signal (default 7%, `ai_settings.fuel_deviation_threshold`)
+- [x] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI
+      (faqat deterministik kod, BigInt); `GET /finance/summary|trips/:id|vehicles/:id`.
+      Amortizatsiya uchun `vehicles.purchase_price` va `planned_total_km` qo'shildi
+- [x] `fuel`: jurnal (CRUD) + W-8 nazorat jadvali, chegara oshsa signal
+      (`companies.fuel_deviation_percent`, default 7%). AZS bo'yicha tahlil va
+      haydovchi ilovasidan strukturalangan quyish ma'lumoti — keyingi ish
 - [ ] `maintenance`: TO tarixi, keyingi TO rejasi
 - [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
 - [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
 - [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
       xarajat strukturasi), Excel/PDF eksport
-- [ ] Web: W-1 dashboard, W-7 moliya, W-8 yoqilg'i, W-9 hisobotlar, W-10 ogohlantirishlar
-- [ ] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov)
+- [x] Web: W-1 dashboard (6 karta, 12 oylik foyda grafigi + jadval ko'rinishi, jonli xarita,
+      hodisalar lentasi), W-8 yoqilg'i nazorati, W-4 moliya tabi real P&L'ga ulandi
+- [ ] Web: W-7 moliya (kassa, qarzdorlar), W-9 hisobotlar, W-10 ogohlantirishlar
+- [x] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov) —
+      kalkulyator 28 test, servis 15 test, fuel 9 test
 
 ## 8-bosqich — AI funksiyalari (TZ §8)
 

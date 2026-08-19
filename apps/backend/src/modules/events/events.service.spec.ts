@@ -85,3 +85,19 @@ describe('EventsService.ingestBatch (offline idempotent sync)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });
+
+describe('EventsService — dashboard feed', () => {
+  it('returns the newest events first, capped and tenant-scoped', async () => {
+    const { prisma, db, forCompany } = createTenantDbMock(['tripEvent']);
+    const audit = { log: jest.fn() } as unknown as AuditService;
+    const service = new EventsService(prisma, audit);
+    db.tripEvent!.findMany!.mockResolvedValue([]);
+
+    await service.listRecent(ACTOR, 500);
+
+    expect(forCompany).toHaveBeenCalledWith(ACTOR.companyId);
+    const args = db.tripEvent!.findMany!.mock.calls[0][0];
+    expect(args.orderBy).toEqual({ eventTime: 'desc' });
+    expect(args.take).toBe(50); // an unbounded limit cannot dump the whole history
+  });
+});

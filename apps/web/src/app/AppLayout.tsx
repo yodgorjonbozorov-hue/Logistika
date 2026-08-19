@@ -1,13 +1,14 @@
 import { useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LOCALES, type Locale } from 'shared';
+import { LOCALES, UserRole, type Locale } from 'shared';
 import { useAuth } from '../shared/auth/AuthContext';
 import { setLocale } from '../shared/i18n';
 import { useTheme } from '../shared/theme';
 import {
   IconBriefcase,
   IconClose,
+  IconGrid,
   IconGlobe,
   IconLogout,
   IconMap,
@@ -15,6 +16,7 @@ import {
   IconMoon,
   IconRoute,
   IconSun,
+  IconSparkles,
   IconTruck,
   IconUsers,
   IconWallet,
@@ -29,19 +31,27 @@ interface NavItem {
   to: string;
   key: string;
   Icon: ComponentType<IconProps>;
+  /** Absent means every signed-in role; money screens are narrower. */
+  roles?: UserRole[];
 }
 
+const FINANCE_ROLES = [UserRole.OWNER, UserRole.ACCOUNTANT];
+
 const NAV_ITEMS: NavItem[] = [
+  { to: '/dashboard', key: 'nav.dashboard', Icon: IconGrid, roles: FINANCE_ROLES },
   { to: '/map', key: 'nav.map', Icon: IconMap },
   { to: '/trips', key: 'nav.trips', Icon: IconRoute },
   { to: '/vehicles', key: 'nav.vehicles', Icon: IconTruck },
   { to: '/drivers', key: 'nav.drivers', Icon: IconUsers },
   { to: '/clients', key: 'nav.clients', Icon: IconBriefcase },
-  { to: '/finance', key: 'nav.finance', Icon: IconWallet },
+  { to: '/finance', key: 'nav.finance', Icon: IconWallet, roles: FINANCE_ROLES },
+  { to: '/fuel', key: 'nav.fuel', Icon: IconSparkles },
 ];
 
-/** The five destinations a phone can reach with a thumb; finance lives in the menu. */
-const MOBILE_ITEMS = NAV_ITEMS.slice(0, 5);
+/** Only what this role may open — the API enforces the same list. */
+function navFor(role: UserRole | undefined): NavItem[] {
+  return NAV_ITEMS.filter((item) => !item.roles || (role && item.roles.includes(role)));
+}
 
 const LOCALE_LABELS: Record<Locale, string> = {
   'uz-latn': "O'zbekcha",
@@ -72,6 +82,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
   const { resolved, toggle } = useTheme();
+  const items = navFor(user?.role);
 
   return (
     <div className="flex h-full flex-col bg-brand-secondary text-white">
@@ -90,7 +101,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
-        {NAV_ITEMS.map(({ to, key, Icon }) => (
+        {items.map(({ to, key, Icon }) => (
           <NavLink key={to} to={to} className={navLinkClass} onClick={onNavigate}>
             <Icon size={19} />
             {t(key)}
@@ -147,7 +158,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppLayout() {
   const { t, i18n } = useTranslation();
+  const { user } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The five destinations a phone can reach with a thumb; the rest stay in the menu.
+  const mobileItems = navFor(user?.role).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background lg:flex">
@@ -196,7 +210,7 @@ export function AppLayout() {
 
         {/* iOS-style bottom navigation */}
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex items-stretch justify-around border-t border-line bg-surface/90 backdrop-blur-xl lg:hidden">
-          {MOBILE_ITEMS.map(({ to, key, Icon }) => (
+          {mobileItems.map(({ to, key, Icon }) => (
             <NavLink
               key={to}
               to={to}

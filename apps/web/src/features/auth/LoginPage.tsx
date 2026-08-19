@@ -42,7 +42,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(identifier, password);
-      navigate('/trips', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       setError(err);
     } finally {

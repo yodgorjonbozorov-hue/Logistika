@@ -15,7 +15,9 @@
     "clients": "Мижозлар",
     "finance": "Молия",
     "map": "Харита",
-    "menu": "Меню"
+    "menu": "Меню",
+    "dashboard": "Бошқарув панели",
+    "fuel": "Ёқилғи"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -51,7 +53,9 @@
     "search": "Қидириш",
     "retry": "Қайта уриниш",
     "themeLight": "Ёруғ режим",
-    "themeDark": "Тунги режим"
+    "themeDark": "Тунги режим",
+    "delete": "Ўчириш",
+    "confirmDelete": "Ростдан ҳам ўчирилсинми?"
   },
   "status": {
     "DRAFT": "Қоралама",
@@ -123,7 +127,9 @@
       "TRAILER": "Тиркама",
       "SPECIAL": "Махсус"
     },
-    "subtitle": "Техника карточкалари, нормалар ва ҳужжат муддатлари"
+    "subtitle": "Техника карточкалари, нормалар ва ҳужжат муддатлари",
+    "purchasePrice": "Сотиб олинган нарх",
+    "plannedTotalKm": "Режадаги умумий пробег"
   },
   "drivers": {
     "title": "Ҳайдовчилар",
@@ -194,7 +200,17 @@
       "TAX": "Солиқ",
       "OTHER": "Бошқа"
     },
-    "subtitle": "Харажатлар ва киримлар назорати"
+    "subtitle": "Харажатлар ва киримлар назорати",
+    "from": "Бошланиш",
+    "to": "Тугаш",
+    "amortization": "Амортизация",
+    "costPerKm": "1 км таннархи",
+    "driverShare": "Ҳайдовчи улуши",
+    "driverBalance": "Ҳайдовчига қолдиқ",
+    "distance": "Масофа",
+    "fromPayments": "Тўланган суммадан",
+    "fromAgreed": "Келишилган нархдан",
+    "noExpensesHint": "Бу рейсга ҳали харажат киритилмаган"
   },
   "map": {
     "title": "Жонли харита",
@@ -239,5 +255,63 @@
     "LOGIST": "Логист",
     "ACCOUNTANT": "Бухгалтер",
     "DRIVER": "Ҳайдовчи"
+  },
+  "dashboard": {
+    "title": "Бошқарув панели",
+    "period": "Давр",
+    "onRoad": "Йўлдаги машиналар",
+    "tripsToday": "Бугунги рейслар",
+    "income": "Ойлик кирим",
+    "expenses": "Ойлик чиқим",
+    "amortization": "Амортизация",
+    "netProfit": "Соф фойда",
+    "fuelAlerts": "Ёқилғи сигналлари",
+    "seeFuel": "Назоратни очиш",
+    "allWithinNorm": "Барчаси норма ичида",
+    "receivables": "Қарздорлик",
+    "receivable": "Тўланмаган",
+    "overdue": "Муддати ўтган",
+    "expenseStructure": "Харажат структураси",
+    "liveMap": "Жонли харита",
+    "openMap": "Харитани очиш",
+    "recentEvents": "Сўнгги ҳодисалар",
+    "profitChart": "Фойда — 12 ой",
+    "viewChart": "График",
+    "viewTable": "Жадвал",
+    "month": "Ой",
+    "monthInProfit": "Фойдали ой",
+    "monthInLoss": "Зарарли ой",
+    "chartScale": "Шкала",
+    "profitChartAria": "Охирги {{count}} ой бўйича соф фойда диаграммаси"
+  },
+  "fuel": {
+    "title": "Ёқилғи назорати",
+    "subtitle": "Норма ва реал сарф таққосламаси",
+    "tabs": {
+      "control": "Назорат",
+      "journal": "Журнал"
+    },
+    "new": "Янги қуйиш",
+    "distance": "Пробег",
+    "norm": "Норма бўйича",
+    "actual": "Реал қуйилган",
+    "diff": "Фарқ",
+    "loss": "Зарар",
+    "status": "Ҳолат",
+    "totalLoss": "Умумий зарар",
+    "flagged": "Сигнал берилган",
+    "threshold": "Чегара",
+    "vehiclesTracked": "Кузатувдаги техника",
+    "overThreshold": "Чегарадан ошди",
+    "slightlyOver": "Нормадан юқори",
+    "withinNorm": "Норма ичида",
+    "noNorm": "Норма киритилмаган",
+    "liters": "Литр",
+    "pricePerLiter": "1 литр нархи",
+    "amount": "Сумма",
+    "station": "АЗС",
+    "refuelTime": "Сана",
+    "emptyHint": "Бу даврда рейс ҳам, қуйиш ҳам қайд этилмаган",
+    "journalEmptyHint": "Қуйишларни қўлда киритинг ёки AI чек ўқиши билан (8-босқич)"
   }
 }

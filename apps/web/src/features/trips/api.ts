@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { TripStatus } from 'shared';
+import type { TripPnlView, TripStatus } from 'shared';
 import { api } from '../../shared/api/client';
 import type { Client, Driver, Expense, Income, Trip, Vehicle } from '../../shared/api/entities';
 
@@ -29,6 +29,14 @@ export function useTripFinance(tripId: string) {
     queryFn: async () => (await api<Income[]>('/incomes', { query: { tripId, limit: 100 } })).data,
   });
   return { expenses, incomes };
+}
+
+/** TZ §6 profit and loss — computed by the backend, never in the browser. */
+export function useTripPnl(tripId: string) {
+  return useQuery({
+    queryKey: ['finance', 'trip', tripId],
+    queryFn: async () => (await api<TripPnlView>(`/finance/trips/${tripId}`)).data,
+  });
 }
 
 /** Reference lists for form selects (first 100 is plenty for 5–40 vehicle fleets). */

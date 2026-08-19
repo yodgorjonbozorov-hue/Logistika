@@ -99,6 +99,21 @@ export class EventsService {
     });
   }
 
+  /**
+   * W-1 dashboard feed: the fleet's last events, newest first
+   * («Alisher A. — nosozlik, Jizzax, 14:20»).
+   */
+  async listRecent(actor: CurrentUserPayload, limit = 10): Promise<TripEvent[]> {
+    return this.prisma.forCompany(actor.companyId).tripEvent.findMany({
+      orderBy: { eventTime: 'desc' },
+      take: Math.min(Math.max(limit, 1), 50),
+      include: {
+        driver: { select: { fullName: true } },
+        trip: { select: { tripNumber: true, vehicle: { select: { plateNumber: true } } } },
+      },
+    });
+  }
+
   /** Photo file ids → stored keys; foreign/unknown ids are dropped silently-safe (tenant scope). */
   private async resolvePhotoKeys(
     actor: CurrentUserPayload,

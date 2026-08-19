@@ -25,9 +25,10 @@ import {
   Tabs,
 } from '../../shared/ui';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
-import { formatTiyin, sumTiyin } from '../../shared/utils/money';
+import { formatTiyin } from '../../shared/utils/money';
+import { formatBp, formatKm10 } from '../../shared/utils/units';
 import { StatusBadge } from './StatusBadge';
-import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
+import { useRefLists, useTrip, useTripFinance, useTripMutations, useTripPnl } from './api';
 
 type Tab = 'timeline' | 'finance' | 'documents';
 
@@ -109,7 +110,7 @@ export function TripDetailPage() {
       />
 
       {tab === 'timeline' && <TimelineTab trip={trip} />}
-      {tab === 'finance' && <FinanceTab tripId={trip.id} agreedPrice={trip.agreedPrice} />}
+      {tab === 'finance' && <FinanceTab tripId={trip.id} />}
       {tab === 'documents' && <EmptyState description={t('trips.documentsNote')} />}
 
       <AssignDialog open={dialog === 'assign'} onClose={() => setDialog(null)} tripId={id} />
@@ -225,35 +226,66 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
   );
 }
 
-function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: string }) {
+function FinanceTab({ tripId }: { tripId: string }) {
   const { t } = useTranslation();
-  const { expenses, incomes } = useTripFinance(tripId);
-  if (expenses.isLoading || incomes.isLoading) return <Spinner />;
+  const pnl = useTripPnl(tripId);
+  const { expenses } = useTripFinance(tripId);
 
-  const expenseTotal = sumTiyin((expenses.data ?? []).map((e) => e.amount));
-  const incomeTotal = sumTiyin((incomes.data ?? []).map((i) => i.amount));
-  const planned = BigInt(agreedPrice);
-  const income = incomeTotal > 0n ? incomeTotal : planned;
-  const balance = income - expenseTotal;
+  if (pnl.isLoading) return <Spinner />;
+  if (pnl.error) return <ErrorMessage error={pnl.error} />;
+  if (!pnl.data) return <EmptyState />;
+
+  const result = pnl.data;
+  const profit = BigInt(result.netProfit);
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label={t('trips.financeIncome')} value={formatTiyin(income)} trend="up" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label={t('trips.financeIncome')}
+          value={formatTiyin(result.revenue)}
+          delta={result.revenueFromPayments ? t('finance.fromPayments') : t('finance.fromAgreed')}
+          trend="up"
+        />
         <StatCard
           label={t('trips.financeExpenses')}
-          value={formatTiyin(expenseTotal)}
+          value={formatTiyin(result.expenseTotal)}
+          delta={`${t('finance.driverShare')} ${formatTiyin(result.driverShare)}`}
           trend="down"
         />
         <StatCard
+          label={t('finance.amortization')}
+          value={formatTiyin(result.amortization)}
+          delta={`${t('finance.costPerKm')} ${formatTiyin(result.costPerKm)}`}
+        />
+        <StatCard
           label={t('trips.financeBalance')}
-          value={formatTiyin(balance)}
+          value={formatTiyin(result.netProfit)}
+          delta={formatBp(result.marginBp)}
           tone="navy"
-          trend={balance >= 0n ? 'up' : 'down'}
+          trend={profit >= 0n ? 'up' : 'down'}
         />
       </div>
+
+      <Card>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <InfoItem label={t('finance.distance')}>{formatKm10(result.distanceKm10)} km</InfoItem>
+          <InfoItem label={t('finance.driverShare')}>{formatTiyin(result.driverShare)}</InfoItem>
+          <InfoItem label={t('trips.advance')}>{formatTiyin(result.driverAdvance)}</InfoItem>
+          <InfoItem label={t('finance.driverBalance')}>
+            <span
+              className={
+                BigInt(result.driverBalance) < 0n ? 'text-danger' : 'font-mono tabular-nums'
+              }
+            >
+              {formatTiyin(result.driverBalance)}
+            </span>
+          </InfoItem>
+        </div>
+      </Card>
+
       {(expenses.data ?? []).length === 0 ? (
-        <EmptyState />
+        <EmptyState description={t('finance.noExpensesHint')} />
       ) : (
         <Table
           headers={[

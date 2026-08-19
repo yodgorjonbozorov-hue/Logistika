@@ -168,7 +168,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 - `GET/POST /trips` · `GET/PATCH /trips/:id` · `POST /trips/:id/close`
 - `GET /trips/:id/timeline` — xronologiya (W-4 tab 1)
-- `GET /trips/:id/pnl` — moliya (W-4 tab 2, finance)
+- moliya (W-4 tab 2) — `GET /finance/trips/:id` (finance moduli)
 - `GET /trips/:id/documents` — hujjatlar (W-4 tab 3)
 - `POST /trips/:id/share-link` — mijoz tracking-havolasi
 
@@ -176,6 +176,7 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 - `POST /events/batch` — idempotent paket qabul (klient UUID, `is_synced`)
 - `GET  /events?tripId=`
+- `GET  /events/recent?limit=` — W-1 hodisalar lentasi
 
 ### tracking
 
@@ -184,11 +185,19 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 - `GET  /tracking/vehicles/:id/history?date=` — marshrut tarixi
 - `GET  /tracking/deviations` — marshrutdan chetlashlar
 
+### finance (faqat hisob-kitob, yozuv yo'q)
+
+- `GET /finance/summary?from&to` — W-1 dashboard: kirim, chiqim, amortizatsiya, sof foyda,
+  qarzdorlik, xarajat strukturasi, 12 oylik foyda qatori
+- `GET /finance/trips/:id` — reys P&L: kirim, kategoriya bo'yicha xarajat, haydovchi ulushi,
+  amortizatsiya, sof foyda, marja, 1 km tannarxi (W-4 tab 2)
+- `GET /finance/vehicles/:id?from&to` — mashina rentabelligi: probeg, xarajat, ROI (W-5)
+
 ### fuel
 
-- `GET/POST /fuel` · `PATCH /fuel/:id`
-- `GET /fuel/control?period=` — nazorat jadvali: probeg, norma, real, farq, zarar (W-8)
-- `GET /fuel/by-station?period=` — AZS bo'yicha tahlil
+- `GET/POST /fuel` · `PATCH/DELETE /fuel/:id`
+- `GET /fuel/control?from&to` — nazorat jadvali: probeg, norma, real, farq, zarar (W-8)
+- `GET /fuel/by-station?from&to` — AZS bo'yicha tahlil (rejada)
 
 ### expenses / incomes
 

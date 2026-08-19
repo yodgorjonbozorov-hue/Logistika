@@ -15,7 +15,9 @@
     "clients": "Mijozlar",
     "finance": "Moliya",
     "map": "Xarita",
-    "menu": "Menyu"
+    "menu": "Menyu",
+    "dashboard": "Boshqaruv paneli",
+    "fuel": "Yoqilg'i"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -51,7 +53,9 @@
     "search": "Qidirish",
     "retry": "Qayta urinish",
     "themeLight": "Yorug' rejim",
-    "themeDark": "Tungi rejim"
+    "themeDark": "Tungi rejim",
+    "delete": "O'chirish",
+    "confirmDelete": "Rostdan ham o'chirilsinmi?"
   },
   "status": {
     "DRAFT": "Qoralama",
@@ -123,7 +127,9 @@
       "TRAILER": "Tirkama",
       "SPECIAL": "Maxsus"
     },
-    "subtitle": "Texnika kartochkalari, normalar va hujjat muddatlari"
+    "subtitle": "Texnika kartochkalari, normalar va hujjat muddatlari",
+    "purchasePrice": "Sotib olingan narx",
+    "plannedTotalKm": "Rejadagi umumiy probeg"
   },
   "drivers": {
     "title": "Haydovchilar",
@@ -194,7 +200,17 @@
       "TAX": "Soliq",
       "OTHER": "Boshqa"
     },
-    "subtitle": "Xarajatlar va kirimlar nazorati"
+    "subtitle": "Xarajatlar va kirimlar nazorati",
+    "from": "Boshlanish",
+    "to": "Tugash",
+    "amortization": "Amortizatsiya",
+    "costPerKm": "1 km tannarxi",
+    "driverShare": "Haydovchi ulushi",
+    "driverBalance": "Haydovchiga qoldiq",
+    "distance": "Masofa",
+    "fromPayments": "To'langan summadan",
+    "fromAgreed": "Kelishilgan narxdan",
+    "noExpensesHint": "Bu reysga hali xarajat kiritilmagan"
   },
   "map": {
     "title": "Jonli xarita",
@@ -239,5 +255,63 @@
     "LOGIST": "Logist",
     "ACCOUNTANT": "Buxgalter",
     "DRIVER": "Haydovchi"
+  },
+  "dashboard": {
+    "title": "Boshqaruv paneli",
+    "period": "Davr",
+    "onRoad": "Yo'ldagi mashinalar",
+    "tripsToday": "Bugungi reyslar",
+    "income": "Oylik kirim",
+    "expenses": "Oylik chiqim",
+    "amortization": "Amortizatsiya",
+    "netProfit": "Sof foyda",
+    "fuelAlerts": "Yoqilg'i signallari",
+    "seeFuel": "Nazoratni ochish",
+    "allWithinNorm": "Barchasi norma ichida",
+    "receivables": "Qarzdorlik",
+    "receivable": "To'lanmagan",
+    "overdue": "Muddati o'tgan",
+    "expenseStructure": "Xarajat strukturasi",
+    "liveMap": "Jonli xarita",
+    "openMap": "Xaritani ochish",
+    "recentEvents": "So'nggi hodisalar",
+    "profitChart": "Foyda — 12 oy",
+    "viewChart": "Grafik",
+    "viewTable": "Jadval",
+    "month": "Oy",
+    "monthInProfit": "Foydali oy",
+    "monthInLoss": "Zararli oy",
+    "chartScale": "Shkala",
+    "profitChartAria": "Oxirgi {{count}} oy bo'yicha sof foyda diagrammasi"
+  },
+  "fuel": {
+    "title": "Yoqilg'i nazorati",
+    "subtitle": "Norma va real sarf taqqoslamasi",
+    "tabs": {
+      "control": "Nazorat",
+      "journal": "Jurnal"
+    },
+    "new": "Yangi quyish",
+    "distance": "Probeg",
+    "norm": "Norma bo'yicha",
+    "actual": "Real quyilgan",
+    "diff": "Farq",
+    "loss": "Zarar",
+    "status": "Holat",
+    "totalLoss": "Umumiy zarar",
+    "flagged": "Signal berilgan",
+    "threshold": "Chegara",
+    "vehiclesTracked": "Kuzatuvdagi texnika",
+    "overThreshold": "Chegaradan oshdi",
+    "slightlyOver": "Normadan yuqori",
+    "withinNorm": "Norma ichida",
+    "noNorm": "Norma kiritilmagan",
+    "liters": "Litr",
+    "pricePerLiter": "1 litr narxi",
+    "amount": "Summa",
+    "station": "AZS",
+    "refuelTime": "Sana",
+    "emptyHint": "Bu davrda reys ham, quyish ham qayd etilmagan",
+    "journalEmptyHint": "Quyishlarni qo'lda kiriting yoki AI chek o'qishi bilan (8-bosqich)"
   }
 }
