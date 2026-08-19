@@ -10,8 +10,10 @@ import {
   EmptyState,
   ErrorMessage,
   Field,
+  IconPlus,
   Input,
   Modal,
+  ModalActions,
   PageHeader,
   Pagination,
   Row,
@@ -36,7 +38,12 @@ export function VehiclesPage() {
     <div>
       <PageHeader
         title={t('vehicles.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('vehicles.new')}</Button>}
+        subtitle={t('vehicles.subtitle')}
+        actions={
+          <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+            {t('vehicles.new')}
+          </Button>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (
@@ -59,27 +66,29 @@ export function VehiclesPage() {
             {vehicles.map((vehicle) => (
               <Row key={vehicle.id}>
                 <Cell className="font-semibold">
-                  {vehicle.plateNumber}{' '}
-                  {!vehicle.isActive && <Badge tone="gray">{t('common.deactivate')}</Badge>}
+                  <span className="font-mono">{vehicle.plateNumber}</span>{' '}
+                  {!vehicle.isActive && <Badge tone="gray">{t('common.inactive')}</Badge>}
                 </Cell>
                 <Cell>{t(`vehicles.types.${vehicle.type}`)}</Cell>
-                <Cell>
+                <Cell className="text-ink-secondary">
                   {vehicle.brand ?? '—'} {vehicle.model ?? ''}
                 </Cell>
-                <Cell>{vehicle.fuelNormPer100km ?? '—'}</Cell>
-                <Cell className="tabular-nums">{vehicle.currentOdometer ?? '—'}</Cell>
-                <Cell>{formatDate(vehicle.insuranceExpiry)}</Cell>
+                <Cell numeric>{vehicle.fuelNormPer100km ?? '—'}</Cell>
+                <Cell numeric>{vehicle.currentOdometer ?? '—'}</Cell>
+                <Cell className="text-ink-secondary">{formatDate(vehicle.insuranceExpiry)}</Cell>
                 <Cell>
                   {vehicle.isActive && (
-                    <button
-                      className="text-xs text-danger hover:underline"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger"
                       onClick={() =>
                         window.confirm(t('common.confirmDeactivate')) &&
                         void remove.mutateAsync(vehicle.id)
                       }
                     >
                       {t('common.deactivate')}
-                    </button>
+                    </Button>
                   )}
                 </Cell>
               </Row>
@@ -131,7 +140,7 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal title={t('vehicles.new')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('vehicles.plate')}>
             <Input value={form.plateNumber} onChange={set('plateNumber')} required />
           </Field>
@@ -182,14 +191,14 @@ function VehicleFormModal({ open, onClose }: { open: boolean; onClose: () => voi
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <ModalActions>
+          <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" loading={create.isPending}>
             {create.isPending ? t('common.saving') : t('common.save')}
           </Button>
-        </div>
+        </ModalActions>
       </form>
     </Modal>
   );

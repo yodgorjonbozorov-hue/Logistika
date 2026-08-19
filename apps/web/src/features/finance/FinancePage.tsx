@@ -8,17 +8,22 @@ import {
   Badge,
   Button,
   Cell,
+  CurrencyInput,
   EmptyState,
   ErrorMessage,
   Field,
+  IconCheck,
+  IconPlus,
   Input,
   Modal,
+  ModalActions,
   PageHeader,
   Pagination,
   Row,
   Select,
   Spinner,
   Table,
+  Tabs,
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
@@ -31,22 +36,15 @@ export function FinancePage() {
 
   return (
     <div>
-      <PageHeader title={t('finance.title')} />
-      <div className="mb-3 flex gap-1 border-b border-gray-200 dark:border-white/10">
-        {(['expenses', 'incomes'] as Tab[]).map((key) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={
-              tab === key
-                ? 'border-b-2 border-accent px-4 py-2 text-sm font-semibold text-accent'
-                : 'px-4 py-2 text-sm text-muted hover:text-gray-700 dark:hover:text-gray-200'
-            }
-          >
-            {t(`finance.${key}`)}
-          </button>
-        ))}
-      </div>
+      <PageHeader title={t('finance.title')} subtitle={t('finance.subtitle')} />
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        options={(['expenses', 'incomes'] as Tab[]).map((key) => ({
+          value: key,
+          label: t(`finance.${key}`),
+        }))}
+      />
       {tab === 'expenses' ? <ExpensesTab /> : <IncomesTab />}
     </div>
   );
@@ -73,8 +71,10 @@ function ExpensesTab() {
 
   return (
     <div>
-      <div className="mb-3 flex justify-end">
-        <Button onClick={() => setShowForm(true)}>+ {t('finance.newExpense')}</Button>
+      <div className="mb-4 flex justify-end">
+        <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+          {t('finance.newExpense')}
+        </Button>
       </div>
       <ErrorMessage error={error ?? post.error} />
       {isLoading ? (
@@ -95,9 +95,9 @@ function ExpensesTab() {
           >
             {expenses.map((expense) => (
               <Row key={expense.id}>
-                <Cell>{formatDate(expense.expenseDate)}</Cell>
+                <Cell className="text-ink-secondary">{formatDate(expense.expenseDate)}</Cell>
                 <Cell>{t(`finance.categories.${expense.category}`)}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(expense.amount)}</Cell>
+                <Cell numeric>{formatTiyin(expense.amount)}</Cell>
                 <Cell>{expense.description ?? '—'}</Cell>
                 <Cell>
                   <Badge tone={expense.isApproved ? 'green' : 'gray'}>
@@ -106,12 +106,14 @@ function ExpensesTab() {
                 </Cell>
                 <Cell>
                   {canApprove && !expense.isApproved && (
-                    <button
-                      className="text-xs font-medium text-success hover:underline"
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<IconCheck size={16} />}
                       onClick={() => void post.mutateAsync({ id: expense.id, verb: 'approve' })}
                     >
                       {t('finance.approve')}
-                    </button>
+                    </Button>
                   )}
                 </Cell>
               </Row>
@@ -151,7 +153,7 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal title={t('finance.newExpense')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('finance.category')}>
             <Select value={form.category} onChange={set('category')}>
               {Object.values(ExpenseCategory).map((category) => (
@@ -162,7 +164,12 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
             </Select>
           </Field>
           <Field label={t('finance.amount')}>
-            <Input inputMode="numeric" value={form.amount} onChange={set('amount')} required />
+            <CurrencyInput
+              unit={t('common.som')}
+              value={form.amount}
+              onChange={set('amount')}
+              required
+            />
           </Field>
           <Field label={t('finance.date')}>
             <Input type="date" value={form.expenseDate} onChange={set('expenseDate')} required />
@@ -172,14 +179,14 @@ function ExpenseFormModal({ open, onClose }: { open: boolean; onClose: () => voi
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <ModalActions>
+          <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" loading={create.isPending}>
             {create.isPending ? t('common.saving') : t('common.save')}
           </Button>
-        </div>
+        </ModalActions>
       </form>
     </Modal>
   );
@@ -197,8 +204,10 @@ function IncomesTab() {
 
   return (
     <div>
-      <div className="mb-3 flex justify-end">
-        <Button onClick={() => setShowForm(true)}>+ {t('finance.newIncome')}</Button>
+      <div className="mb-4 flex justify-end">
+        <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+          {t('finance.newIncome')}
+        </Button>
       </div>
       <ErrorMessage error={error ?? update.error} />
       {isLoading ? (
@@ -217,29 +226,34 @@ function IncomesTab() {
           >
             {incomes.map((income) => (
               <Row key={income.id}>
-                <Cell>{formatDate(income.paymentDate ?? income.createdAt)}</Cell>
+                <Cell className="text-ink-secondary">
+                  {formatDate(income.paymentDate ?? income.createdAt)}
+                </Cell>
                 <Cell>{income.invoiceNumber ?? '—'}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(income.amount)}</Cell>
+                <Cell numeric>{formatTiyin(income.amount)}</Cell>
                 <Cell>
-                  <Select
-                    className="w-40"
-                    value={income.status}
-                    onChange={(e) =>
-                      void update.mutateAsync({
-                        id: income.id,
-                        body: { status: e.target.value },
-                      })
-                    }
-                  >
-                    {Object.values(PaymentStatus).map((status) => (
-                      <option key={status} value={status}>
-                        {t(`finance.paymentStatuses.${status}`)}
-                      </option>
-                    ))}
-                  </Select>{' '}
-                  <Badge tone={PAYMENT_TONES[income.status]}>
-                    {t(`finance.paymentStatuses.${income.status}`)}
-                  </Badge>
+                  <div className="flex items-center justify-end gap-2">
+                    <Badge tone={PAYMENT_TONES[income.status]}>
+                      {t(`finance.paymentStatuses.${income.status}`)}
+                    </Badge>
+                    <Select
+                      aria-label={t('finance.paymentStatus')}
+                      className="w-40"
+                      value={income.status}
+                      onChange={(e) =>
+                        void update.mutateAsync({
+                          id: income.id,
+                          body: { status: e.target.value },
+                        })
+                      }
+                    >
+                      {Object.values(PaymentStatus).map((status) => (
+                        <option key={status} value={status}>
+                          {t(`finance.paymentStatuses.${status}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </Cell>
               </Row>
             ))}
@@ -278,9 +292,14 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Modal title={t('finance.newIncome')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('finance.amount')}>
-            <Input inputMode="numeric" value={form.amount} onChange={set('amount')} required />
+            <CurrencyInput
+              unit={t('common.som')}
+              value={form.amount}
+              onChange={set('amount')}
+              required
+            />
           </Field>
           <Field label={t('finance.invoiceNumber')}>
             <Input value={form.invoiceNumber} onChange={set('invoiceNumber')} />
@@ -299,14 +318,14 @@ function IncomeFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <ModalActions>
+          <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" loading={create.isPending}>
             {create.isPending ? t('common.saving') : t('common.save')}
           </Button>
-        </div>
+        </ModalActions>
       </form>
     </Modal>
   );

@@ -1,4 +1,7 @@
-# TruckControl AI
+# TruckControl AI — Logixa AI
+
+> Mahsulot interfeysi **Logixa AI** brendi ostida (2026 brand board);
+> repo, paket va modul nomlari `truckcontrol` bo'lib qoladi.
 
 Sun'iy intellektga asoslangan logistika boshqaruv tizimi — O'zbekiston yuk tashish
 firmalari (5–40 texnika) uchun SaaS.
@@ -21,6 +24,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/TZ.md`](docs/TZ.md)                     | Texnik topshiriq — barcha talablar manbasi |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
+| [`docs/DESIGN.md`](docs/DESIGN.md)             | Logixa AI dizayn tizimi (token, komponent) |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek

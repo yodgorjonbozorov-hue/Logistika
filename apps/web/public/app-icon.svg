@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <title>Logixa AI</title>
+  <defs>
+    <linearGradient id="lx" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E96FF"/>
+      <stop offset="1" stop-color="#0A6DE8"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#lx)"/>
+  <g transform="translate(36 36) scale(1.6875)">
+    <path d="M14 22v26M14 48h28" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <circle cx="14" cy="14" r="4" fill="#FFFFFF"/>
+    <circle cx="52" cy="48" r="5.5" fill="#FFFFFF"/>
+  </g>
+</svg>

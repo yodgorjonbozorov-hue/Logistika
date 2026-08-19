@@ -8,8 +8,10 @@ import {
   EmptyState,
   ErrorMessage,
   Field,
+  IconPlus,
   Input,
   Modal,
+  ModalActions,
   PageHeader,
   Pagination,
   Row,
@@ -31,7 +33,12 @@ export function ClientsPage() {
     <div>
       <PageHeader
         title={t('clients.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('clients.new')}</Button>}
+        subtitle={t('clients.subtitle')}
+        actions={
+          <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+            {t('clients.new')}
+          </Button>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (
@@ -52,10 +59,12 @@ export function ClientsPage() {
             {clients.map((client) => (
               <Row key={client.id}>
                 <Cell className="font-semibold">{client.name}</Cell>
-                <Cell>{client.contactPerson ?? '—'}</Cell>
-                <Cell>{client.phone ?? '—'}</Cell>
-                <Cell>{client.paymentTermsDays ?? '—'}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(client.balance)}</Cell>
+                <Cell className="text-ink-secondary">{client.contactPerson ?? '—'}</Cell>
+                <Cell numeric className="text-ink-secondary">
+                  {client.phone ?? '—'}
+                </Cell>
+                <Cell numeric>{client.paymentTermsDays ?? '—'}</Cell>
+                <Cell numeric>{formatTiyin(client.balance)}</Cell>
               </Row>
             ))}
           </Table>
@@ -102,7 +111,7 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
         <Field label={t('clients.name')}>
           <Input value={form.name} onChange={set('name')} required />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('clients.inn')}>
             <Input value={form.inn} onChange={set('inn')} />
           </Field>
@@ -128,14 +137,14 @@ function ClientFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <ModalActions>
+          <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" loading={create.isPending}>
             {create.isPending ? t('common.saving') : t('common.save')}
           </Button>
-        </div>
+        </ModalActions>
       </form>
     </Modal>
   );

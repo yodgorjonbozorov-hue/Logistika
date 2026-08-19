@@ -10,8 +10,10 @@ import {
   EmptyState,
   ErrorMessage,
   Field,
+  IconPlus,
   Input,
   Modal,
+  ModalActions,
   PageHeader,
   Pagination,
   Row,
@@ -36,7 +38,12 @@ export function DriversPage() {
     <div>
       <PageHeader
         title={t('drivers.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('drivers.new')}</Button>}
+        subtitle={t('drivers.subtitle')}
+        actions={
+          <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+            {t('drivers.new')}
+          </Button>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (
@@ -60,15 +67,17 @@ export function DriversPage() {
               <Row key={driver.id}>
                 <Cell className="font-semibold">
                   {driver.fullName}{' '}
-                  {!driver.isActive && <Badge tone="gray">{t('common.deactivate')}</Badge>}
+                  {!driver.isActive && <Badge tone="gray">{t('common.inactive')}</Badge>}
                 </Cell>
-                <Cell>{driver.phone ?? '—'}</Cell>
-                <Cell>{driver.licenseNumber ?? '—'}</Cell>
-                <Cell>{formatDate(driver.licenseExpiry)}</Cell>
+                <Cell numeric className="text-ink-secondary">
+                  {driver.phone ?? '—'}
+                </Cell>
+                <Cell className="text-ink-secondary">{driver.licenseNumber ?? '—'}</Cell>
+                <Cell className="text-ink-secondary">{formatDate(driver.licenseExpiry)}</Cell>
                 <Cell>
                   {driver.salaryType ? t(`drivers.salaryTypes.${driver.salaryType}`) : '—'}
                 </Cell>
-                <Cell className="tabular-nums">
+                <Cell numeric>
                   {driver.salaryType === 'PERCENT'
                     ? driver.salaryValue
                       ? `${Number(driver.salaryValue) / 100}%`
@@ -77,15 +86,17 @@ export function DriversPage() {
                 </Cell>
                 <Cell>
                   {driver.isActive && (
-                    <button
-                      className="text-xs text-danger hover:underline"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-danger"
                       onClick={() =>
                         window.confirm(t('common.confirmDeactivate')) &&
                         void remove.mutateAsync(driver.id)
                       }
                     >
                       {t('common.deactivate')}
-                    </button>
+                    </Button>
                   )}
                 </Cell>
               </Row>
@@ -140,7 +151,7 @@ function DriverFormModal({ open, onClose }: { open: boolean; onClose: () => void
         <Field label={t('drivers.fullName')}>
           <Input value={form.fullName} onChange={set('fullName')} required />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('drivers.phone')}>
             <Input value={form.phone} onChange={set('phone')} placeholder="+99890XXXXXXX" />
           </Field>
@@ -168,14 +179,14 @@ function DriverFormModal({ open, onClose }: { open: boolean; onClose: () => void
           </Field>
         </div>
         <ErrorMessage error={create.error} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <ModalActions>
+          <Button variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" loading={create.isPending}>
             {create.isPending ? t('common.saving') : t('common.save')}
           </Button>
-        </div>
+        </ModalActions>
       </form>
     </Modal>
   );

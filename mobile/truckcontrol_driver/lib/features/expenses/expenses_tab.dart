@@ -60,7 +60,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
           final time = DateTime.tryParse(row['event_time'] as String? ?? '')?.toLocal();
           return Card(
             child: ListTile(
-              leading: Icon(definition.icon, color: BrandColors.accent),
+              leading: Icon(definition.icon, color: BrandColors.accentBright),
               title: Text(t.t('event.$type')),
               subtitle: Text([
                 if (time != null)

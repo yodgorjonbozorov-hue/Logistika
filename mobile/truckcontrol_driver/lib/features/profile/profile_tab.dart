@@ -65,7 +65,7 @@ class _ProfileTabState extends State<ProfileTab> {
         if (_me != null)
           Card(
             child: ListTile(
-              leading: const Icon(Icons.person, color: BrandColors.accent),
+              leading: const Icon(Icons.person, color: BrandColors.accentBright),
               title: Text((_me!['fullName'] as String?) ?? ''),
               subtitle: Text((_me!['phone'] as String?) ?? ''),
             ),
@@ -91,7 +91,7 @@ class _ProfileTabState extends State<ProfileTab> {
         ),
         Card(
           child: ListTile(
-            leading: const Icon(Icons.language, color: BrandColors.accent),
+            leading: const Icon(Icons.language, color: BrandColors.accentBright),
             title: Text(t.t('profile.language')),
             trailing: DropdownButton<String>(
               value: scope.tokens.locale,

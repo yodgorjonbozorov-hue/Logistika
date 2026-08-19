@@ -9,7 +9,7 @@ beradi va anomaliyalarni topadi — lekin hech narsani o'zi bazaga yozmaydi. Uch
 haydovchi (Flutter mobil, offline-first), logist (React web), boshliq (web + Telegram).
 
 **Har seans boshida o'qi:** `docs/TZ.md` (talablar), `docs/ARCHITECTURE.md` (qarorlar),
-`docs/ROADMAP.md` (joriy bosqich). Seans oxirida ROADMAP'dagi bajarilgan punktlarni belgila.
+`docs/ROADMAP.md` (joriy bosqich), `docs/DESIGN.md` (Logixa AI dizayn tizimi — UI ishida). Seans oxirida ROADMAP'dagi bajarilgan punktlarni belgila.
 
 ## Papka tuzilishi
 
@@ -33,6 +33,8 @@ To'liq tuzilish va modullar bog'liqligi — `docs/ARCHITECTURE.md`.
 - Har API javobi bir xil formatda: `{ success, data, error, meta }`.
 - Foydalanuvchi ko'radigan barcha matn i18n orqali: uz-latn (asosiy), ru, uz-cyrl.
   Kodga qattiq yozilgan matn bo'lmasin.
+- UI ranglari, radiuslari va shriftlari faqat dizayn tokenlaridan (`docs/DESIGN.md`);
+  komponentda hex yozilmaydi, brend belgisi qayta chizilmaydi.
 - AI hech qachon bazaga to'g'ridan-to'g'ri yozmaydi va SQL yozmaydi.
 - Moliyaviy hisob-kitobni AI emas, oddiy kod bajaradi (TZ 6-bo'lim).
 - Har modul uchun test yoziladi.

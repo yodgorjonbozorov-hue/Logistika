@@ -91,6 +91,22 @@
 - [x] Mijoz tracking-havolasi: `POST /trips/:id/share-link` (muddatli token) +
       autentifikatsiyasiz `/track/:token` sahifasi — sanitizatsiya testda tekshirilgan (TZ §4.2)
 
+## Brend va dizayn tizimi (Logixa AI) ✅
+
+- [x] Brand board tahlili → yagona dizayn tizimi: `apps/web/src/index.css` tokenlari
+      (Deep Navy + Electric Blue, yorug'/tungi), Tailwind bog'lanishi, `docs/DESIGN.md`
+- [x] Logotip komponentlari (gorizontal/ikonka/wordmark/stacked), favicon, app-icon,
+      web manifest
+- [x] iOS uslubidagi komponentlar kutubxonasi: tugma (loading/disabled), input/select/
+      currency, karta va KPI plitkasi, moslashuvchan jadval, badge, modal-sheet, tab,
+      segment, holatlar, yagona ikonka oilasi
+- [x] Ilova qobig'i: premium sidebar, telefon uchun pastki navigatsiya va drawer,
+      safe-area; kirish va mijoz kuzatuv sahifalari brend ostida
+- [x] Tema arxitekturasi (`light|dark|system`, default dark) + testlar
+- [x] i18n: barcha yangi matnlar uch tilda, kalit-parite testi; `uz-latn` resurslari
+      topilmasligi tuzatildi (i18next `lowerCaseLng`)
+- [x] Flutter haydovchi ilovasi temasi shu tokenlarga ko'chirildi
+
 ## 7-bosqich — Moliya yadrosi
 
 - [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI

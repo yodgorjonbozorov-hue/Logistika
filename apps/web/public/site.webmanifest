@@ -1,0 +1,14 @@
+{
+  "name": "Logixa AI",
+  "short_name": "Logixa AI",
+  "description": "AI-powered logistics — fleet, trips, fuel and expenses in one platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1220",
+  "theme_color": "#0D1220",
+  "icons": [
+    { "src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

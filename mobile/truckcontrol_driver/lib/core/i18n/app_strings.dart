@@ -18,7 +18,7 @@ class AppStrings {
 
   static const Map<String, Map<String, String>> _messages = {
     'uz-latn': {
-      'app.title': 'TruckControl AI',
+      'app.title': 'Logixa AI',
       'login.title': 'Haydovchi kirishi',
       'login.phone': 'Telefon raqami',
       'login.sendCode': 'Kod olish',
@@ -68,7 +68,7 @@ class AppStrings {
       'common.cancel': 'Bekor qilish',
     },
     'uz-cyrl': {
-      'app.title': 'TruckControl AI',
+      'app.title': 'Logixa AI',
       'login.title': 'Ҳайдовчи кириши',
       'login.phone': 'Телефон рақами',
       'login.sendCode': 'Код олиш',
@@ -118,7 +118,7 @@ class AppStrings {
       'common.cancel': 'Бекор қилиш',
     },
     'ru': {
-      'app.title': 'TruckControl AI',
+      'app.title': 'Logixa AI',
       'login.title': 'Вход для водителя',
       'login.phone': 'Номер телефона',
       'login.sendCode': 'Получить код',

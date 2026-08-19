@@ -1,6 +1,12 @@
 {
   "app": {
-    "title": "TruckControl AI"
+    "title": "Logixa AI"
+  },
+  "brand": {
+    "name": "Logixa AI",
+    "tagline": "Butun avtoparkingizni boshqaradigan AI.",
+    "description": "Mashinalar, haydovchilar, marshrutlar, yuklar, yoqilg'i va xarajatlar — bitta platformada.",
+    "kicker": "AI-POWERED LOGISTICS"
   },
   "nav": {
     "trips": "Reyslar",
@@ -8,7 +14,8 @@
     "drivers": "Haydovchilar",
     "clients": "Mijozlar",
     "finance": "Moliya",
-    "map": "Xarita"
+    "map": "Xarita",
+    "menu": "Menyu"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -39,7 +46,12 @@
     "select": "Tanlang…",
     "notSet": "—",
     "theme": "Tungi rejim",
-    "language": "Til"
+    "language": "Til",
+    "inactive": "Faol emas",
+    "search": "Qidirish",
+    "retry": "Qayta urinish",
+    "themeLight": "Yorug' rejim",
+    "themeDark": "Tungi rejim"
   },
   "status": {
     "DRAFT": "Qoralama",
@@ -89,7 +101,9 @@
     "financeBalance": "Farq",
     "shareLink": "Mijoz havolasi",
     "linkCopied": "Havola nusxalandi",
-    "copy": "Nusxalash"
+    "copy": "Nusxalash",
+    "subtitle": "Reyslar ro'yxati va hayot sikli",
+    "emptyHint": "Birinchi reysni oching — marshrut, yuk va narxni kiriting"
   },
   "vehicles": {
     "title": "Avtopark",
@@ -108,7 +122,8 @@
       "TRUCK": "Fura",
       "TRAILER": "Tirkama",
       "SPECIAL": "Maxsus"
-    }
+    },
+    "subtitle": "Texnika kartochkalari, normalar va hujjat muddatlari"
   },
   "drivers": {
     "title": "Haydovchilar",
@@ -125,7 +140,8 @@
       "FIXED": "Oylik",
       "PERCENT": "Foiz",
       "PER_KM": "Km ga"
-    }
+    },
+    "subtitle": "Haydovchilar, guvohnomalar va ish haqi shartlari"
   },
   "clients": {
     "title": "Mijozlar",
@@ -137,7 +153,8 @@
     "email": "Email",
     "address": "Manzil",
     "paymentTerms": "To'lov muddati (kun)",
-    "balance": "Balans (so'm)"
+    "balance": "Balans (so'm)",
+    "subtitle": "Mijozlar, to'lov shartlari va balans"
   },
   "finance": {
     "title": "Moliya",
@@ -176,7 +193,8 @@
       "INSURANCE": "Sug'urta",
       "TAX": "Soliq",
       "OTHER": "Boshqa"
-    }
+    },
+    "subtitle": "Xarajatlar va kirimlar nazorati"
   },
   "map": {
     "title": "Jonli xarita",
@@ -192,7 +210,8 @@
     "selectVehicle": "Mashinani tanlang",
     "selectDate": "Sana",
     "noTrack": "Bu kunda trek yo'q",
-    "noPosition": "Hali GPS signal yo'q"
+    "noPosition": "Hali GPS signal yo'q",
+    "subtitle": "Jonli holat va marshrut tarixi"
   },
   "track": {
     "title": "Yuk kuzatuvi",
@@ -213,5 +232,12 @@
     "EXPENSE": "Yo'l xarajati",
     "DELIVERED": "Yuk topshirildi",
     "FINISH": "Reys tugadi"
+  },
+  "roles": {
+    "SUPERADMIN": "Superadmin",
+    "OWNER": "Rahbar",
+    "LOGIST": "Logist",
+    "ACCOUNTANT": "Buxgalter",
+    "DRIVER": "Haydovchi"
   }
 }

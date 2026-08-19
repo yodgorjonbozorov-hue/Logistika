@@ -7,16 +7,16 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-le
 import { LiveStatus } from 'shared';
 import { api } from '../../shared/api/client';
 import type { Vehicle } from '../../shared/api/entities';
-import { Card, PageHeader, Select, Spinner } from '../../shared/ui';
+import { BRAND, Card, Input, PageHeader, SegmentedControl, Select, Spinner } from '../../shared/ui';
 import { formatDateTime } from '../../shared/utils/date';
 
 const TASHKENT: [number, number] = [41.3, 69.25];
 
 const STATUS_COLORS: Record<LiveStatus, string> = {
-  [LiveStatus.MOVING]: '#2FAE6A',
-  [LiveStatus.RESTING]: '#F5A623',
-  [LiveStatus.BREAKDOWN]: '#E14B4B',
-  [LiveStatus.IDLE]: '#8A94A6',
+  [LiveStatus.MOVING]: BRAND.success,
+  [LiveStatus.RESTING]: BRAND.warning,
+  [LiveStatus.BREAKDOWN]: BRAND.danger,
+  [LiveStatus.IDLE]: BRAND.muted,
 };
 
 interface LiveVehicle {
@@ -41,22 +41,16 @@ export function MapPage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title={t('map.title')}
+        subtitle={t('map.subtitle')}
         actions={
-          <div className="flex gap-1 rounded-lg border border-gray-300 p-0.5 dark:border-white/20">
-            {(['live', 'history'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={
-                  mode === m
-                    ? 'rounded-md bg-accent px-3 py-1 text-sm font-semibold text-navy'
-                    : 'px-3 py-1 text-sm text-muted'
-                }
-              >
-                {t(`map.${m}`)}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={mode}
+            onChange={setMode}
+            options={(['live', 'history'] as Mode[]).map((value) => ({
+              value,
+              label: t(`map.${value}`),
+            }))}
+          />
         }
       />
       {mode === 'live' ? (
@@ -85,27 +79,29 @@ function LiveMap() {
   if (isLoading) return <Spinner />;
 
   return (
-    <div className="flex min-h-0 flex-1 gap-3">
-      <Card className="w-52 shrink-0 self-start">
-        <ul className="space-y-2 text-sm">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+      <Card className="shrink-0 self-start lg:w-56">
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-4 lg:grid-cols-1">
           {Object.values(LiveStatus).map((status) => (
-            <li key={status} className="flex items-center gap-2">
+            <li key={status} className="flex items-center gap-2 text-subhead">
               <span
-                className="h-3 w-3 rounded-full"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: STATUS_COLORS[status] }}
               />
-              <span className="flex-1">{t(`map.${status}`)}</span>
-              <span className="font-semibold tabular-nums">{counts[status]}</span>
+              <span className="min-w-0 flex-1 truncate text-ink-secondary">
+                {t(`map.${status}`)}
+              </span>
+              <span className="font-mono font-semibold tabular-nums">{counts[status]}</span>
             </li>
           ))}
         </ul>
       </Card>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
+      <div className="min-h-[420px] flex-1 overflow-hidden rounded-lg border border-line shadow-sm">
         <MapContainer
           center={TASHKENT}
           zoom={6}
           className="h-full w-full"
-          style={{ minHeight: 480 }}
+          style={{ minHeight: 420 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -119,15 +115,15 @@ function LiveMap() {
                 center={[vehicle.lastPosition!.lat, vehicle.lastPosition!.lng]}
                 radius={9}
                 pathOptions={{
-                  color: '#ffffff',
+                  color: BRAND.white,
                   weight: 2,
                   fillColor: STATUS_COLORS[vehicle.status],
                   fillOpacity: 1,
                 }}
               >
                 <Popup>
-                  <div className="space-y-1 text-sm">
-                    <div className="font-bold">{vehicle.plateNumber}</div>
+                  <div className="space-y-1 text-subhead">
+                    <div className="font-mono font-semibold">{vehicle.plateNumber}</div>
                     <div>{t(`map.${vehicle.status}`)}</div>
                     {vehicle.driverName && <div>{vehicle.driverName}</div>}
                     {vehicle.trip && (
@@ -141,11 +137,11 @@ function LiveMap() {
                       </div>
                     )}
                     {vehicle.deviationKm != null && vehicle.deviationKm > 20 && (
-                      <div className="font-semibold text-red-600">
+                      <div className="font-semibold text-danger">
                         {t('map.deviation')}: {vehicle.deviationKm} km
                       </div>
                     )}
-                    <div className="text-xs text-gray-500">
+                    <div className="text-caption text-ink-tertiary">
                       {t('map.lastSignal')}: {formatDateTime(vehicle.lastPosition?.recordedAt)}
                     </div>
                   </div>
@@ -194,8 +190,13 @@ function HistoryMap({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex gap-3">
-        <Select value={vehicleId} onChange={(e) => onVehicle(e.target.value)} className="w-56">
+      <div className="flex flex-wrap gap-3">
+        <Select
+          aria-label={t('map.selectVehicle')}
+          value={vehicleId}
+          onChange={(e) => onVehicle(e.target.value)}
+          className="w-56"
+        >
           <option value="">{t('map.selectVehicle')}</option>
           {(vehicles ?? [])
             .filter((v) => v.type !== 'TRAILER')
@@ -205,37 +206,42 @@ function HistoryMap({
               </option>
             ))}
         </Select>
-        <input
+        <Input
           type="date"
           value={date}
           onChange={(e) => onDate(e.target.value)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-white/20 dark:bg-white/10"
+          className="w-44"
           aria-label={t('map.selectDate')}
         />
         {vehicleId && !isLoading && track.length === 0 && (
-          <span className="self-center text-sm text-muted">{t('map.noTrack')}</span>
+          <span className="self-center text-subhead text-ink-tertiary">{t('map.noTrack')}</span>
         )}
       </div>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-xl">
+      <div className="min-h-[420px] flex-1 overflow-hidden rounded-lg border border-line shadow-sm">
         <MapContainer
           center={TASHKENT}
           zoom={6}
           bounds={bounds}
           className="h-full w-full"
-          style={{ minHeight: 480 }}
+          style={{ minHeight: 420 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {track.length > 1 && (
-            <Polyline positions={track} pathOptions={{ color: '#F5A623', weight: 4 }} />
+            <Polyline positions={track} pathOptions={{ color: BRAND.primary, weight: 4 }} />
           )}
           {track.length > 0 && (
             <CircleMarker
               center={track[track.length - 1]!}
               radius={8}
-              pathOptions={{ color: '#fff', weight: 2, fillColor: '#2FAE6A', fillOpacity: 1 }}
+              pathOptions={{
+                color: BRAND.white,
+                weight: 2,
+                fillColor: BRAND.success,
+                fillOpacity: 1,
+              }}
             />
           )}
         </MapContainer>

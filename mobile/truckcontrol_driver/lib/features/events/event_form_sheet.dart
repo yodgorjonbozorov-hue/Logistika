@@ -97,7 +97,7 @@ class _EventFormSheetState extends State<_EventFormSheet> {
         children: [
           Row(
             children: [
-              Icon(definition.icon, color: BrandColors.accent),
+              Icon(definition.icon, color: BrandColors.accentBright),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

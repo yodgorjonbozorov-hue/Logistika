@@ -68,7 +68,7 @@ class TruckControlAppState extends State<TruckControlApp> {
       queue: widget.queue,
       gps: widget.gps,
       child: MaterialApp(
-        title: 'TruckControl AI',
+        title: 'Logixa AI',
         debugShowCheckedModeBanner: false,
         theme: buildDarkTheme(),
         localizationsDelegates: [

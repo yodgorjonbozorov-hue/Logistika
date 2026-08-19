@@ -7,6 +7,7 @@ import {
   Cell,
   EmptyState,
   ErrorMessage,
+  IconPlus,
   PageHeader,
   Pagination,
   Row,
@@ -34,24 +35,28 @@ export function TripsPage() {
     <div>
       <PageHeader
         title={t('trips.title')}
+        subtitle={t('trips.subtitle')}
         actions={
           <>
             <Select
+              aria-label={t('trips.status')}
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value as TripStatus | '');
+              onChange={(event) => {
+                setStatus(event.target.value as TripStatus | '');
                 setPage(1);
               }}
               className="w-44"
             >
               <option value="">{t('common.all')}</option>
-              {Object.values(TripStatus).map((s) => (
-                <option key={s} value={s}>
-                  {t(`status.${s}`)}
+              {Object.values(TripStatus).map((value) => (
+                <option key={value} value={value}>
+                  {t(`status.${value}`)}
                 </option>
               ))}
             </Select>
-            <Button onClick={() => setShowForm(true)}>+ {t('trips.new')}</Button>
+            <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+              {t('trips.new')}
+            </Button>
           </>
         }
       />
@@ -59,7 +64,14 @@ export function TripsPage() {
       {isLoading ? (
         <Spinner />
       ) : trips.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          description={t('trips.emptyHint')}
+          action={
+            <Button onClick={() => setShowForm(true)} icon={<IconPlus size={18} />}>
+              {t('trips.new')}
+            </Button>
+          }
+        />
       ) : (
         <>
           <Table
@@ -75,14 +87,16 @@ export function TripsPage() {
           >
             {trips.map((trip) => (
               <Row key={trip.id} onClick={() => navigate(`/trips/${trip.id}`)}>
-                <Cell className="font-semibold">№{trip.tripNumber}</Cell>
-                <Cell>
+                <Cell numeric className="font-semibold text-ink">
+                  №{trip.tripNumber}
+                </Cell>
+                <Cell className="font-medium">
                   {trip.loadingAddress ?? '—'} → {trip.unloadingAddress ?? '—'}
                 </Cell>
-                <Cell>{trip.client?.name ?? '—'}</Cell>
-                <Cell>{trip.vehicle?.plateNumber ?? '—'}</Cell>
-                <Cell>{trip.driver?.fullName ?? '—'}</Cell>
-                <Cell className="tabular-nums">{formatTiyin(trip.agreedPrice)}</Cell>
+                <Cell className="text-ink-secondary">{trip.client?.name ?? '—'}</Cell>
+                <Cell className="text-ink-secondary">{trip.vehicle?.plateNumber ?? '—'}</Cell>
+                <Cell className="text-ink-secondary">{trip.driver?.fullName ?? '—'}</Cell>
+                <Cell numeric>{formatTiyin(trip.agreedPrice)}</Cell>
                 <Cell>
                   <StatusBadge status={trip.status} />
                 </Cell>

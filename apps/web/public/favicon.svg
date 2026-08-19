@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Logixa AI</title>
+  <path d="M14 22v26M14 48h28" stroke="#0D1220" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="14" cy="14" r="5.5" fill="#0D1220"/>
+  <circle cx="52" cy="48" r="7.5" fill="#0A84FF"/>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      path { stroke: #FFFFFF }
+      circle:nth-of-type(1) { fill: #FFFFFF }
+    }
+  </style>
+</svg>

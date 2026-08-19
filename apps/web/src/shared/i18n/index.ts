@@ -20,6 +20,9 @@ void i18n.use(initReactI18next).init({
   },
   lng: initialLocale,
   fallbackLng: DEFAULT_LOCALE,
+  // i18next would otherwise normalise `uz-latn` to BCP-47 casing (`uz-Latn`)
+  // and miss the resource bundles, which are keyed exactly like `LOCALES`.
+  lowerCaseLng: true,
   interpolation: { escapeValue: false },
 });
 

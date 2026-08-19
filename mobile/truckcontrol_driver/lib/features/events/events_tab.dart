@@ -96,7 +96,7 @@ class _EventButton extends StatelessWidget {
     final t = AppStrings.of(context);
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF223358),
+        backgroundColor: BrandColors.graphite,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.all(8),
       ),
@@ -104,7 +104,7 @@ class _EventButton extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(definition.icon, size: 30, color: BrandColors.accent),
+          Icon(definition.icon, size: 30, color: BrandColors.accentBright),
           const SizedBox(height: 6),
           Text(
             t.t(definition.i18nKey),

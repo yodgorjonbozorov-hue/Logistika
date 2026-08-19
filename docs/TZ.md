@@ -828,6 +828,11 @@ Tarif narxi 1.8 mln so'm (~$140) bo'lganda AI xarajati **~23%**. Bu qabul qilina
 
 # 11. BREND
 
+> **Yangilanish (2026, brand board V1.0):** brend **Logixa AI** ga o'zgardi —
+> Deep Navy `#0D1220` + Electric Blue `#0A84FF`. Quyidagi 11.0 bo'limi tarixiy
+> holat sifatida qoladi; amaldagi palitra, tipografika va komponentlar —
+> [`docs/DESIGN.md`](DESIGN.md).
+
 ## 11.0. Nom va identifikatsiya
 
 **Nom:** TruckControl AI
