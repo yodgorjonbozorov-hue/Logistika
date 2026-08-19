@@ -5,6 +5,8 @@
   "AUTH_TOKEN_EXPIRED": "Sessiya muddati tugadi, qaytadan kiring",
   "AUTH_REFRESH_INVALID": "Sessiyani yangilab bo'lmadi, qaytadan kiring",
   "AUTH_FORBIDDEN": "Bu amal uchun sizda huquq yo'q",
+  "AUTH_EMAIL_TAKEN": "Bu email allaqachon ro'yxatdan o'tgan",
+  "AUTH_PHONE_TAKEN": "Bu telefon raqami allaqachon ro'yxatdan o'tgan",
   "VALIDATION_FAILED": "Kiritilgan ma'lumotlar noto'g'ri",
   "NOT_FOUND": "Ma'lumot topilmadi",
   "TENANT_MISSING": "Kompaniya aniqlanmadi",

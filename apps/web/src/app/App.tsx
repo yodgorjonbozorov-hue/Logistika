@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { CargoPage } from '../features/cargo/CargoPage';
 import { ClientsPage } from '../features/clients/ClientsPage';
 import { DocumentsPage } from '../features/documents/DocumentsPage';
@@ -24,6 +25,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/track/:token" element={<PublicTrackPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

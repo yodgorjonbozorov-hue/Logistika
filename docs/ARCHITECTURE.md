@@ -114,10 +114,15 @@ qoidasining strukturaviy kafolati.
 
 **Auth oqimi:**
 
+- Ro'yxatdan o'tish (ochiq): `POST /auth/register` — kompaniya + birinchi OWNER bitta
+  tranzaksiyada, `tariff_plan = TRIAL`, `subscription_until = now + 14 kun`; javob login
+  bilan bir xil token juftligi. E-mail/telefon band bo'lsa 409 (`AUTH_EMAIL_TAKEN`/
+  `AUTH_PHONE_TAKEN`).
 - Ofis (OWNER/LOGIST/ACCOUNTANT): email/telefon + parol (argon2) → access JWT (15 daq) +
   refresh (30 kun, rotatsiya).
-- Haydovchi: telefon + SMS-kod yoki logist bergan login/parol (TZ §3.2 E-1) → uzoq muddatli
-  refresh (telefon — ish quroli, tez-tez login qilinmaydi).
+- Haydovchi: **hozircha** logist bergan telefon/parol (TZ §3.2 E-1) → uzoq muddatli refresh
+  (telefon — ish quroli, tez-tez login qilinmaydi). SMS-kod oqimi kodda bor, lekin provayder
+  ulanmaguncha ishlatilmaydi; Google-kirish ham keyingi bosqichda.
 - Mijoz havolasi: JWT emas — imzolangan, muddatli, bitta reysga bog'langan token URL ichida.
 - Rollar: NestJS guard + dekorator (`@Roles('OWNER')`); barcha o'zgarishlar `audit` logiga.
 
@@ -128,8 +133,10 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 ### auth
 
+- `POST /auth/register` — o'zi ro'yxatdan o'tish: kompaniya + OWNER, 14 kunlik trial
 - `POST /auth/login` — email/parol (ofis) yoki login/parol (haydovchi)
-- `POST /auth/driver/request-code` · `POST /auth/driver/verify` — telefon+SMS
+- `POST /auth/driver/request-code` · `POST /auth/driver/verify` — telefon+SMS (provayder
+  ulangandan keyin)
 - `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me`
 
 ### companies (OWNER; superadmin — alohida `/admin` prefiksi)

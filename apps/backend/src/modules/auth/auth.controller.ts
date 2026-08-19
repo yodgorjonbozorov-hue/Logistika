@@ -7,13 +7,24 @@ import { DriverAuthService } from './driver-auth.service';
 import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RegistrationService } from './registration.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly driverAuthService: DriverAuthService,
+    private readonly registrationService: RegistrationService,
   ) {}
+
+  /** Self-service sign-up: company + first OWNER, signed in straight away. */
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  register(@Body() dto: RegisterDto) {
+    return this.registrationService.register(dto);
+  }
 
   @Public()
   @Post('driver/request-code')

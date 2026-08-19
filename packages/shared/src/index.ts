@@ -42,6 +42,19 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+/** Self-service sign-up: a company and its first OWNER in one request. */
+export interface RegisterRequest {
+  companyName: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
+
+/** Every new tenant starts on a free trial of this length. */
+export const TRIAL_DAYS = 14;
+export const TARIFF_TRIAL = 'TRIAL';
+
 export interface CurrentUserPayload {
   userId: string;
   companyId: string | null;
@@ -146,6 +159,8 @@ export const ERROR_CODES = [
   'AUTH_TOKEN_EXPIRED',
   'AUTH_REFRESH_INVALID',
   'AUTH_FORBIDDEN',
+  'AUTH_EMAIL_TAKEN',
+  'AUTH_PHONE_TAKEN',
   'VALIDATION_FAILED',
   'NOT_FOUND',
   'TENANT_MISSING',

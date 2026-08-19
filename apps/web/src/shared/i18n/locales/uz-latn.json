@@ -33,7 +33,6 @@
     "hidePassword": "Parolni yashirish",
     "rememberMe": "Meni eslab qol",
     "noAccount": "Hisobingiz yo'qmi?",
-    "askAdmin": "Administratoringizga murojaat qiling.",
     "heroLine1": "Har bir reys",
     "heroLine2": "nazorat ostida.",
     "heroBody": "Reyslar, mashinalar, haydovchilar va moliya — bitta boshqaruv panelida. Zamonaviy logistika kompaniyasining operatsion tizimi.",
@@ -41,7 +40,35 @@
     "highlights": {
       "gps": "GPS kuzatuv har 3 daqiqada, offlayn rejimda ham",
       "profit": "Har bir reysning real foydasi — tiyingacha",
-      "driverApp": "Haydovchilar uchun SMS-kod bilan mobil ilova"
+      "driverApp": "Haydovchilar uchun mobil ilova — login va parol bilan"
+    },
+    "registerLink": "Ro'yxatdan o'ting",
+    "register": {
+      "title": "Bepul sinovni boshlang",
+      "subtitle": "Kompaniyangizni ro'yxatdan o'tkazing — 14 kun bepul",
+      "companyName": "Kompaniya nomi",
+      "companyNamePlaceholder": "Yo'l Logistika MChJ",
+      "fullName": "Ismingiz",
+      "fullNamePlaceholder": "Umar Karimov",
+      "email": "Email",
+      "emailPlaceholder": "siz@kompaniya.uz",
+      "phone": "Telefon (ixtiyoriy)",
+      "phonePlaceholder": "+998901234567",
+      "password": "Parol",
+      "passwordHint": "Kamida 8 ta belgi",
+      "passwordRepeat": "Parolni takrorlang",
+      "passwordMismatch": "Parollar mos kelmadi",
+      "passwordTooShort": "Parol kamida 8 ta belgidan iborat bo'lsin",
+      "submit": "Bepul boshlash",
+      "submitting": "Hisob yaratilmoqda…",
+      "haveAccount": "Hisobingiz bormi?",
+      "signIn": "Kirish",
+      "trialNote": "{{days}} kun bepul · karta talab qilinmaydi",
+      "perks": {
+        "instant": "Bir daqiqada ishga tushadi — o'rnatish shart emas",
+        "noCard": "Karta kerak emas, avtomatik to'lov yo'q",
+        "owner": "Siz kompaniya egasi sifatida kirasiz"
+      }
     }
   },
   "common": {

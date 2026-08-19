@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
-import type { AuthTokens } from 'shared';
+import type { AuthTokens, RegisterRequest } from 'shared';
 import { api, tokenStore } from '../api/client';
 import type { User } from '../api/entities';
 
@@ -8,6 +8,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
+  register: (input: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,6 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  // Sign-up returns the same token pair as a login, so the new owner lands
+  // inside the app without a second round trip.
+  const register = useCallback(
+    async (input: RegisterRequest) => {
+      const { data } = await api<AuthTokens>('/auth/register', { method: 'POST', body: input });
+      tokenStore.set(data.accessToken, data.refreshToken);
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+    [queryClient],
+  );
+
   const logout = useCallback(async () => {
     const refreshToken = tokenStore.refresh;
     if (refreshToken) {
@@ -58,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -37,6 +37,9 @@
 
 - [x] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
 - [x] `users` CRUD; haydovchi auth (telefon + SMS-kod, 5 daq TTL, 5 urinish, enumeratsiyasiz)
+- [x] Ochiq ro'yxatdan o'tish: `POST /auth/register` + web `/register` — kompaniya va birinchi
+      OWNER bitta tranzaksiyada, 14 kunlik bepul trial, kirish faqat login+parol
+      (SMS va Google keyingi bosqichda)
 - [x] `drivers`: profil, ish haqi turi (fixed/percent/per_km), soft-delete
 - [x] `clients`: mijozlar, to'lov shartlari, balans
 - [x] `vehicles`: kartochka, norma l/100km, probeg, hujjat muddatlari

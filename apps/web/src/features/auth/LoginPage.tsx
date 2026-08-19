@@ -145,7 +145,7 @@ export function LoginPage() {
           </button>
 
           <p className="m-0 mt-[18px] text-center text-[12.5px] text-neutral-500">
-            {t('auth.noAccount')} <span className="text-neutral-300">{t('auth.askAdmin')}</span>
+            {t('auth.noAccount')} <Link to="/register">{t('auth.registerLink')}</Link>
           </p>
         </form>
       </section>

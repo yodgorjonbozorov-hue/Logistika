@@ -65,7 +65,7 @@ tashqarida bo'lishi shart:
 | `S3_SECRET_ACCESS_KEY` | secret key                                                    | Supabase'da — anon key                                      |
 | `S3_SESSION_TOKEN`     | ixtiyoriy                                                     | Supabase'da — service role key                              |
 | `S3_FORCE_PATH_STYLE`  | `true`                                                        | MinIO va yo'l prefiksli endpoint'lar uchun; AWS'da `false`  |
-| `SMS_PROVIDER_URL`     | SMS shlyuzi endpoint'i                                        | **productionda majburiy** — pastga qarang                   |
+| `SMS_PROVIDER_URL`     | SMS shlyuzi endpoint'i                                        | hozircha **ixtiyoriy** — pastga qarang                      |
 | `SMS_PROVIDER_TOKEN`   | shlyuz tokeni                                                 | `SMS_PROVIDER_URL` bilan birga                              |
 | `NODE_ENV`             | `production`                                                  |                                                             |
 | `API_PORT`             | `3000`                                                        | serverless'da ishlatilmaydi, lekin env sxemasi talab qiladi |
@@ -73,10 +73,14 @@ tashqarida bo'lishi shart:
 `CRON_SECRET` berilmasa `/api/v1/cron/*` endpoint'lari **yopiq** turadi —
 noto'g'ri sozlangan deploy ularni ochib qo'ymaydi.
 
-> **`SMS_PROVIDER_URL` haqida.** U berilmasa `SmsService` xatolik bermaydi —
-> haydovchining kirish kodini shunchaki logga yozadi. Dev'da bu qulay, lekin
-> productionda ikki barobar yomon: haydovchilar kod ololmaydi, kod esa deploy
-> loglarida ochiq turadi. Productionga chiqishdan oldin albatta to'ldiring.
+> **`SMS_PROVIDER_URL` haqida.** Hozirgi bosqichda kirish faqat login+parol
+> orqali: ofis xodimi email+parol bilan, haydovchi esa logist bergan telefon
+> raqami + parol bilan kiradi. SMS-kod oqimi (`POST /auth/driver/request-code`,
+> `POST /auth/driver/verify`) kodda turibdi, lekin hech qayerda majburiy emas.
+> Bu ikki o'zgaruvchi bo'sh qolsa `SmsService` xatolik bermaydi — kodni logga
+> yozadi, xolos. **Shuning uchun SMS provayderi ulanmaguncha bu endpoint'lardan
+> foydalanmang** (kod deploy loglarida ochiq qoladi). SMS va Google-kirish
+> to'liq ishga tushgandan keyin qo'shiladi.
 
 **Install buyrug'i nega shunday** (`cd ../.. && pnpm install --frozen-lockfile --prod=false`)
 

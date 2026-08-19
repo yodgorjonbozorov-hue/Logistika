@@ -65,7 +65,7 @@ export function LandingPage() {
         <Link to="/login" className="text-[13.5px] text-neutral-300 hover:text-accent-300">
           {t('landing.signIn')}
         </Link>
-        <Link to="/login" className="btn btn-primary">
+        <Link to="/register" className="btn btn-primary">
           {t('landing.getStarted')}
         </Link>
       </header>
@@ -84,7 +84,7 @@ export function LandingPage() {
             {t('landing.hero.body')}
           </p>
           <div className="mb-[26px] flex gap-2.5">
-            <Link to="/login" className="btn btn-primary px-5 py-2.5 text-sm">
+            <Link to="/register" className="btn btn-primary px-5 py-2.5 text-sm">
               {t('landing.getStarted')}
               <Icon name="arrow-right" size={15} />
             </Link>
@@ -224,7 +224,7 @@ export function LandingPage() {
             </h2>
             <p className="m-0 text-sm text-neutral-400">{t('landing.cta.body')}</p>
           </div>
-          <Link to="/login" className="btn btn-primary shrink-0 px-[22px] py-[11px] text-sm">
+          <Link to="/register" className="btn btn-primary shrink-0 px-[22px] py-[11px] text-sm">
             {t('landing.getStarted')}
             <Icon name="arrow-right" size={15} />
           </Link>
