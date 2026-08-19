@@ -93,6 +93,35 @@ class ApiClient {
     }
   }
 
+  /// Multipart upload, returning the stored file id.
+  ///
+  /// Lives here rather than in the sync queue because this is the one place
+  /// that owns an http.Client: building a `MultipartRequest` and calling
+  /// `send()` elsewhere silently uses a fresh default client, which ignores the
+  /// injected one (so it cannot be tested) and every timeout configured on it.
+  ///
+  /// Returns null when the upload failed; the caller decides whether that means
+  /// "retry later" or "give up on the photo".
+  Future<String?> uploadFile(String filePath, {Duration timeout = const Duration(seconds: 60)}) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/files/upload'))
+        ..headers['authorization'] = 'Bearer ${_tokens.accessToken}'
+        ..files.add(await http.MultipartFile.fromPath('file', filePath));
+
+      final streamed = await _http.send(request).timeout(timeout);
+      final body = await streamed.stream.bytesToString();
+      if (streamed.statusCode >= 300) return null;
+
+      // Parsed, not regex-scraped: the envelope is JSON and a regex would
+      // happily match an "id" from anywhere else in the payload.
+      final envelope = jsonDecode(body) as Map<String, dynamic>;
+      if (envelope['success'] != true) return null;
+      return (envelope['data'] as Map<String, dynamic>?)?['id'] as String?;
+    } on Exception {
+      return null;
+    }
+  }
+
   Future<bool> _tryRefresh() async {
     final refresh = _tokens.refreshToken;
     if (refresh == null) return false;

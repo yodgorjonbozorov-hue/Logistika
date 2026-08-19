@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Keeps the session and the offline queue out of device backups (H-16).
+
+  `adb backup` and cloud backup would otherwise carry the encrypted-preferences
+  file and the SQLite queue off the device, where the keystore that protects
+  them does not exist. Excluding them means a restored phone asks the driver to
+  log in again — the correct trade.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+    </device-transfer>
+</data-extraction-rules>

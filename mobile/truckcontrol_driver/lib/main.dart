@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_scope.dart';
 import 'core/api/api_client.dart';
+import 'core/config.dart';
 import 'core/db/app_database.dart';
 import 'core/gps/gps_service.dart';
 import 'core/i18n/app_strings.dart';
@@ -15,8 +16,14 @@ import 'features/home/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Fail fast and loudly rather than shipping credentials over plain HTTP.
+  AppConfig.assertSecureInRelease();
+
   final prefs = await SharedPreferences.getInstance();
   final tokens = TokenStore(prefs);
+  // Tokens live in the platform keystore now, so they have to be read
+  // asynchronously before the first authenticated request can be made (H-16).
+  await tokens.load();
   final api = ApiClient(tokens);
   final db = await AppDatabase.open();
   final queue = OfflineQueue(db, api, tokens)..start();

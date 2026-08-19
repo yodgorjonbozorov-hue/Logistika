@@ -167,12 +167,47 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
+  # Flutter driver app.
+  # ---------------------------------------------------------------------------
+  mobile:
+    name: driver app (analyze + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        working-directory: mobile/truckcontrol_driver
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: mobile/truckcontrol_driver
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        working-directory: mobile/truckcontrol_driver
+        run: flutter test
+
+      # A release build must never be able to talk to a plain-HTTP endpoint.
+      - name: Assert the release build is HTTPS-only
+        working-directory: mobile/truckcontrol_driver
+        run: |
+          grep -q 'cleartextTrafficPermitted="false"' \
+            android/app/src/main/res/xml/network_security_config.xml
+          grep -q 'android:usesCleartextTraffic="false"' \
+            android/app/src/main/AndroidManifest.xml
+
+  # ---------------------------------------------------------------------------
   # Production build + container image. Nothing is deployed from here.
   # ---------------------------------------------------------------------------
   build:
     name: production build
     runs-on: ubuntu-latest
-    needs: [unit, e2e]
+    needs: [unit, e2e, mobile]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
