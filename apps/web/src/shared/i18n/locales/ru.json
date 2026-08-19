@@ -11,7 +11,8 @@
     "map": "Карта",
     "openMenu": "Открыть меню",
     "dashboard": "Панель",
-    "routes": "Маршруты"
+    "routes": "Маршруты",
+    "ai": "TruckAI AI"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -282,5 +283,40 @@
     "norm": "Норма",
     "deviation": "Отклонение",
     "overNorm": "Выше нормы"
+  },
+  "ai": {
+    "title": "TruckAI AI",
+    "subtitle": "Задайте любой вопрос о вашей логистике",
+    "placeholder": "Напишите вопрос…",
+    "send": "Отправить",
+    "loading": "Анализируем данные…",
+    "loadingShort": "Анализ…",
+    "error": "Не удалось получить данные.",
+    "unavailable": "AI-провайдер не подключён",
+    "suggestionsTitle": "Например, спросите:",
+    "suggestions": {
+      "profit": "Сколько прибыли за этот месяц?",
+      "topRoute": "Какой маршрут самый прибыльный?",
+      "topExpenseVehicle": "Какая машина потратила больше всех?",
+      "compare": "Сравни с прошлым месяцем"
+    },
+    "showFacts": "Показать цифры",
+    "hideFacts": "Скрыть цифры",
+    "sourceModel": "Ответ AI",
+    "sourceTemplate": "По отчётам",
+    "insightsTitle": "Наблюдения AI",
+    "insights": {
+      "REVENUE_UP": "Выручка выросла на {{change}} к прошлому месяцу ({{revenue}} сум).",
+      "REVENUE_DOWN": "Выручка снизилась на {{change}} к прошлому месяцу ({{revenue}} сум).",
+      "PROFIT_UP": "Чистая прибыль выросла на {{change}} ({{profit}} сум).",
+      "PROFIT_DOWN": "Чистая прибыль снизилась на {{change}} ({{profit}} сум).",
+      "LOSS_PERIOD": "Период закрыт с убытком: {{profit}} сум ({{margin}}).",
+      "TOP_ROUTE": "Маршрут {{route}} дал больше всего прибыли: {{profit}} сум за {{trips}} рейсов ({{margin}}).",
+      "LOSS_ROUTE": "Маршрут {{route}} принёс убыток: {{profit}} сум за {{trips}} рейсов.",
+      "TOP_VEHICLE": "{{plate}} — самая прибыльная машина: {{profit}} сум за {{trips}} рейсов.",
+      "HIGH_EXPENSE_VEHICLE": "На {{plate}} приходится {{share}} всех расходов ({{expenses}} сум).",
+      "FUEL_ANOMALY": "{{plate}} израсходовала на {{deviation}} больше нормы: {{consumption}} л/100км (норма {{norm}}).",
+      "NO_DATA": "Пока недостаточно данных для анализа."
+    }
   }
 }

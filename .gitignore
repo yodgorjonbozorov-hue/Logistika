@@ -41,3 +41,6 @@ mobile/**/*.iml
 
 # TypeScript incremental build info (L-1)
 *.tsbuildinfo
+
+# Redis writes its snapshot into the CWD of whoever started it.
+*.rdb

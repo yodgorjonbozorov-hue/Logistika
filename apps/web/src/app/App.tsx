@@ -39,6 +39,9 @@ const FinancePage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 );
+const AiAssistantPage = lazy(() =>
+  import('../features/ai/AiAssistantPage').then((m) => ({ default: m.AiAssistantPage })),
+);
 const RoutesPage = lazy(() =>
   import('../features/routes/RoutesPage').then((m) => ({ default: m.RoutesPage })),
 );
@@ -61,6 +64,7 @@ export function App() {
             <Route element={<ProtectedRoute allow={OFFICE} />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/routes" element={<RoutesPage />} />
+              <Route path="/ai" element={<AiAssistantPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/:id" element={<TripDetailPage />} />

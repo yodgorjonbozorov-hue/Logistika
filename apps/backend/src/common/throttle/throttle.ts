@@ -44,6 +44,14 @@ export const ThrottlePublic = () => Throttle({ default: { limit: 60, ttl: MINUTE
 /** File upload — bandwidth, storage and image-processing CPU. */
 export const ThrottleUpload = () => Throttle({ default: { limit: 30, ttl: MINUTE } });
 
+/**
+ * AI questions — each one runs several analytics rollups and may call a paid
+ * provider, so this is the most expensive request an ordinary user can make.
+ * Bucketed per user by AppThrottlerGuard, so one company cannot spend another's
+ * budget.
+ */
+export const ThrottleAi = () => Throttle({ default: { limit: 20, ttl: MINUTE } });
+
 /** Driver telemetry batches — high legitimate volume, still bounded. */
 export const ThrottleIngest = () => Throttle({ default: { limit: 120, ttl: MINUTE } });
 

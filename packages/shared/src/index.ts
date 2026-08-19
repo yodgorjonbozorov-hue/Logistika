@@ -285,3 +285,78 @@ export interface FuelFinanceRow {
   /** Burning more than the configured alert threshold over the norm. */
   overNorm: boolean;
 }
+
+// ---------- AI assistant (TZ §8) ----------
+//
+// The assistant is read-only and tenant-bound: `companyId` comes from the JWT
+// and is never part of any request below. Every figure in `facts` was computed
+// by the finance core; `source` says whether a language model wrote the prose
+// or the deterministic composer did.
+
+export const AI_INTENTS = [
+  'REVENUE',
+  'EXPENSE',
+  'PROFIT',
+  'MARGIN',
+  'TRIPS',
+  'ROUTES',
+  'VEHICLES',
+  'DRIVERS',
+  'FUEL',
+  'DISTANCE',
+  'MONTHLY_COMPARISON',
+  'ANOMALY',
+  'RECOMMENDATION',
+] as const;
+export type AiIntent = (typeof AI_INTENTS)[number];
+
+export interface AiFact {
+  key: string;
+  /** Already formatted for display, in the unit named below. */
+  value: string;
+  unit: 'som' | 'percent' | 'km' | 'litre' | 'count' | 'text';
+}
+
+export interface AiAnswer {
+  answer: string;
+  /** `model` when a provider wrote it, `template` when the composer did. */
+  source: 'model' | 'template';
+  /**
+   * Why the deterministic answer was used: `disabled`, `unavailable`,
+   * `timeout`, `refused`, `failed`, `empty`, `unverified`, or `refused:<rule>`
+   * for a question the guard declined. Null when a model answered.
+   */
+  fallbackReason: string | null;
+  intents: AiIntent[];
+  period: { from: string; to: string; label: string };
+  /** The figures behind the answer, so the UI can show its work. */
+  facts: AiFact[];
+  provider: string;
+}
+
+export const AI_INSIGHT_KINDS = [
+  'REVENUE_UP',
+  'REVENUE_DOWN',
+  'PROFIT_UP',
+  'PROFIT_DOWN',
+  'LOSS_PERIOD',
+  'TOP_ROUTE',
+  'LOSS_ROUTE',
+  'TOP_VEHICLE',
+  'HIGH_EXPENSE_VEHICLE',
+  'FUEL_ANOMALY',
+  'NO_DATA',
+] as const;
+export type AiInsightKind = (typeof AI_INSIGHT_KINDS)[number];
+
+export interface AiInsight {
+  kind: AiInsightKind;
+  severity: 'info' | 'good' | 'warning';
+  /** Formatted values; the client renders the sentence through its own i18n. */
+  params: Record<string, string>;
+}
+
+export interface AiStatus {
+  provider: string;
+  available: boolean;
+}

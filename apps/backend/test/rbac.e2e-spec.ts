@@ -168,6 +168,27 @@ const CASES: Case[] = [
     path: '/finance/fuel',
     allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
   },
+  // The assistant answers with the company's money, in a sentence. Same roles
+  // as the finance endpoints it reads from.
+  {
+    name: 'ai chat',
+    method: 'post',
+    path: '/ai/chat',
+    body: { question: 'Bu oy qancha foyda?' },
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'ai insights',
+    method: 'get',
+    path: '/ai/insights',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'ai status',
+    method: 'get',
+    path: '/ai/status',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
   { name: 'admin companies', method: 'get', path: '/admin/companies', allow: [] },
 ];
 
@@ -251,6 +272,7 @@ describe('RBAC matrix', () => {
       ['/routes', 'get'],
       ['/fuel-logs', 'get'],
       ['/finance/summary', 'get'],
+      ['/ai/insights', 'get'],
     ] as Array<[string, Method]>)('%s requires a token', async (path, method) => {
       const response = await api(app)[method](`/api/v1${path}`);
       expect(response.status).toBe(401);

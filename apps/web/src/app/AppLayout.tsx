@@ -42,6 +42,11 @@ const NAV_ITEMS = [
     key: 'nav.finance',
     roles: [UserRole.OWNER, UserRole.ACCOUNTANT, UserRole.LOGIST],
   },
+  {
+    to: '/ai',
+    key: 'nav.ai',
+    roles: [UserRole.OWNER, UserRole.ACCOUNTANT, UserRole.LOGIST],
+  },
 ] as const;
 
 const LOCALE_LABELS: Record<Locale, string> = {

@@ -16,6 +16,7 @@ import {
   Table,
 } from '../../shared/ui';
 import { formatTiyin } from '../../shared/utils/money';
+import { InsightsCard } from '../ai/InsightsCard';
 import {
   useFinanceFuel,
   useFinanceMonthly,
@@ -136,6 +137,10 @@ export function DashboardPage() {
       />
 
       {summary.isLoading ? <Spinner /> : summary.data ? <Kpis data={summary.data} /> : null}
+
+      {/* Deterministic, provider-free, and failure-silent: the dashboard's own
+          figures are the page and an extra must never be able to break it. */}
+      <InsightsCard />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>

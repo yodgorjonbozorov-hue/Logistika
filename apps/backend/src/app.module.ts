@@ -12,6 +12,7 @@ import { ApiResponseInterceptor } from './common/interceptors/api-response.inter
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { I18nModule } from './i18n/i18n.module';
+import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
@@ -52,6 +53,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ExpensesModule,
     FuelModule,
     FinanceModule,
+    AiModule,
     FilesModule,
     PublicLinkModule,
     HealthModule,

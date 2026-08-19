@@ -138,6 +138,54 @@ export class EnvironmentVariables {
   @IsBoolean()
   MINIO_USE_SSL = false;
 
+  // ---------- AI assistant (TZ §8) ----------
+
+  /** `mock` needs no credentials and no network; it is the safe default. */
+  @IsIn(['mock', 'anthropic'])
+  AI_PROVIDER = 'mock';
+
+  /** Backend-only. Never reaches a browser — the web app talks to /ai/*. */
+  @IsOptional()
+  @IsString()
+  AI_API_KEY = '';
+
+  @IsOptional()
+  @IsString()
+  AI_MODEL = 'claude-opus-5';
+
+  /** A question must not hold a request open longer than this. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  @Max(60_000)
+  AI_TIMEOUT_MS = 15_000;
+
+  /** Longest question accepted. Cost, and injection surface. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(20)
+  @Max(2000)
+  AI_MAX_PROMPT_CHARS = 500;
+
+  /** Longest answer returned to the client, in characters. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(200)
+  @Max(8000)
+  AI_MAX_ANSWER_CHARS = 1200;
+
+  /** Token ceiling for the provider call. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(256)
+  @Max(8192)
+  AI_MAX_ANSWER_TOKENS = 2048;
+
+  /** Kill switch: the endpoints stay mounted and answer deterministically. */
+  @Transform(toBoolean)
+  @IsBoolean()
+  AI_ENABLED = true;
+
   // ---------- SMS ----------
 
   @IsOptional()
@@ -181,6 +229,12 @@ function assertProductionSafety(env: EnvironmentVariables): string[] {
   }
   if (env.DATABASE_URL.includes('change-me')) {
     problems.push('DATABASE_URL: still contains the sample password');
+  }
+  // Selecting a real provider without a key would run every question through
+  // the deterministic fallback while the deployment believed it had an
+  // assistant. Fail at boot instead.
+  if (env.AI_PROVIDER !== 'mock' && !env.AI_API_KEY) {
+    problems.push(`AI_API_KEY: required when AI_PROVIDER is "${env.AI_PROVIDER}"`);
   }
   return problems;
 }

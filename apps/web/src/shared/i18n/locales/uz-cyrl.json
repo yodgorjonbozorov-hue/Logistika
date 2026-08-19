@@ -11,7 +11,8 @@
     "map": "Харита",
     "openMenu": "Менюни очиш",
     "dashboard": "Бошқарув панели",
-    "routes": "Йўналишлар"
+    "routes": "Йўналишлар",
+    "ai": "TruckAI AI"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -282,5 +283,40 @@
     "norm": "Норма",
     "deviation": "Фарқ",
     "overNorm": "Нормадан юқори"
+  },
+  "ai": {
+    "title": "TruckAI AI",
+    "subtitle": "Логистикангиз ҳақида исталган саволни беринг",
+    "placeholder": "Саволингизни ёзинг…",
+    "send": "Юбориш",
+    "loading": "Маълумотлар таҳлил қилинмоқда…",
+    "loadingShort": "Таҳлил…",
+    "error": "Маълумотларни олишда хатолик юз берди.",
+    "unavailable": "AI провайдер уланмаган",
+    "suggestionsTitle": "Масалан, сўранг:",
+    "suggestions": {
+      "profit": "Бу ой қанча фойда қилдик?",
+      "topRoute": "Энг фойдали йўналиш қайси?",
+      "topExpenseVehicle": "Қайси трук энг кўп харажат қилди?",
+      "compare": "Ўтган ой билан солиштир"
+    },
+    "showFacts": "Рақамларни кўрсатиш",
+    "hideFacts": "Рақамларни яшириш",
+    "sourceModel": "AI жавоби",
+    "sourceTemplate": "Ҳисобот асосида",
+    "insightsTitle": "AI кузатувлари",
+    "insights": {
+      "REVENUE_UP": "Даромад ўтган ойга нисбатан {{change}} ошган ({{revenue}} сўм).",
+      "REVENUE_DOWN": "Даромад ўтган ойга нисбатан {{change}} камайган ({{revenue}} сўм).",
+      "PROFIT_UP": "Соф фойда {{change}} ошган ({{profit}} сўм).",
+      "PROFIT_DOWN": "Соф фойда {{change}} камайган ({{profit}} сўм).",
+      "LOSS_PERIOD": "Бу давр зарар билан якунланган: {{profit}} сўм ({{margin}}).",
+      "TOP_ROUTE": "{{route}} йўналиши энг юқори фойда берган: {{trips}} рейсда {{profit}} сўм ({{margin}}).",
+      "LOSS_ROUTE": "{{route}} йўналиши зарар келтирган: {{trips}} рейсда {{profit}} сўм.",
+      "TOP_VEHICLE": "{{plate}} энг фойдали машина: {{trips}} рейсда {{profit}} сўм.",
+      "HIGH_EXPENSE_VEHICLE": "{{plate}} умумий харажатнинг {{share}} қисмини ташкил қилган ({{expenses}} сўм).",
+      "FUEL_ANOMALY": "{{plate}} нормадан {{deviation}} кўп ёқилғи сарфлаган: {{consumption}} л/100км (норма {{norm}}).",
+      "NO_DATA": "Ҳозирча таҳлил учун маълумот йўқ."
+    }
   }
 }

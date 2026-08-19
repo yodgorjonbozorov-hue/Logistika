@@ -11,7 +11,8 @@
     "map": "Xarita",
     "openMenu": "Menyuni ochish",
     "dashboard": "Boshqaruv paneli",
-    "routes": "Yo'nalishlar"
+    "routes": "Yo'nalishlar",
+    "ai": "TruckAI AI"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -282,5 +283,40 @@
     "norm": "Norma",
     "deviation": "Farq",
     "overNorm": "Normadan yuqori"
+  },
+  "ai": {
+    "title": "TruckAI AI",
+    "subtitle": "Logistikangiz haqida istalgan savolni bering",
+    "placeholder": "Savolingizni yozing…",
+    "send": "Yuborish",
+    "loading": "Ma'lumotlar tahlil qilinmoqda…",
+    "loadingShort": "Tahlil…",
+    "error": "Ma'lumotlarni olishda xatolik yuz berdi.",
+    "unavailable": "AI provayder ulanmagan",
+    "suggestionsTitle": "Masalan, so‘rang:",
+    "suggestions": {
+      "profit": "Bu oy qancha foyda qildik?",
+      "topRoute": "Eng foydali yo'nalish qaysi?",
+      "topExpenseVehicle": "Qaysi truck eng ko'p xarajat qildi?",
+      "compare": "O'tgan oy bilan solishtir"
+    },
+    "showFacts": "Raqamlarni ko'rsatish",
+    "hideFacts": "Raqamlarni yashirish",
+    "sourceModel": "AI javobi",
+    "sourceTemplate": "Hisobot asosida",
+    "insightsTitle": "AI kuzatuvlari",
+    "insights": {
+      "REVENUE_UP": "Daromad o'tgan oyga nisbatan {{change}} oshgan ({{revenue}} so'm).",
+      "REVENUE_DOWN": "Daromad o'tgan oyga nisbatan {{change}} kamaygan ({{revenue}} so'm).",
+      "PROFIT_UP": "Sof foyda {{change}} oshgan ({{profit}} so'm).",
+      "PROFIT_DOWN": "Sof foyda {{change}} kamaygan ({{profit}} so'm).",
+      "LOSS_PERIOD": "Bu davr zarar bilan yakunlangan: {{profit}} so'm ({{margin}}).",
+      "TOP_ROUTE": "{{route}} yo'nalishi eng yuqori foyda bergan: {{trips}} reysda {{profit}} so'm ({{margin}}).",
+      "LOSS_ROUTE": "{{route}} yo'nalishi zarar keltirgan: {{trips}} reysda {{profit}} so'm.",
+      "TOP_VEHICLE": "{{plate}} eng foydali mashina: {{trips}} reysda {{profit}} so'm.",
+      "HIGH_EXPENSE_VEHICLE": "{{plate}} umumiy xarajatning {{share}} qismini tashkil qilgan ({{expenses}} so'm).",
+      "FUEL_ANOMALY": "{{plate}} normadan {{deviation}} ko'p yoqilg'i sarflagan: {{consumption}} l/100km (norma {{norm}}).",
+      "NO_DATA": "Hozircha tahlil uchun ma'lumot yo'q."
+    }
   }
 }

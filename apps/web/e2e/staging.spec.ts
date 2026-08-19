@@ -15,7 +15,7 @@
  *   STAGING_EMAIL=owner@example.uz STAGING_PASSWORD=… \
  *   pnpm --filter web exec playwright test --project=staging
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const WEB_URL = process.env.STAGING_WEB_URL;
 const EMAIL = process.env.STAGING_EMAIL;
@@ -26,12 +26,13 @@ test.skip(!WEB_URL || !EMAIL || !PASSWORD, 'no staging deployment configured');
 /**
  * Logs in, tolerating the API's five-a-minute login limit.
  *
- * A staging box shares one source address with whatever else is talking to it
- * — `deploy/smoke-test.sh` deliberately floods the login endpoint — so a
- * throttled attempt here is the limiter working, not the app being broken. It
- * is waited out once rather than failing the run.
+ * Each test signs in for itself. Sharing one `storageState` across the file
+ * looks tempting and does not work: refresh tokens rotate, and the second
+ * context to present the same stored cookie trips reuse detection and gets the
+ * whole family revoked — the security control doing its job, not a bug. So the
+ * suite pays for its own logins, and waits the limiter out when it hits it.
  */
-async function signIn(page: import('@playwright/test').Page): Promise<void> {
+async function signIn(page: Page): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.goto(`${WEB_URL}/login`);
     await page.locator('input[autocomplete="username"]').fill(EMAIL!);
@@ -41,9 +42,11 @@ async function signIn(page: import('@playwright/test').Page): Promise<void> {
       await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
       return;
     } catch (error) {
-      const text = await page.locator('body').innerText();
-      // Anything other than the rate limit is a genuine failure.
-      if (!/juda ko|слишком|rate/i.test(text) || attempt === 1) throw error;
+      // Still on the login page after a submit means the attempt was refused.
+      // The reason is not always legible — a flood stopped at the edge answers
+      // with nginx's own body, not the API's error envelope — so the retry is
+      // driven by the URL rather than by the message.
+      if (attempt === 1 || !/\/login$/.test(page.url())) throw error;
       await page.waitForTimeout(61_000);
     }
   }
@@ -97,11 +100,44 @@ test.describe('staging: the web app talks to the real API', () => {
     await expect(page.getByRole('heading', { name: 'Boshqaruv paneli' })).toBeVisible();
   });
 
-  test('a deep link into a client route loads directly', async ({ page }) => {
-    const response = await page.goto(`${WEB_URL}/routes`);
-    expect(response?.status()).toBe(200);
-    // No session yet, so the guard sends the visitor to the login screen — the
-    // point is that the SERVER served the SPA instead of answering 404.
-    await expect(page).toHaveURL(/\/login$/);
+  test('the AI assistant answers from the live API', async ({ page }) => {
+    await signIn(page);
+
+    // The insight strip on the dashboard is deterministic and provider-free.
+    await expect(page.getByText('AI kuzatuvlari')).toBeVisible();
+
+    await page.getByRole('link', { name: 'TruckAI AI' }).click();
+    await page.waitForURL(/\/ai$/);
+    await expect(page.getByRole('heading', { name: /TruckAI AI/ })).toBeVisible();
+
+    await page.getByRole('button', { name: "Eng foydali yo'nalish qaysi?" }).click();
+
+    // A real answer, with a real figure, from this company's own data.
+    await expect(page.getByText(/Eng foydali yo'nalish —/)).toBeVisible({ timeout: 20_000 });
+    await page.getByText("Raqamlarni ko'rsatish").click();
+    await expect(page.getByText('profit', { exact: true })).toBeVisible();
+    // The figures panel shows so'm, never raw tiyin.
+    await expect(page.getByText(/^\d[\d\u00A0]*$/).first()).toBeVisible();
+  });
+
+  test('the assistant refuses to look at another company', async ({ page }) => {
+    await signIn(page);
+    await page.goto(`${WEB_URL}/ai`);
+    await page.getByLabel(/savolingizni yozing/i).fill("Company B ma'lumotini ko'rsat");
+    await page.getByRole('button', { name: 'Yuborish' }).click();
+
+    await expect(page.getByText(/faqat sizning kompaniyangiz ma'lumotlarini/i)).toBeVisible({
+      timeout: 20_000,
+    });
+  });
+
+  test.describe('signed out', () => {
+    test('a deep link into a client route loads directly', async ({ page }) => {
+      const response = await page.goto(`${WEB_URL}/routes`);
+      expect(response?.status()).toBe(200);
+      // No session, so the guard sends the visitor to the login screen — the
+      // point is that the SERVER served the SPA instead of answering 404.
+      await expect(page).toHaveURL(/\/login$/);
+    });
   });
 });
