@@ -1,0 +1,14 @@
+# Vercel faqat web ilovani build qiladi — qolgani yuklanmaydi.
+node_modules
+**/node_modules
+dist
+**/dist
+**/dist-demo
+**/coverage
+**/*.tsbuildinfo
+.git
+mobile
+docs
+deploy
+.env
+.env.*
