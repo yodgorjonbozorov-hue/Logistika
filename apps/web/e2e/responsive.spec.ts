@@ -84,6 +84,19 @@ test.describe('app shell', () => {
   });
 });
 
+test.describe('i18n', () => {
+  test('renders translated text, never raw translation keys', async ({ page }) => {
+    // The app once shipped with i18next unable to resolve `uz-latn` (it
+    // title-cases the four-letter subtag to `uz-Latn`), so every label on every
+    // screen was its own key. It looked fine to a smoke test that only checked
+    // the page rendered — this one reads what the user actually sees.
+    await page.goto('/login');
+    const body = await page.locator('body').innerText();
+    expect(body).not.toMatch(/\b(auth|common|nav|dashboard|finance|routes)\.[a-zA-Z]/);
+    await expect(page.getByRole('button', { name: 'Kirish' })).toBeVisible();
+  });
+});
+
 test.describe('viewport meta', () => {
   test('declares a responsive viewport', async ({ page }) => {
     await page.goto('/login');

@@ -7,11 +7,12 @@ import { useRefLists, useTripMutations } from './api';
 
 export function TripFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  const { vehicles, drivers, clients } = useRefLists();
+  const { vehicles, drivers, clients, routes } = useRefLists();
   const { create } = useTripMutations();
 
   const [form, setForm] = useState({
     clientId: '',
+    routeId: '',
     vehicleId: '',
     trailerId: '',
     driverId: '',
@@ -33,6 +34,7 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
     event.preventDefault();
     await create.mutateAsync({
       clientId: form.clientId || undefined,
+      routeId: form.routeId || undefined,
       vehicleId: form.vehicleId || undefined,
       trailerId: form.trailerId || undefined,
       driverId: form.driverId || undefined,
@@ -55,16 +57,29 @@ export function TripFormModal({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Modal title={t('trips.new')} open={open} onClose={onClose}>
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-3">
-        <Field label={t('trips.client')}>
-          <Select value={form.clientId} onChange={set('clientId')}>
-            <option value="">{t('common.select')}</option>
-            {(clients.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t('trips.client')}>
+            <Select value={form.clientId} onChange={set('clientId')}>
+              <option value="">{t('common.select')}</option>
+              {(clients.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {/* The lane, not free text: route analytics group by this id. */}
+          <Field label={t('trips.route')}>
+            <Select value={form.routeId} onChange={set('routeId')}>
+              <option value="">{t('common.select')}</option>
+              {(routes.data ?? []).map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('trips.cargoName')}>
             <Input value={form.cargoName} onChange={set('cargoName')} />

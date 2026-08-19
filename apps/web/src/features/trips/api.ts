@@ -1,7 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TripStatus } from 'shared';
 import { api } from '../../shared/api/client';
-import type { Client, Driver, Expense, Income, Trip, Vehicle } from '../../shared/api/entities';
+import type {
+  Client,
+  Driver,
+  Expense,
+  Income,
+  Route,
+  Trip,
+  Vehicle,
+} from '../../shared/api/entities';
 
 export function useTrips(filter: { page: number; status?: TripStatus }) {
   return useQuery({
@@ -67,7 +75,13 @@ export function useRefLists() {
     queryKey: ['clients', 'ref'],
     queryFn: async () => (await api<Client[]>('/clients', { query: { limit: 100 } })).data,
   });
-  return { vehicles, drivers, clients };
+  // Deactivated routes stay in reports but must not be offered for a new trip.
+  const routes = useQuery({
+    queryKey: ['routes', 'ref'],
+    queryFn: async () =>
+      (await api<Route[]>('/routes', { query: { limit: 100, onlyActive: true } })).data,
+  });
+  return { vehicles, drivers, clients, routes };
 }
 
 export function useTripMutations(tripId?: string) {

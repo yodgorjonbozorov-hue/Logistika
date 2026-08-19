@@ -18,10 +18,20 @@ const THEME_KEY = 'tc.theme';
  * action would 403.
  */
 const NAV_ITEMS = [
+  {
+    to: '/dashboard',
+    key: 'nav.dashboard',
+    roles: [UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT],
+  },
   { to: '/map', key: 'nav.map', roles: [UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT] },
   { to: '/trips', key: 'nav.trips', roles: [UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT] },
   { to: '/vehicles', key: 'nav.vehicles', roles: [UserRole.OWNER, UserRole.LOGIST] },
   { to: '/drivers', key: 'nav.drivers', roles: [UserRole.OWNER, UserRole.LOGIST] },
+  {
+    to: '/routes',
+    key: 'nav.routes',
+    roles: [UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT],
+  },
   {
     to: '/clients',
     key: 'nav.clients',

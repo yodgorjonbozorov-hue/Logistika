@@ -9,7 +9,9 @@
     "clients": "Mijozlar",
     "finance": "Moliya",
     "map": "Xarita",
-    "openMenu": "Menyuni ochish"
+    "openMenu": "Menyuni ochish",
+    "dashboard": "Boshqaruv paneli",
+    "routes": "Yo'nalishlar"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -219,5 +221,66 @@
     "EXPENSE": "Yo'l xarajati",
     "DELIVERED": "Yuk topshirildi",
     "FINISH": "Reys tugadi"
+  },
+  "units": {
+    "km": "km",
+    "litre": "l",
+    "per100km": "l/100km"
+  },
+  "routes": {
+    "title": "Yo'nalishlar",
+    "new": "Yangi yo'nalish",
+    "name": "Nomi",
+    "origin": "Jo'nash nuqtasi",
+    "destination": "Borish nuqtasi",
+    "plannedDistance": "Reja masofa",
+    "status": "Holat",
+    "active": "Faol",
+    "inactive": "Faol emas",
+    "distanceHint": "Kilometrda, bitta kasr xonagacha (masalan 1210.5)"
+  },
+  "dashboard": {
+    "title": "Boshqaruv paneli",
+    "period": "Davr",
+    "from": "Dan",
+    "to": "Gacha",
+    "presets": {
+      "thisMonth": "Shu oy",
+      "lastMonth": "O'tgan oy",
+      "last30": "So'nggi 30 kun",
+      "last90": "So'nggi 90 kun",
+      "thisYear": "Shu yil",
+      "custom": "Boshqa davr"
+    },
+    "revenue": "Daromad",
+    "expenses": "Xarajat",
+    "profit": "Sof foyda",
+    "margin": "Rentabellik",
+    "trips": "Reyslar",
+    "completed": "Yakunlangan",
+    "inProgress": "Yo‘lda",
+    "trucksDispatched": "Jo'natilgan mashina",
+    "routesUsed": "Yo'nalishlar",
+    "distance": "Masofa",
+    "litres": "Yoqilg'i",
+    "fuelCost": "Yoqilg'i xarajati",
+    "profitPerTrip": "Reysga foyda",
+    "profitPerKm": "Km ga foyda",
+    "costPerKm": "Km ga xarajat",
+    "monthlyComparison": "Oylar taqqoslash",
+    "expensesByCategory": "Xarajat kategoriyalari",
+    "byRoute": "Yo'nalishlar bo'yicha",
+    "byVehicle": "Mashinalar bo'yicha",
+    "byTrip": "Reyslar bo'yicha",
+    "fuel": "Yoqilg'i nazorati",
+    "route": "Yo'nalish",
+    "vehicle": "Mashina",
+    "trip": "Reys",
+    "unassignedRoute": "Yo'nalishsiz",
+    "refuels": "Quyishlar",
+    "consumption": "Sarf",
+    "norm": "Norma",
+    "deviation": "Farq",
+    "overNorm": "Normadan yuqori"
   }
 }

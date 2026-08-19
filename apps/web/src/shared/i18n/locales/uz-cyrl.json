@@ -9,7 +9,9 @@
     "clients": "Мижозлар",
     "finance": "Молия",
     "map": "Харита",
-    "openMenu": "Менюни очиш"
+    "openMenu": "Менюни очиш",
+    "dashboard": "Бошқарув панели",
+    "routes": "Йўналишлар"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -219,5 +221,66 @@
     "EXPENSE": "Йўл харажати",
     "DELIVERED": "Юк топширилди",
     "FINISH": "Рейс тугади"
+  },
+  "units": {
+    "km": "км",
+    "litre": "л",
+    "per100km": "л/100км"
+  },
+  "routes": {
+    "title": "Йўналишлар",
+    "new": "Янги йўналиш",
+    "name": "Номи",
+    "origin": "Жўнаш нуқтаси",
+    "destination": "Бориш нуқтаси",
+    "plannedDistance": "Режа масофа",
+    "status": "Ҳолат",
+    "active": "Фаол",
+    "inactive": "Фаол эмас",
+    "distanceHint": "Километрда, битта каср хонагача (масалан 1210.5)"
+  },
+  "dashboard": {
+    "title": "Бошқарув панели",
+    "period": "Давр",
+    "from": "Дан",
+    "to": "Гача",
+    "presets": {
+      "thisMonth": "Шу ой",
+      "lastMonth": "Ўтган ой",
+      "last30": "Сўнгги 30 кун",
+      "last90": "Сўнгги 90 кун",
+      "thisYear": "Шу йил",
+      "custom": "Бошқа давр"
+    },
+    "revenue": "Даромад",
+    "expenses": "Харажат",
+    "profit": "Соф фойда",
+    "margin": "Рентабеллик",
+    "trips": "Рейслар",
+    "completed": "Якунланган",
+    "inProgress": "Йўлда",
+    "trucksDispatched": "Жўнатилган машина",
+    "routesUsed": "Йўналишлар",
+    "distance": "Масофа",
+    "litres": "Ёқилғи",
+    "fuelCost": "Ёқилғи харажати",
+    "profitPerTrip": "Рейсга фойда",
+    "profitPerKm": "Км га фойда",
+    "costPerKm": "Км га харажат",
+    "monthlyComparison": "Ойлар таққослаш",
+    "expensesByCategory": "Харажат категориялари",
+    "byRoute": "Йўналишлар бўйича",
+    "byVehicle": "Машиналар бўйича",
+    "byTrip": "Рейслар бўйича",
+    "fuel": "Ёқилғи назорати",
+    "route": "Йўналиш",
+    "vehicle": "Машина",
+    "trip": "Рейс",
+    "unassignedRoute": "Йўналишсиз",
+    "refuels": "Қуйишлар",
+    "consumption": "Сарф",
+    "norm": "Норма",
+    "deviation": "Фарқ",
+    "overNorm": "Нормадан юқори"
   }
 }

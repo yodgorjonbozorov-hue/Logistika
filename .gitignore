@@ -28,6 +28,10 @@ apps/backend/prisma/*.db
 # Docker volume'lar (lokal)
 .docker-data/
 
+# Playwright yugurish artefaktlari (xatolik konteksti, oxirgi yugurish holati)
+apps/web/test-results/
+apps/web/playwright-report/
+
 # Flutter
 mobile/**/build/
 mobile/**/.dart_tool/

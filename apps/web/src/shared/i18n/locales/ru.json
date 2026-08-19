@@ -9,7 +9,9 @@
     "clients": "Клиенты",
     "finance": "Финансы",
     "map": "Карта",
-    "openMenu": "Открыть меню"
+    "openMenu": "Открыть меню",
+    "dashboard": "Панель",
+    "routes": "Маршруты"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -219,5 +221,66 @@
     "EXPENSE": "Дорожный расход",
     "DELIVERED": "Груз сдан",
     "FINISH": "Рейс завершён"
+  },
+  "units": {
+    "km": "км",
+    "litre": "л",
+    "per100km": "л/100км"
+  },
+  "routes": {
+    "title": "Маршруты",
+    "new": "Новый маршрут",
+    "name": "Название",
+    "origin": "Пункт отправления",
+    "destination": "Пункт назначения",
+    "plannedDistance": "Плановое расстояние",
+    "status": "Статус",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "distanceHint": "В километрах, до одного знака после запятой (например 1210.5)"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "period": "Период",
+    "from": "С",
+    "to": "По",
+    "presets": {
+      "thisMonth": "Текущий месяц",
+      "lastMonth": "Прошлый месяц",
+      "last30": "Последние 30 дней",
+      "last90": "Последние 90 дней",
+      "thisYear": "Текущий год",
+      "custom": "Другой период"
+    },
+    "revenue": "Выручка",
+    "expenses": "Расходы",
+    "profit": "Чистая прибыль",
+    "margin": "Рентабельность",
+    "trips": "Рейсы",
+    "completed": "Завершено",
+    "inProgress": "В пути",
+    "trucksDispatched": "Машин отправлено",
+    "routesUsed": "Маршрутов",
+    "distance": "Пробег",
+    "litres": "Топливо",
+    "fuelCost": "Расход на топливо",
+    "profitPerTrip": "Прибыль на рейс",
+    "profitPerKm": "Прибыль на км",
+    "costPerKm": "Расход на км",
+    "monthlyComparison": "Сравнение по месяцам",
+    "expensesByCategory": "Расходы по категориям",
+    "byRoute": "По маршрутам",
+    "byVehicle": "По машинам",
+    "byTrip": "По рейсам",
+    "fuel": "Контроль топлива",
+    "route": "Маршрут",
+    "vehicle": "Машина",
+    "trip": "Рейс",
+    "unassignedRoute": "Без маршрута",
+    "refuels": "Заправок",
+    "consumption": "Расход",
+    "norm": "Норма",
+    "deviation": "Отклонение",
+    "overNorm": "Выше нормы"
   }
 }

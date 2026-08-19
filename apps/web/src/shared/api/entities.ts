@@ -66,10 +66,23 @@ export interface Client {
   balance: string;
 }
 
+/** A lane. Reports group by `id`, so the name is unique within the company. */
+export interface Route {
+  id: string;
+  name: string;
+  originName: string;
+  destinationName: string;
+  /** Kilometres with one decimal, as a string — the column is DECIMAL(9,1). */
+  plannedDistanceKm: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Trip {
   id: string;
   tripNumber: string;
   clientId: string | null;
+  routeId: string | null;
   vehicleId: string | null;
   trailerId: string | null;
   driverId: string | null;
@@ -92,6 +105,7 @@ export interface Trip {
   finishedAt: string | null;
   createdAt: string;
   client?: Client | null;
+  route?: Route | null;
   vehicle?: Vehicle | null;
   trailer?: Vehicle | null;
   driver?: Driver | null;

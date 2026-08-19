@@ -36,6 +36,12 @@ const ClientsPage = lazy(() =>
 const FinancePage = lazy(() =>
   import('../features/finance/FinancePage').then((m) => ({ default: m.FinancePage })),
 );
+const DashboardPage = lazy(() =>
+  import('../features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
+const RoutesPage = lazy(() =>
+  import('../features/routes/RoutesPage').then((m) => ({ default: m.RoutesPage })),
+);
 const PublicTrackPage = lazy(() =>
   import('../features/track/PublicTrackPage').then((m) => ({ default: m.PublicTrackPage })),
 );
@@ -51,8 +57,10 @@ export function App() {
         <Route path="/track/:token" element={<PublicTrackPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/trips" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<ProtectedRoute allow={OFFICE} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/routes" element={<RoutesPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/trips" element={<TripsPage />} />
               <Route path="/trips/:id" element={<TripDetailPage />} />
