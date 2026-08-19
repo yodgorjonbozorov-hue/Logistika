@@ -9,6 +9,20 @@ import { AuditService } from '../audit/audit.service';
 import { AdminCreateCompanyDto, AdminUpdateCompanyDto } from './dto/admin-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
+/**
+ * Every Prisma model that carries a `company_id` — that is, everything a tenant
+ * owns. Deriving it from the transaction client keeps {@link
+ * CompaniesService.TENANT_MODELS} honest: a model added to the schema with a
+ * `companyId` is a candidate here, and a name that is not one will not compile.
+ */
+type TenantModel = {
+  [K in keyof Prisma.TransactionClient]: Prisma.TransactionClient[K] extends {
+    deleteMany: (args: { where: { companyId: string } }) => unknown;
+  }
+    ? K
+    : never;
+}[keyof Prisma.TransactionClient];
+
 @Injectable()
 export class CompaniesService {
   constructor(
@@ -98,25 +112,28 @@ export class CompaniesService {
    * of the same tenant before the rows they point at. Postgres has no cascade
    * on these relations — that is deliberate, so nothing can be deleted by
    * accident — which means the order has to be spelled out here.
+   *
+   * Named by Prisma model rather than by table, so a rename or a typo is a
+   * compile error rather than a 500 halfway through a delete.
    */
-  private static readonly TENANT_TABLES = [
-    'gps_track_archive',
-    'gps_tracks',
-    'tracking_links',
-    'trip_events',
-    'fuel_logs',
-    'expenses',
-    'incomes',
-    'documents',
-    'notifications',
-    'maintenances',
-    'audit_logs',
-    'stored_files',
-    'trips',
-    'drivers',
-    'vehicles',
-    'clients',
-  ] as const;
+  private static readonly TENANT_MODELS = [
+    'gpsTrackArchive',
+    'gpsTrack',
+    'trackingLink',
+    'tripEvent',
+    'fuelLog',
+    'expense',
+    'income',
+    'document',
+    'notification',
+    'maintenance',
+    'auditLog',
+    'storedFile',
+    'trip',
+    'driver',
+    'vehicle',
+    'client',
+  ] as const satisfies ReadonlyArray<TenantModel>;
 
   /**
    * Removes a tenant and everything under it, in one transaction.
@@ -142,8 +159,14 @@ export class CompaniesService {
       if (userIds.length > 0) {
         await tx.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
       }
-      for (const table of CompaniesService.TENANT_TABLES) {
-        await tx.$executeRawUnsafe(`DELETE FROM "${table}" WHERE company_id = $1`, id);
+      for (const model of CompaniesService.TENANT_MODELS) {
+        // The delegates are the same shape but each has its own generic
+        // signature, so their union is not callable. The *name* is what needed
+        // checking, and `TenantModel` has already done that at compile time.
+        const delegate = tx[model] as unknown as {
+          deleteMany: (args: { where: { companyId: string } }) => Promise<unknown>;
+        };
+        await delegate.deleteMany({ where: { companyId: id } });
       }
       await tx.user.deleteMany({ where: { companyId: id } });
       await tx.company.delete({ where: { id } });

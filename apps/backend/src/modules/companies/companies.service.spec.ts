@@ -7,11 +7,35 @@ describe('CompaniesService.adminDelete', () => {
 
   /** The transaction client, so a test can see the order deletes ran in. */
   function setup(company: { id: string; name: string } | null = { id: 'c1', name: 'Yo‘l Trans' }) {
+    // Every tenant-owned delegate the service walks, plus the ones around it.
+    const order: string[] = [];
+    const deleteMany = (model: string) =>
+      jest.fn((args: unknown) => {
+        order.push(model);
+        void args;
+        return Promise.resolve({ count: 0 });
+      });
     const tx = {
       user: { findMany: jest.fn().mockResolvedValue([{ id: 'u1' }]), deleteMany: jest.fn() },
       refreshToken: { deleteMany: jest.fn() },
       company: { delete: jest.fn() },
-      $executeRawUnsafe: jest.fn(),
+      gpsTrackArchive: { deleteMany: deleteMany('gpsTrackArchive') },
+      gpsTrack: { deleteMany: deleteMany('gpsTrack') },
+      trackingLink: { deleteMany: deleteMany('trackingLink') },
+      tripEvent: { deleteMany: deleteMany('tripEvent') },
+      fuelLog: { deleteMany: deleteMany('fuelLog') },
+      expense: { deleteMany: deleteMany('expense') },
+      income: { deleteMany: deleteMany('income') },
+      document: { deleteMany: deleteMany('document') },
+      notification: { deleteMany: deleteMany('notification') },
+      maintenance: { deleteMany: deleteMany('maintenance') },
+      auditLog: { deleteMany: deleteMany('auditLog') },
+      storedFile: { deleteMany: deleteMany('storedFile') },
+      trip: { deleteMany: deleteMany('trip') },
+      driver: { deleteMany: deleteMany('driver') },
+      vehicle: { deleteMany: deleteMany('vehicle') },
+      client: { deleteMany: deleteMany('client') },
+      order,
     };
     const prisma = {
       company: { findUnique: jest.fn().mockResolvedValue(company) },
@@ -52,27 +76,54 @@ describe('CompaniesService.adminDelete', () => {
 
     expect(tx.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { userId: { in: ['u1'] } } });
 
-    const tables = tx.$executeRawUnsafe.mock.calls.map(
-      ([sql]) => /FROM "([a-z_]+)"/.exec(sql as string)?.[1],
-    );
     // Children before parents: a trip's events cannot outlive the trip.
-    expect(tables.indexOf('trip_events')).toBeLessThan(tables.indexOf('trips'));
-    expect(tables.indexOf('expenses')).toBeLessThan(tables.indexOf('trips'));
-    expect(tables.indexOf('gps_tracks')).toBeLessThan(tables.indexOf('trips'));
-    expect(tables.indexOf('trips')).toBeLessThan(tables.indexOf('vehicles'));
-    expect(tables.indexOf('trips')).toBeLessThan(tables.indexOf('drivers'));
-    expect(tables.indexOf('trips')).toBeLessThan(tables.indexOf('clients'));
+    const { order } = tx;
+    expect(order.indexOf('tripEvent')).toBeLessThan(order.indexOf('trip'));
+    expect(order.indexOf('expense')).toBeLessThan(order.indexOf('trip'));
+    expect(order.indexOf('gpsTrack')).toBeLessThan(order.indexOf('trip'));
+    expect(order.indexOf('income')).toBeLessThan(order.indexOf('trip'));
+    expect(order.indexOf('trackingLink')).toBeLessThan(order.indexOf('trip'));
+    expect(order.indexOf('trip')).toBeLessThan(order.indexOf('vehicle'));
+    expect(order.indexOf('trip')).toBeLessThan(order.indexOf('driver'));
+    expect(order.indexOf('trip')).toBeLessThan(order.indexOf('client'));
 
     expect(tx.user.deleteMany).toHaveBeenCalledWith({ where: { companyId: 'c1' } });
     expect(tx.company.delete).toHaveBeenCalledWith({ where: { id: 'c1' } });
   });
 
-  it('scopes every raw delete to the one company', async () => {
+  it('reaches every table a tenant owns', async () => {
     const { service, tx } = setup();
     await service.adminDelete('admin-1', 'c1', 'Yo‘l Trans');
-    for (const [sql, id] of tx.$executeRawUnsafe.mock.calls) {
-      expect(sql as string).toContain('WHERE company_id = $1');
-      expect(id).toBe('c1');
+    // Every model with a company_id, per the schema — a new one added there
+    // without being listed in the service would leave orphan rows behind.
+    expect([...tx.order].sort()).toEqual(
+      [
+        'auditLog',
+        'client',
+        'document',
+        'driver',
+        'expense',
+        'fuelLog',
+        'gpsTrack',
+        'gpsTrackArchive',
+        'income',
+        'maintenance',
+        'notification',
+        'storedFile',
+        'trackingLink',
+        'trip',
+        'tripEvent',
+        'vehicle',
+      ].sort(),
+    );
+  });
+
+  it('scopes every delete to the one company', async () => {
+    const { service, tx } = setup();
+    await service.adminDelete('admin-1', 'c1', 'Yo‘l Trans');
+    for (const model of tx.order) {
+      const delegate = (tx as unknown as Record<string, { deleteMany: jest.Mock }>)[model]!;
+      expect(delegate.deleteMany).toHaveBeenCalledWith({ where: { companyId: 'c1' } });
     }
   });
 
