@@ -171,7 +171,21 @@ DATABASE_URL="postgresql://…" pnpm --filter backend db:deploy
 #    Keyingi har push avtomatik deploy bo'ladi.
 ```
 
-Tekshirish:
+### Tekshirish
+
+Har bir deploydan keyin to'liq to'plamni ishga tushiring — funksional va
+xavfsizlik regressiyalari real HTTPS orqali:
+
+```bash
+CRON_SECRET=<sir> scripts/prod-check.sh
+# yoki boshqa muhit uchun:
+API_URL=https://… WEB_URL=https://… scripts/prod-check.sh
+```
+
+U faqat o'qiydi; yagona yozadigan chaqiruvi — cron endpoint'i, u esa idempotent.
+Bitta tekshiruv yiqilsa skript nolga teng bo'lmagan kod qaytaradi.
+
+Tez tekshiruv:
 
 ```bash
 curl https://<api-domen>/api/v1/health

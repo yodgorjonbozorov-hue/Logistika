@@ -14,6 +14,14 @@ export const API_PREFIX = 'api/v1';
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
 
+  // Express advertises itself with `x-powered-by` by default. It tells an
+  // attacker which stack to aim at and buys the API nothing.
+  const httpAdapter = app.getHttpAdapter();
+  const instance: unknown = httpAdapter.getInstance();
+  if (typeof (instance as { disable?: unknown }).disable === 'function') {
+    (instance as { disable: (setting: string) => void }).disable('x-powered-by');
+  }
+
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const isAllowedOrigin = createOriginCheck({
