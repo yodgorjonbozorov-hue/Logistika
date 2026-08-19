@@ -25,9 +25,28 @@ export class UsersService {
 
   // ---------- Pre-auth lookups (login happens before the tenant is known) ----------
 
-  findByIdentifier(identifier: string): Promise<User | null> {
-    const where = identifier.includes('@') ? { email: identifier } : { phone: identifier };
-    return this.prisma.user.findUnique({ where });
+  /**
+   * Resolves whatever the sign-in form was given: an e-mail, a phone number, or
+   * a login name.
+   *
+   * Usernames are stored lower-cased, so they are matched that way. E-mails are
+   * tried as typed first and only then lower-cased — rows predate the
+   * normalisation, and a case-folded-only lookup would lock those accounts out.
+   */
+  async findByIdentifier(identifier: string): Promise<User | null> {
+    const value = identifier.trim();
+    if (!value) return null;
+
+    if (value.includes('@')) {
+      const exact = await this.prisma.user.findUnique({ where: { email: value } });
+      if (exact) return exact;
+      const lower = value.toLowerCase();
+      return lower === value ? null : this.prisma.user.findUnique({ where: { email: lower } });
+    }
+    if (/^\+?[\d\s-]+$/.test(value)) {
+      return this.prisma.user.findUnique({ where: { phone: value } });
+    }
+    return this.prisma.user.findUnique({ where: { username: value.toLowerCase() } });
   }
 
   findById(id: string): Promise<User | null> {

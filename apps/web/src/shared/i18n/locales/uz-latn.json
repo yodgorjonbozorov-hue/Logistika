@@ -29,7 +29,7 @@
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
-    "identifier": "Email yoki telefon",
+    "identifier": "Login, email yoki telefon",
     "password": "Parol",
     "submit": "Kirish",
     "loggingIn": "Kirilmoqda…",

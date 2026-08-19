@@ -29,7 +29,7 @@
   },
   "auth": {
     "loginTitle": "Вход в систему",
-    "identifier": "Email или телефон",
+    "identifier": "Логин, email или телефон",
     "password": "Пароль",
     "submit": "Войти",
     "loggingIn": "Вход…",

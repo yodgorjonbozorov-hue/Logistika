@@ -29,7 +29,7 @@
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
-    "identifier": "Email ёки телефон",
+    "identifier": "Логин, email ёки телефон",
     "password": "Парол",
     "submit": "Кириш",
     "loggingIn": "Кирилмоқда…",

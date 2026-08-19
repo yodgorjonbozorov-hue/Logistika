@@ -130,17 +130,39 @@ Mahalliy ravishda ham ishga tushirish mumkin:
 DATABASE_URL="<to'g'ridan-to'g'ri, pooler emas>" pnpm --filter backend db:deploy
 ```
 
-### Birinchi administrator
+### Platforma administratori
 
 Yangi bazada hech kim yo'q, API esa foydalanuvchi yaratish uchun
 autentifikatsiya talab qiladi. `src/scripts/bootstrap-superadmin.ts` shu
 tugunni yechadi va u ham build'da ishlaydi:
 
-- `SEED_SUPERADMIN_EMAIL` va `SEED_SUPERADMIN_PASSWORD` ikkalasi qo'yilmasa —
-  hech nima qilmaydi;
-- allaqachon SUPERADMIN bo'lsa — tegmaydi (parolni qayta yozmaydi).
+- `SEED_SUPERADMIN_PASSWORD` (kamida 12 belgi) va `SEED_SUPERADMIN_EMAIL` yoki
+  `SEED_SUPERADMIN_USERNAME` dan kamida bittasi qo'yilmasa — hech nima qilmaydi;
+- allaqachon SUPERADMIN bo'lsa — tegmaydi.
 
-Birinchi deploydan keyin bu ikki o'zgaruvchini o'chirib qo'ysangiz ham bo'ladi.
+**Parolni yoki login nomini almashtirish.** Boshqa yo'l yo'q: platforma hisobi
+hech qaysi kompaniyaga tegishli emas, shuning uchun uni tenant API'si orqali
+tahrirlab bo'lmaydi. Shu uchta o'zgaruvchini qo'yib bitta deploy qiling:
+
+```
+SEED_SUPERADMIN_USERNAME=<login>      # yoki SEED_SUPERADMIN_EMAIL
+SEED_SUPERADMIN_PASSWORD=<yangi parol>
+SEED_SUPERADMIN_RESET=true
+```
+
+`SEED_SUPERADMIN_RESET=true` bo'lmasa skript mavjud hisobga tegmaydi — ya'ni
+tasodifiy deploy hech qachon parolni qayta yozib yubormaydi. Berilgan
+identifikator ustiga yoziladi, berilmagani (masalan email) tegishsiz qoladi.
+
+Ishlatib bo'lgach **darhol** `SEED_SUPERADMIN_RESET` va `SEED_SUPERADMIN_PASSWORD`
+ni o'chiring: aks holda parol Vercel env'ida ochiq turadi va keyingi har bir
+deploy uni qayta o'rnatadi.
+
+### Kirish identifikatori
+
+`POST /auth/login` `identifier` maydonini uch xil qabul qiladi: `@` bo'lsa —
+email, faqat raqam/`+` bo'lsa — telefon, aks holda — login nomi (`users.username`,
+kichik harflarda saqlanadi va shunday solishtiriladi).
 
 ## 3. Rejalashtirilgan vazifalar (cron)
 

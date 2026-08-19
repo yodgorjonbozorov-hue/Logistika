@@ -1,7 +1,59 @@
 import { UserRole } from 'shared';
 import type { AuditService } from '../audit/audit.service';
+import type { PrismaService } from '../../prisma/prisma.service';
 import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { UsersService } from './users.service';
+
+describe('UsersService.findByIdentifier', () => {
+  const audit = { log: jest.fn() } as unknown as AuditService;
+
+  /** Only the pre-auth lookup is exercised here, so a bare client is enough. */
+  function setup(row: Record<string, unknown> | null = null) {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const prisma = { user: { findUnique } } as unknown as PrismaService;
+    return { findUnique, service: new UsersService(prisma, audit) };
+  }
+
+  it('treats anything with an @ as an e-mail', async () => {
+    const { service, findUnique } = setup({ id: 'u1' });
+    await service.findByIdentifier(' owner@test.uz ');
+    expect(findUnique).toHaveBeenCalledWith({ where: { email: 'owner@test.uz' } });
+  });
+
+  it('retries a missed e-mail lower-cased, for rows written before normalisation', async () => {
+    const { service, findUnique } = setup();
+    findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'u1' });
+    await expect(service.findByIdentifier('Owner@Test.UZ')).resolves.toMatchObject({ id: 'u1' });
+    expect(findUnique.mock.calls.map(([arg]) => arg)).toEqual([
+      { where: { email: 'Owner@Test.UZ' } },
+      { where: { email: 'owner@test.uz' } },
+    ]);
+  });
+
+  it('does not run the same e-mail query twice', async () => {
+    const { service, findUnique } = setup(null);
+    await service.findByIdentifier('owner@test.uz');
+    expect(findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats digits as a phone number, as typed', async () => {
+    const { service, findUnique } = setup({ id: 'u1' });
+    await service.findByIdentifier('+998901234567');
+    expect(findUnique).toHaveBeenCalledWith({ where: { phone: '+998901234567' } });
+  });
+
+  it('treats anything else as a login name, lower-cased', async () => {
+    const { service, findUnique } = setup({ id: 'u1' });
+    await service.findByIdentifier('  Umar_Narziyev ');
+    expect(findUnique).toHaveBeenCalledWith({ where: { username: 'umar_narziyev' } });
+  });
+
+  it('never queries on an empty identifier', async () => {
+    const { service, findUnique } = setup();
+    await expect(service.findByIdentifier('   ')).resolves.toBeNull();
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+});
 
 describe('UsersService (tenant-scoped CRUD)', () => {
   const audit = { log: jest.fn() } as unknown as AuditService;

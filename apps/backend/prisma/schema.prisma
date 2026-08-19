@@ -160,6 +160,9 @@ model User {
   fullName     String    @map("full_name")
   phone        String?   @unique
   email        String?   @unique
+  // An optional login name, for accounts that sign in with neither an e-mail
+  // nor a phone (platform staff). Lower-cased by the application.
+  username     String?   @unique
   passwordHash String    @map("password_hash")
   role         UserRole
   isActive     Boolean   @default(true) @map("is_active")

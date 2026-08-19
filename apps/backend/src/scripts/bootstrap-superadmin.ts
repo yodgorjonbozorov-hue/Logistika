@@ -1,45 +1,89 @@
 /**
- * Creates the first SUPERADMIN so a fresh production database is reachable at
- * all — every other account is created through the API, which itself requires
- * an authenticated admin.
+ * Creates — or, on an explicit instruction, re-credentials — the platform
+ * SUPERADMIN. Without it a fresh production database is unreachable: every
+ * other account is created through the API, which itself requires an
+ * authenticated admin.
  *
- * Idempotent and opt-in:
- *   - does nothing unless BOTH SEED_SUPERADMIN_EMAIL and SEED_SUPERADMIN_PASSWORD
- *     are set, so a normal deploy never touches user data;
- *   - does nothing if any SUPERADMIN already exists, so re-running it can never
- *     overwrite a live account or reset a password.
+ * Opt-in and deliberately dull:
+ *   - does nothing unless SEED_SUPERADMIN_PASSWORD and at least one of
+ *     SEED_SUPERADMIN_EMAIL / SEED_SUPERADMIN_USERNAME are set, so a normal
+ *     deploy never touches user data;
+ *   - if a SUPERADMIN already exists it is left alone, *unless*
+ *     SEED_SUPERADMIN_RESET is `true` — the one way to change the platform
+ *     account's sign-in details, and it has to be asked for by name.
  *
- * Run it once against a new database, then clear the two variables.
+ * Run it once, then clear the variables so the next deploy is a no-op again.
  */
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 
-async function main(): Promise<void> {
-  const email = process.env.SEED_SUPERADMIN_EMAIL;
-  const password = process.env.SEED_SUPERADMIN_PASSWORD;
+const MIN_PASSWORD = 12;
 
-  if (!email || !password) {
+/** Login names are matched lower-cased, so they are stored that way. */
+function normaliseUsername(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+async function main(): Promise<void> {
+  const email = process.env.SEED_SUPERADMIN_EMAIL?.trim().toLowerCase() || null;
+  const username = process.env.SEED_SUPERADMIN_USERNAME
+    ? normaliseUsername(process.env.SEED_SUPERADMIN_USERNAME)
+    : null;
+  const password = process.env.SEED_SUPERADMIN_PASSWORD;
+  const reset = process.env.SEED_SUPERADMIN_RESET === 'true';
+
+  if (!password || (!email && !username)) {
     console.log('bootstrap-superadmin: SEED_SUPERADMIN_* not set, skipping');
     return;
   }
-  if (password.length < 12) {
+  if (password.length < MIN_PASSWORD) {
     throw new Error(
-      'bootstrap-superadmin: SEED_SUPERADMIN_PASSWORD must be at least 12 characters',
+      `bootstrap-superadmin: SEED_SUPERADMIN_PASSWORD must be at least ${MIN_PASSWORD} characters`,
+    );
+  }
+  if (username && !/^[a-z0-9._-]{3,64}$/.test(username)) {
+    throw new Error(
+      'bootstrap-superadmin: SEED_SUPERADMIN_USERNAME must be 3-64 characters of a-z, 0-9, dot, underscore or hyphen',
     );
   }
 
   const prisma = new PrismaClient();
   try {
-    const existing = await prisma.user.findFirst({ where: { role: 'SUPERADMIN' } });
-    if (existing) {
+    const passwordHash = await argon2.hash(password);
+    const existing = await prisma.user.findFirst({
+      where: { role: 'SUPERADMIN' },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (existing && !reset) {
       console.log('bootstrap-superadmin: a SUPERADMIN already exists, leaving it untouched');
+      return;
+    }
+
+    if (existing) {
+      const updated = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          passwordHash,
+          // Only overwrite an identifier that was actually supplied, so setting
+          // a username does not silently drop the e-mail, or the other way round.
+          ...(email ? { email } : {}),
+          ...(username ? { username } : {}),
+          isActive: true,
+        },
+      });
+      console.log(
+        `bootstrap-superadmin: reset credentials for SUPERADMIN ${updated.id} ` +
+          `(username: ${updated.username ?? '—'}, email: ${updated.email ?? '—'})`,
+      );
       return;
     }
 
     const user = await prisma.user.create({
       data: {
         email,
-        passwordHash: await argon2.hash(password),
+        username,
+        passwordHash,
         fullName: 'Platform administrator',
         role: 'SUPERADMIN',
         companyId: null,
