@@ -8,6 +8,7 @@ import type { Company } from '../shared/api/entities';
 import { useAuth } from '../shared/auth/AuthContext';
 import { setLocale } from '../shared/i18n';
 import { Avatar, Button, Icon, PageSkeleton, Sheet, initialsOf } from '../shared/ui';
+import { AccountMenu } from './AccountMenu';
 import { cn } from '../shared/utils/cn';
 
 interface NavItem {
@@ -57,12 +58,6 @@ const MENU_ITEMS: readonly NavItem[] = [
   { to: '/users', key: 'nav.users', icon: 'user-gear' },
   { to: '/settings', key: 'nav.settings', icon: 'gear-six' },
 ];
-
-const LOCALE_LABELS: Record<Locale, string> = {
-  'uz-latn': "O'zbek (lotin)",
-  'uz-cyrl': 'Ўзбек (кирил)',
-  ru: 'Русский',
-};
 
 /** Room for three side by side on a 320px screen. */
 const LOCALE_SHORT: Record<Locale, string> = {
@@ -357,7 +352,7 @@ function Sidebar({ openTrips }: { openTrips: number | null }) {
           <Icon name="question" size={16} />
           <span>{t('nav.help')}</span>
         </a>
-        <UserMenu />
+        <AccountMenu />
       </div>
     </aside>
   );
@@ -412,81 +407,6 @@ function NavItemLink({ item, count }: { item: NavItem; count: number | null }) {
         </>
       )}
     </NavLink>
-  );
-}
-
-/** The sidebar footer identity row — opens language choice and sign-out. */
-function UserMenu() {
-  const { t, i18n } = useTranslation();
-  const { user, logout } = useAuth();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      {open ? (
-        <div className="card absolute bottom-full left-0 z-30 mb-1.5 w-full p-1.5 shadow-md">
-          <div className="px-2 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-neutral-600">
-            {t('common.language')}
-          </div>
-          {LOCALES.map((locale) => (
-            <button
-              key={locale}
-              type="button"
-              onClick={() => setLocale(locale)}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px]',
-                i18n.language === locale
-                  ? 'text-accent-200'
-                  : 'text-neutral-400 hover:bg-neutral-800/50',
-              )}
-            >
-              <Icon
-                name={i18n.language === locale ? 'check' : 'translate'}
-                size={14}
-                style={{ opacity: i18n.language === locale ? 1 : 0.5 }}
-              />
-              {LOCALE_LABELS[locale]}
-            </button>
-          ))}
-          <div className="my-1 h-px bg-divider" />
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-danger-text hover:bg-neutral-800/50"
-          >
-            <Icon name="sign-out" size={14} />
-            {t('auth.logout')}
-          </button>
-        </div>
-      ) : null}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2.5 rounded-md p-2 text-left hover:bg-neutral-800/50"
-      >
-        <Avatar initials={initialsOf(user?.fullName)} size={30} tone="accent" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium leading-[1.2]">
-            {user?.fullName ?? '—'}
-          </span>
-          <span className="block text-[11px] text-neutral-500">
-            {user ? t(`roles.${user.role}`) : ''}
-          </span>
-        </span>
-        <Icon name="caret-up-down" size={14} style={{ color: 'var(--color-neutral-600)' }} />
-      </button>
-    </div>
   );
 }
 

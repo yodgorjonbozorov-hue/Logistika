@@ -37,6 +37,10 @@
 
 - [x] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
 - [x] `users` CRUD; haydovchi auth (telefon + SMS-kod, 5 daq TTL, 5 urinish, enumeratsiyasiz)
+- [x] Superadmin paneli: `/admin` — kompaniyalar ro'yxati, yangi tenant + birinchi OWNER,
+      tarif/obuna muddati/faollik; rol bo'yicha marshrutlash (platforma ↔ tenant)
+- [x] Ommaviy kuzatuv sahifasi (`/track/:token`) Nocturne'ga o'tkazildi va mobil uchun
+      qayta yig'ildi
 - [x] Mobile-first responsive web: pastki tab-bar, karta ro'yxatlari, bottom-sheet
       modallar/filtrlar, 44px tegish maydonlari, skeleton/empty/error holatlari,
       safe-area, PWA (manifest + service worker), marshrutlar bo'yicha lazy-load.

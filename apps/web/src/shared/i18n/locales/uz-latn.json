@@ -376,7 +376,8 @@
     "updated": "Yangilangan",
     "notFound": "Havola topilmadi yoki muddati tugagan",
     "route": "Marshrut",
-    "cargo": "Yuk"
+    "cargo": "Yuk",
+    "notFoundBody": "Havola noto‘g‘ri yoki muddati tugagan. Yuk beruvchidan yangi havola so‘rang."
   },
   "event": {
     "START": "Yo'lga chiqdi",
@@ -665,6 +666,39 @@
       "privacy": "Maxfiylik",
       "terms": "Shartlar",
       "contact": "Aloqa: +998 71 202 44 80"
+    }
+  },
+  "admin": {
+    "platform": "Platforma",
+    "standing": {
+      "active": "Faol",
+      "expiring": "Muddati tugayapti",
+      "expired": "Muddati tugagan",
+      "suspended": "To‘xtatilgan",
+      "noSubscription": "Obunasiz"
+    },
+    "companies": {
+      "title": "Kompaniyalar",
+      "subtitle": "Platformadagi {{count}} ta tenant",
+      "new": "Yangi kompaniya",
+      "empty": "Hozircha kompaniya yo‘q",
+      "searchPlaceholder": "Kompaniya nomi…",
+      "name": "Nomi",
+      "plan": "Tarif",
+      "planHint": "Masalan TRIAL, Pro, Enterprise",
+      "until": "Obuna muddati",
+      "untilHint": "Bo‘sh qoldirilsa — {{days}} kunlik sinov qo‘yiladi",
+      "daysLeft": "Qolgan kun",
+      "created": "Yaratilgan",
+      "days": "kun",
+      "owner": "Kompaniya egasi (birinchi OWNER)",
+      "isActive": "Kompaniya faol",
+      "isActiveHint": "O‘chirilsa, xodimlari tizimga kira olmaydi",
+      "stats": {
+        "all": "Jami",
+        "trial": "Sinovda",
+        "expiring": "7 kun ichida tugaydi"
+      }
     }
   }
 }

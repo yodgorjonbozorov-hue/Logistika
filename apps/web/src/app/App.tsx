@@ -3,7 +3,11 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { LandingPage } from '../features/landing/LandingPage';
+import { tokenStore } from '../shared/api/client';
+import { useAuth } from '../shared/auth/AuthContext';
+import { homePathFor } from '../shared/auth/roles';
 import { PageSkeleton } from '../shared/ui';
+import { AdminLayout } from './AdminLayout';
 import { AppLayout } from './AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -56,6 +60,19 @@ const SettingsPage = lazy(() =>
 const PublicTrackPage = lazy(() =>
   import('../features/track/PublicTrackPage').then((m) => ({ default: m.PublicTrackPage })),
 );
+const CompaniesPage = lazy(() =>
+  import('../features/admin/CompaniesPage').then((m) => ({ default: m.CompaniesPage })),
+);
+
+/**
+ * An unknown URL sends a visitor to the marketing page, but a signed-in user to
+ * whichever home their role can actually load — dropping them on the landing
+ * page reads as having been signed out.
+ */
+function NotFound() {
+  const { user } = useAuth();
+  return <Navigate to={tokenStore.refresh ? homePathFor(user) : '/'} replace />;
+}
 
 export function App() {
   return (
@@ -65,6 +82,12 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/track/:token" element={<PublicTrackPage />} />
+        {/* Platform staff: their own shell, and nothing company-scoped. */}
+        <Route element={<ProtectedRoute platform />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<CompaniesPage />} />
+          </Route>
+        </Route>
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/overview" element={<OverviewPage />} />
@@ -83,7 +106,7 @@ export function App() {
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );
