@@ -63,10 +63,9 @@ Migratsiyalar, birinchi superadmin, HTTPS va backup — [`docs/DEPLOY.md`](docs/
 
 ### Frontend Vercel'da
 
-Web ilova Vercel'da: **https://logixa-ai.vercel.app** — `/demo` manzili API'siz,
-mock ma'lumot bilan ishlaydigan namoyish rejimi. Sozlamalar `vercel.json` da;
-haqiqiy ma'lumot uchun `VITE_API_URL` ni backend manziliga qo'yib qayta deploy
-qiling.
+Web ilova Vercel'da: **https://truckai.vercel.app** (loyiha
+`truck-control-ai-web`) — `/demo` manzili API'siz, mock ma'lumot bilan
+ishlaydigan namoyish rejimi. Sozlamalar [`apps/web/vercel.json`](apps/web/vercel.json) da.
 Batafsil — [`docs/DEPLOY.md` §8](docs/DEPLOY.md).
 
 Batafsil — [`CLAUDE.md`](CLAUDE.md).

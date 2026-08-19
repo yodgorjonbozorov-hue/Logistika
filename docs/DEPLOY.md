@@ -137,64 +137,67 @@ Docker healthcheck yoqilgan. Tashqi monitoring uchun shu ikki manzilni ishlating
 
 ## 8. Vercel (faqat frontend)
 
-Joriy deployment: **https://logixa-ai.vercel.app** (`/demo` — mock ma'lumotli
-namoyish). Loyiha nomi Vercel'da `logixa-ai`.
+Mavjud loyiha: **`truck-control-ai-web`** → https://truckai.vercel.app
+API esa alohida loyihada: `truck-control-ai-api` → `VITE_API_URL` shunga qaragan.
 
-Vercel statik saytlarni xosting qiladi — NestJS backend, PostgreSQL, Redis va
-MinIO baribir yuqoridagi Compose stack'da qoladi. Vercel'ga faqat `apps/web`
-chiqadi va u ikki manzilni beradi:
+Vercel statik saytlarni xosting qiladi — PostgreSQL, Redis va MinIO baribir
+yuqoridagi Compose stack'da qoladi. Web ikki manzil beradi:
 
 | Manzil  | Nima            | Talab                                 |
 | ------- | --------------- | ------------------------------------- |
 | `/`     | Haqiqiy ilova   | `VITE_API_URL` ishlaydigan backend'ga |
 | `/demo` | Namoyish (mock) | Yo'q — brauzerda mustaqil ishlaydi    |
 
-Sozlamalar `vercel.json` da yozilgan, dashboard'da qo'lda kiritish shart emas:
+### Sozlamalar
 
-| Sozlama          | Qiymat                           |
-| ---------------- | -------------------------------- |
-| Framework        | Other (`null`)                   |
-| Root Directory   | `.` (repo ildizi)                |
-| Install Command  | `pnpm install --frozen-lockfile` |
-| Build Command    | `pnpm build:vercel`              |
-| Output Directory | `apps/web/dist`                  |
+Loyihaning **Root Directory** i `apps/web`, shuning uchun Vercel konfiguratsiyasi
+ham o'sha papkada: [`apps/web/vercel.json`](../apps/web/vercel.json). Dashboard'da
+qo'lda hech narsa kiritish shart emas:
 
-### Qadamlar
+| Sozlama          | Qiymat                           | Izoh                                    |
+| ---------------- | -------------------------------- | --------------------------------------- |
+| Framework        | Other (`null`)                   | Vite'ni o'zimiz chaqiramiz              |
+| Root Directory   | `apps/web`                       | Loyiha sozlamasi (dashboard)            |
+| Install Command  | `pnpm install --frozen-lockfile` | repo ildizida ishlaydi — butun monorepo |
+| Build Command    | `pnpm -w run build:vercel`       | `-w` — skript ildizdagi package.json da |
+| Output Directory | `dist`                           | Root Directory ga nisbatan              |
 
-1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → shu repo.
-2. **Environment Variables** → `VITE_API_URL` = `https://api.<domen>/api/v1`
-   (Production va Preview uchun ham). Bu qiymat build vaqtida bundle ichiga
-   kiradi — o'zgartirgandan keyin qayta deploy qilish kerak.
-3. Deploy. Birinchi build ~2 daqiqa.
-4. Backend `.env.production` da `WEB_URL` ni Vercel domeniga o'zgartiring
-   (CORS shu qiymatni tekshiradi) va backend'ni qayta ishga tushiring:
+`pnpm build:vercel` ketma-ketligi: `shared` → `web` → `web build:demo` →
+`scripts/stage-demo.mjs` (namoyishni `apps/web/dist/demo` ga ko'chiradi).
 
-   ```bash
-   WEB_URL=https://<loyiha>.vercel.app
-   docker compose -f docker-compose.prod.yml --env-file .env.production up -d backend
-   ```
+### Deploy
 
-5. Backend HTTPS ostida bo'lishi shart — Vercel sahifasi `https://`, shuning
-   uchun `http://` API'ga so'rov brauzer tomonidan bloklanadi (mixed content).
+```bash
+vercel link --yes --project truck-control-ai-web --token "$VERCEL_TOKEN"
+vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+```
+
+`VITE_API_URL` build vaqtida bundle ichiga kiradi — o'zgartirgandan keyin qayta
+deploy qilish shart:
+
+```bash
+vercel env rm VITE_API_URL production --token "$VERCEL_TOKEN"
+vercel env add VITE_API_URL production --token "$VERCEL_TOKEN"
+```
+
+Backend tomonda `WEB_URL` Vercel domeniga teng bo'lishi kerak (CORS shuni
+tekshiradi) va backend HTTPS ostida turishi shart — aks holda brauzer
+`http://` so'rovni mixed content sifatida bloklaydi:
+
+```bash
+WEB_URL=https://truckai.vercel.app
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d backend
+```
 
 `VITE_API_URL` berilmasa build baribir o'tadi, lekin `/` dagi kirish formasi
 API'ni topa olmaydi — shu holatda forma ostida `/demo` ga havola ko'rsatiladi.
 
 ### Git bilan avtomatik deploy
 
-Loyiha GitHub repo'ga bog'langan. Production faqat Vercel'dagi **Production
-Branch** ga push qilinganda yangilanadi; boshqa branch'lar preview deployment
-beradi. Ish branch'idan production chiqarish uchun yo Vercel → Settings → Git →
-Production Branch ni o'sha branch'ga qo'ying, yo quyidagi CLI buyrug'ini
-ishlating.
-
-### CLI orqali (ixtiyoriy)
-
-```bash
-vercel link --yes --project logixa-ai --token "$VERCEL_TOKEN"
-vercel env add VITE_API_URL production --token "$VERCEL_TOKEN"
-vercel deploy --prod --yes --token "$VERCEL_TOKEN"
-```
+Loyiha GitHub repo'ga bog'langan: har push preview deployment beradi, production
+esa faqat Vercel → Settings → Git → **Production Branch** dagi branch'dan
+yangilanadi. Ish branch'ini production qilish uchun yo o'sha sozlamani
+o'zgartiring, yo yuqoridagi `vercel deploy --prod` ni ishlating.
 
 CI'dan chiqarish uchun `VERCEL_TOKEN` kerak (Vercel → Account Settings →
 Tokens); token faqat CI secret'ida saqlanadi, repoda emas.
