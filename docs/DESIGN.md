@@ -110,7 +110,19 @@ Mijozning ochiq kuzatuv sahifasi har doim navy palitrada — u brend yuzasi.
 Mobil ilova (Flutter) shu tokenlarni `lib/core/theme.dart` da takrorlaydi:
 `BrandColors` + `BrandRadii`.
 
-## 7. Tekshiruv ro'yxati (yangi ekran qo'shganda)
+## 7. Preview (backendsiz demo)
+
+Interfeysni serversiz ko'rsatish uchun alohida build bor — haqiqiy ilova,
+lekin API o'rniga `src/demo/fixtures.ts` dagi ma'lumotlar:
+
+```bash
+pnpm --filter web exec vite build --config vite.demo.config.ts   # → dist-demo/
+```
+
+`src/demo/` faqat shu build'ga kiradi, production bundle'ga tushmaydi.
+Xarita plitkalari va chiqish tugmasi demo'da o'chiriladi (`src/demo/demo.css`).
+
+## 8. Tekshiruv ro'yxati (yangi ekran qo'shganda)
 
 1. Rang faqat tokendan; hex yo'q.
 2. Matn faqat i18n kalitidan (uz-latn/uz-cyrl/ru — uchalasi ham to'ldiriladi).

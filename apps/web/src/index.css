@@ -147,92 +147,97 @@
   }
 }
 
-@layer components {
-  /*
-   * Adaptive table: a real table from `md` up, stacked cards below it. Each
-   * cell prints its column name from `data-label`, so no header is lost on a
-   * phone and nothing overflows sideways.
-   */
-  @media (max-width: 767px) {
-    .lx-table,
-    .lx-table tbody,
-    .lx-table tr,
-    .lx-table td {
-      display: block;
-      width: 100%;
-    }
-
-    .lx-table thead {
-      @apply hidden;
-    }
-
-    .lx-table tr {
-      @apply mb-3 rounded-lg border border-line bg-surface p-1 shadow-sm;
-    }
-
-    .lx-table tr:last-child {
-      @apply mb-0;
-    }
-
-    .lx-table td {
-      @apply flex items-center justify-between gap-4 border-b border-line-divider px-3 py-2.5 text-right;
-    }
-
-    .lx-table td:last-child {
-      @apply border-b-0;
-    }
-
-    .lx-table td::before {
-      content: attr(data-label);
-      @apply shrink-0 text-left font-mono text-[10px] uppercase tracking-[0.1em] text-ink-tertiary;
-    }
-
-    .lx-table td[data-label='']::before {
-      @apply hidden;
-    }
-
-    .lx-table td[data-label='']:only-child {
-      @apply justify-end;
-    }
+/*
+ * Plain CSS on purpose: Tailwind emits rules from `@layer components`
+ * only when the class name appears in the source scan, and Leaflet
+ * creates its classes at runtime — inside a layer these rules vanish
+ * from the build. Selectors are doubled to outrank Leaflet's own
+ * stylesheet, which is injected after ours.
+ */
+/*
+ * Adaptive table: a real table from `md` up, stacked cards below it. Each
+ * cell prints its column name from `data-label`, so no header is lost on a
+ * phone and nothing overflows sideways.
+ */
+@media (max-width: 767px) {
+  .lx-table,
+  .lx-table tbody,
+  .lx-table tr,
+  .lx-table td {
+    display: block;
+    width: 100%;
   }
 
-  /*
-   * Leaflet follows the design system rather than its own defaults. Its
-   * stylesheet is injected after ours, so each selector is doubled to win on
-   * specificity instead of reaching for `!important`.
-   */
-  .leaflet-container.leaflet-container {
-    @apply bg-surface-sunken font-sans;
+  .lx-table thead {
+    @apply hidden;
   }
 
-  .leaflet-popup-content-wrapper.leaflet-popup-content-wrapper,
-  .leaflet-popup-tip.leaflet-popup-tip {
-    @apply bg-surface text-ink shadow-md;
+  .lx-table tr {
+    @apply mb-3 rounded-lg border border-line bg-surface p-1 shadow-sm;
   }
 
-  .leaflet-popup-content-wrapper.leaflet-popup-content-wrapper {
-    @apply rounded-lg;
+  .lx-table tr:last-child {
+    @apply mb-0;
   }
 
-  .leaflet-control-zoom.leaflet-control-zoom a {
-    @apply border-line bg-surface text-ink;
+  .lx-table td {
+    @apply flex items-center justify-between gap-4 border-b border-line-divider px-3 py-2.5 text-right;
   }
 
-  .leaflet-control-attribution.leaflet-control-attribution {
-    @apply bg-surface/80 text-ink-tertiary;
+  .lx-table td:last-child {
+    @apply border-b-0;
   }
 
-  /* Dark mode maps the tiles to the navy ground instead of glaring white. */
-  .dark .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.75);
+  .lx-table td::before {
+    content: attr(data-label);
+    @apply shrink-0 text-left font-mono text-[10px] uppercase tracking-[0.1em] text-ink-tertiary;
   }
 
-  /* The route line that runs behind hero/navy panels — brand board cover. */
-  .lx-route-grid {
-    background-image:
-      radial-gradient(circle at 18% 82%, rgb(var(--c-brand-primary) / 0.18), transparent 45%),
-      radial-gradient(circle at 82% 12%, rgb(var(--c-brand-primary) / 0.12), transparent 40%);
+  .lx-table td[data-label='']::before {
+    @apply hidden;
   }
+
+  .lx-table td[data-label='']:only-child {
+    @apply justify-end;
+  }
+}
+
+/*
+ * Leaflet follows the design system rather than its own defaults. Its
+ * stylesheet is injected after ours, so each selector is doubled to win on
+ * specificity instead of reaching for `!important`.
+ */
+.leaflet-container.leaflet-container {
+  @apply bg-surface-sunken font-sans;
+}
+
+.leaflet-popup-content-wrapper.leaflet-popup-content-wrapper,
+.leaflet-popup-tip.leaflet-popup-tip {
+  @apply bg-surface text-ink shadow-md;
+}
+
+.leaflet-popup-content-wrapper.leaflet-popup-content-wrapper {
+  @apply rounded-lg;
+}
+
+.leaflet-control-zoom.leaflet-control-zoom a {
+  @apply border-line bg-surface text-ink;
+}
+
+.leaflet-control-attribution.leaflet-control-attribution {
+  @apply bg-surface/80 text-ink-tertiary;
+}
+
+/* Dark mode maps the tiles to the navy ground instead of glaring white. */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.75);
+}
+
+/* The route line that runs behind hero/navy panels — brand board cover. */
+.lx-route-grid {
+  background-image:
+    radial-gradient(circle at 18% 82%, rgb(var(--c-brand-primary) / 0.18), transparent 45%),
+    radial-gradient(circle at 82% 12%, rgb(var(--c-brand-primary) / 0.12), transparent 40%);
 }
 
 @layer utilities {

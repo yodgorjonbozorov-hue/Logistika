@@ -1,0 +1,26 @@
+/*
+ * Preview-only styling. The artifact host blocks external requests, so the map
+ * gets the brand board's grid ground instead of OpenStreetMap tiles, and the
+ * sign-out control is hidden because there is no session to leave.
+ */
+.leaflet-tile-pane {
+  display: none;
+}
+
+.leaflet-container.leaflet-container {
+  background-color: #0a101c;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 120px 120px;
+}
+
+.leaflet-control-attribution {
+  display: none;
+}
+
+button[aria-label='Chiqish'],
+button[aria-label='Чиқиш'],
+button[aria-label='Выйти'] {
+  display: none;
+}

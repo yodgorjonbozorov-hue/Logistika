@@ -4,6 +4,7 @@ node_modules/
 
 # Build natijalari
 dist/
+dist-demo/
 build/
 coverage/
 
