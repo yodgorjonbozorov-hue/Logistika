@@ -20,9 +20,14 @@ import { TrackingService } from '../tracking/tracking.service';
 export class CronController {
   constructor(private readonly tracking: TrackingService) {}
 
+  /**
+   * Failures propagate to the exception filter as a 500 on purpose, so a broken
+   * nightly job shows up as a failed run in the platform's cron history instead
+   * of a green tick over a silent error.
+   */
   @Get('archive-gps')
-  async archiveGps(): Promise<{ job: string; ranAt: string }> {
-    await this.tracking.archiveOldTracks();
-    return { job: 'archive-gps', ranAt: new Date().toISOString() };
+  async archiveGps(): Promise<{ job: string; archived: number; ranAt: string }> {
+    const archived = await this.tracking.archiveOldTracks();
+    return { job: 'archive-gps', archived, ranAt: new Date().toISOString() };
   }
 }

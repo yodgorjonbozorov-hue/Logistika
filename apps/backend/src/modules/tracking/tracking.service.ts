@@ -171,23 +171,42 @@ export class TrackingService {
     return points;
   }
 
-  /** TZ §5 note: gps_tracks grows fast — nightly move of >90-day rows to cold storage. */
+  /**
+   * TZ §5 note: gps_tracks grows fast — moves >90-day rows to cold storage.
+   *
+   * A single SQL statement, so it is idempotent: rows are deleted and inserted
+   * in one transaction and a second run simply finds nothing left to move.
+   * Failures are thrown, not swallowed, so the caller decides — the HTTP cron
+   * endpoint reports them, the in-process timer below only logs.
+   */
+  async archiveOldTracks(): Promise<number> {
+    const moved = await this.prisma.$executeRaw`
+      WITH moved AS (
+        DELETE FROM gps_tracks
+        WHERE recorded_at < now() - make_interval(days => ${GPS_RETENTION_DAYS})
+        RETURNING *
+      )
+      INSERT INTO gps_tracks_archive
+        (id, company_id, vehicle_id, trip_id, lat, lng, speed, heading, recorded_at)
+      SELECT id, company_id, vehicle_id, trip_id, lat, lng, speed, heading, recorded_at
+      FROM moved
+    `;
+    if (moved > 0) {
+      this.logger.log(`Archived ${moved} GPS points older than ${GPS_RETENTION_DAYS}d`);
+    }
+    return moved;
+  }
+
+  /**
+   * The in-process schedule used by a self-hosted (Docker) deployment. It
+   * swallows failures on purpose — a nightly maintenance job must never take
+   * the running server down. Serverless deployments have no timer and call the
+   * `/cron/archive-gps` endpoint instead, which does surface failures.
+   */
   @Cron('0 3 * * *')
-  async archiveOldTracks(): Promise<void> {
+  async archiveOldTracksScheduled(): Promise<void> {
     try {
-      const moved = await this.prisma.$executeRaw`
-        WITH moved AS (
-          DELETE FROM gps_tracks
-          WHERE recorded_at < now() - make_interval(days => ${GPS_RETENTION_DAYS})
-          RETURNING *
-        )
-        INSERT INTO gps_tracks_archive
-          (id, company_id, vehicle_id, trip_id, lat, lng, speed, heading, recorded_at)
-        SELECT id, company_id, vehicle_id, trip_id, lat, lng, speed, heading, recorded_at
-        FROM moved
-      `;
-      if (moved > 0)
-        this.logger.log(`Archived ${moved} GPS points older than ${GPS_RETENTION_DAYS}d`);
+      await this.archiveOldTracks();
     } catch (error) {
       this.logger.error(
         `GPS archive job failed: ${error instanceof Error ? error.message : String(error)}`,

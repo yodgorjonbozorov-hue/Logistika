@@ -57,11 +57,18 @@ tashqarida bo'lishi shart:
 | `MINIO_ROOT_PASSWORD` | secret key                                   |                                                             |
 | `MINIO_BUCKET`        | `truckcontrol`                               | bucket oldindan yaratilgan bo'lsin                          |
 | `MINIO_REGION`        | `auto` (R2) yoki `us-east-1` (AWS)           |                                                             |
+| `SMS_PROVIDER_URL`    | SMS shlyuzi endpoint'i                       | **productionda majburiy** — pastga qarang                   |
+| `SMS_PROVIDER_TOKEN`  | shlyuz tokeni                                | `SMS_PROVIDER_URL` bilan birga                              |
 | `NODE_ENV`            | `production`                                 |                                                             |
 | `API_PORT`            | `3000`                                       | serverless'da ishlatilmaydi, lekin env sxemasi talab qiladi |
 
 `CRON_SECRET` berilmasa `/api/v1/cron/*` endpoint'lari **yopiq** turadi —
 noto'g'ri sozlangan deploy ularni ochib qo'ymaydi.
+
+> **`SMS_PROVIDER_URL` haqida.** U berilmasa `SmsService` xatolik bermaydi —
+> haydovchining kirish kodini shunchaki logga yozadi. Dev'da bu qulay, lekin
+> productionda ikki barobar yomon: haydovchilar kod ololmaydi, kod esa deploy
+> loglarida ochiq turadi. Productionga chiqishdan oldin albatta to'ldiring.
 
 **Build nima qiladi** (`apps/backend/vercel.json`):
 
@@ -101,8 +108,15 @@ Shuning uchun ish HTTP orqali ochilgan va uni **Vercel Cron** chaqiradi —
 ```
 
 Vercel bu so'rovga `Authorization: Bearer $CRON_SECRET` qo'yadi; `CronGuard`
-uni tekshiradi. O'zini o'zi hostlagan (Docker) deployda eski `@Cron` dekoratori
-avvalgidek ishlaydi — ish idempotent, ikkalasi ham xavfsiz.
+uni tekshiradi. O'zini o'zi hostlagan (Docker) deployda `@Cron` dekoratori
+avvalgidek ishlaydi.
+
+Ish idempotent — arxivlash bitta SQL bayonotida bo'ladi, ikkinchi marta
+ishga tushsa ko'chiradigan qator qolmaydi. Xatolik yuz bersa HTTP endpoint
+**500** qaytaradi (va javobda `archived` soni bo'ladi), shuning uchun buzilgan
+tungi ish Vercel cron tarixida muvaffaqiyatsiz bo'lib ko'rinadi. Doimiy
+serverdagi taymer esa xatoni faqat logga yozadi — texnik xizmat ishi ishlab
+turgan serverni yiqitmasligi kerak.
 
 > Vercel Hobby tarifida cron kuniga 1 marta ishlaydi — bu vazifa uchun yetarli.
 
@@ -122,6 +136,11 @@ avvalgidek ishlaydi — ish idempotent, ikkalasi ham xavfsiz.
 
 `VITE_*` build vaqtida bundle ichiga yoziladi, shuning uchun uni o'zgartirgach
 qayta deploy qilish kerak.
+
+`VITE_API_URL` production build'da **majburiy**: berilmasa `vite.config.ts`
+build'ni to'xtatadi. Aks holda bundle ichiga dev fallback (`http://localhost:3000`)
+yozilib qolar edi va deploy qilingan sayt har bir so'rovni tashrif buyuruvchining
+o'z kompyuteriga yuborardi — jimgina va topish qiyin nosozlik.
 
 `vercel.json` dagi rewrite barcha yo'llarni `index.html` ga qaytaradi — React
 Router'ning `/trips/:id` kabi klient marshrutlari to'g'ridan-to'g'ri ochilganda
