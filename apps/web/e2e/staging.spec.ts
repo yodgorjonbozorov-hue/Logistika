@@ -78,6 +78,9 @@ test.describe('staging: the web app talks to the real API', () => {
 
     // A figure, not a spinner: the request completed and returned numbers.
     await expect(page.locator('.tabular-nums').first()).toBeVisible();
+    // Money is rendered in so'm from a tiyin string — a page showing the raw
+    // tiyin, or a rounded double, would not match.
+    await expect(page.getByText(/^\d[\d\u00A0]*(,\d+)?$/).first()).toBeVisible();
 
     expect(failures, `console errors / failed requests:\n${failures.join('\n')}`).toEqual([]);
   });
