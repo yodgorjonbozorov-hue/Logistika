@@ -7,7 +7,7 @@ import { ThrottleModule } from './common/throttle/throttle.module';
 import { AppThrottlerGuard } from './common/throttle/throttle';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
-import { SessionStateService } from './common/guards/session-state.service';
+import { SessionStateModule } from './common/guards/session-state.module';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
@@ -33,6 +33,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ScheduleModule.forRoot(),
     ThrottleModule,
     PrismaModule,
+    SessionStateModule,
     I18nModule,
     AuditModule,
     UsersModule,
@@ -50,7 +51,6 @@ import { PrismaModule } from './prisma/prisma.module';
     HealthModule,
   ],
   providers: [
-    SessionStateService,
     // Order matters: authentication first so the throttler can bucket per user
     // instead of per shared office IP, then roles, then the rate limiter.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

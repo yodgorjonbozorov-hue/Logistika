@@ -6,6 +6,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SessionStateService } from '../../common/guards/session-state.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 
@@ -21,6 +22,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly sessionState: SessionStateService,
   ) {}
 
   // ---------- Pre-auth lookups (login happens before the tenant is known) ----------
@@ -93,6 +95,15 @@ export class UsersService {
         where: { id },
         data,
       });
+
+      // A password change is usually a response to a suspected compromise, and
+      // a role change alters what the token is allowed to do. Either way the
+      // existing sessions must not survive: without this, a stolen refresh
+      // token keeps working for another 30 days after the "fix".
+      if (password || rest.role !== undefined || rest.isActive === false) {
+        await this.revokeSessions(id);
+      }
+
       this.audit.log({
         companyId: actor.companyId,
         userId: actor.userId,
@@ -107,6 +118,18 @@ export class UsersService {
     }
   }
 
+  /**
+   * Kills every live refresh token for a user and drops the cached session
+   * verdict, so the next request re-checks against the database.
+   */
+  private async revokeSessions(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    this.sessionState.invalidate(userId);
+  }
+
   /** Soft delete: users are deactivated, never removed (history must survive). */
   async deactivate(actor: CurrentUserPayload, id: string): Promise<SafeUser> {
     if (id === actor.userId) {
@@ -117,6 +140,9 @@ export class UsersService {
         where: { id },
         data: { isActive: false },
       });
+      // Deactivation has to take effect now, not whenever the access token
+      // happens to expire.
+      await this.revokeSessions(id);
       this.audit.log({
         companyId: actor.companyId,
         userId: actor.userId,

@@ -96,8 +96,13 @@ export class AuthService {
     }
     if (stored.revokedAt) {
       await this.revokeFamily(stored.familyId);
+      // Deliberately not phrased as "theft detected": an administrator
+      // deactivating an account or resetting a password also revokes tokens,
+      // and the client then presents one. Both mean the session is over; only
+      // the pattern of occurrences tells them apart.
       this.logger.warn(
-        `Refresh token reuse detected for user ${stored.userId}; family ${stored.familyId} revoked`,
+        `Revoked refresh token presented for user ${stored.userId}; ` +
+          `family ${stored.familyId} revoked (rotation replay or an administrative revocation)`,
       );
       this.audit.log({
         userId: stored.userId,

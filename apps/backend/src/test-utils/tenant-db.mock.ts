@@ -23,14 +23,23 @@ export function createTenantDbMock(models: string[]) {
   // Raw-SQL escape hatches used by the trip-number allocator and DISTINCT ON.
   const $queryRaw = jest.fn().mockResolvedValue([]);
   const $executeRaw = jest.fn().mockResolvedValue(0);
+  // RefreshToken is deliberately OUTSIDE the tenant scope (it is keyed by user),
+  // so it is reached through the bare client rather than through forCompany().
+  const refreshToken = {
+    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+  };
   return {
     prisma: {
       forCompany,
       $queryRaw,
       $executeRaw,
+      refreshToken,
     } as unknown as import('../prisma/prisma.service').PrismaService,
     db,
     forCompany,
+    refreshToken,
     $queryRaw,
     $executeRaw,
   };
@@ -49,4 +58,12 @@ export function createDriversStub(driver: { id: string } | null = { id: 'd1' }) 
       driver ? Promise.resolve(driver) : Promise.reject(new Error('DRIVER_PROFILE_MISSING')),
     ),
   } as unknown as import('../modules/drivers/drivers.service').DriversService;
+}
+
+/** SessionStateService stub for services that invalidate cached verdicts. */
+export function createSessionStateStub() {
+  return {
+    invalidate: jest.fn(),
+    assertUsable: jest.fn(),
+  } as unknown as import('../common/guards/session-state.service').SessionStateService;
 }

@@ -1,15 +1,16 @@
 import { UserRole } from 'shared';
 import type { AuditService } from '../audit/audit.service';
-import { ACTOR, createTenantDbMock } from '../../test-utils/tenant-db.mock';
+import { ACTOR, createSessionStateStub, createTenantDbMock } from '../../test-utils/tenant-db.mock';
 import { UsersService } from './users.service';
 
 describe('UsersService (tenant-scoped CRUD)', () => {
   const audit = { log: jest.fn() } as unknown as AuditService;
 
   function setup() {
-    const { prisma, db, forCompany } = createTenantDbMock(['user']);
-    const service = new UsersService(prisma, audit);
-    return { service, db, forCompany };
+    const { prisma, db, forCompany, refreshToken } = createTenantDbMock(['user']);
+    const sessionState = createSessionStateStub();
+    const service = new UsersService(prisma, audit, sessionState);
+    return { service, db, forCompany, refreshToken, sessionState };
   }
 
   it('always resolves the tenant client with the actor companyId', async () => {
@@ -57,5 +58,50 @@ describe('UsersService (tenant-scoped CRUD)', () => {
       data: { isActive: false },
     });
     expect(db.user!.delete).not.toHaveBeenCalled();
+  });
+
+  describe('session revocation', () => {
+    it('kills every live session when a user is deactivated', async () => {
+      const { service, db, refreshToken, sessionState } = setup();
+      db.user!.update!.mockResolvedValue({ id: 'u2', passwordHash: 'x', isActive: false });
+
+      await service.deactivate(ACTOR, 'u2');
+
+      expect(refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'u2', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(sessionState.invalidate).toHaveBeenCalledWith('u2');
+    });
+
+    it('kills every live session when the password is changed', async () => {
+      const { service, db, refreshToken } = setup();
+      db.user!.update!.mockResolvedValue({ id: 'u2', passwordHash: 'new' });
+
+      await service.update(ACTOR, 'u2', { password: 'a-brand-new-password' });
+
+      expect(refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'u2', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('kills every live session when the role changes', async () => {
+      const { service, db, refreshToken } = setup();
+      db.user!.update!.mockResolvedValue({ id: 'u2', passwordHash: 'x', role: UserRole.OWNER });
+
+      await service.update(ACTOR, 'u2', { role: UserRole.OWNER });
+
+      expect(refreshToken.updateMany).toHaveBeenCalled();
+    });
+
+    it('leaves sessions alone for a harmless edit', async () => {
+      const { service, db, refreshToken } = setup();
+      db.user!.update!.mockResolvedValue({ id: 'u2', passwordHash: 'x' });
+
+      await service.update(ACTOR, 'u2', { fullName: 'New Name' });
+
+      expect(refreshToken.updateMany).not.toHaveBeenCalled();
+    });
   });
 });

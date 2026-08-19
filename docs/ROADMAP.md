@@ -122,15 +122,41 @@
 - [ ] Telegram bot ulash + FCM push
 - [ ] AI chegaralari testlari: bazaga yozmasligi, SQL yo'qligi, taklif-tasdiqlash oqimi, limit
 
+## 6.5-bosqich — Production audit va tuzatish ✅
+
+> 7-bosqichdan oldin bajarildi: audit 10 ta production blokerini aniqladi, ular
+> tuzatilmasdan moliya yadrosini qurish ma'nosiz edi (masalan haydovchi ilovasi
+> umuman ishlamas, tenant izolyatsiyasi yozuv tomonida buzilgan edi).
+
+- [x] **C-1** `Driver.userId` bog'lanishi: haydovchi ilovasining barcha endpoint'lari
+      (`/trips/my`, `/events/batch`, `/tracking/positions`) ishlamas edi
+- [x] **C-2** `prisma/seed.ts`: birinchi SUPERADMIN (env, argon2, idempotent)
+- [x] **C-3** Prisma migratsiya tarixi: baseline + hardening (mavjud ma'lumotga xavfsiz)
+- [x] **C-4** Tenant extension: `data.companyId` injection'i (yozuv tomonida izolyatsiya)
+- [x] **C-5** Rate limiting (`@nestjs/throttler`, Redis) — login, SMS, public, upload
+- [x] **H-1** `GET /events` IDOR, **H-2** tenantlararo FK, **H-3** moliyaviy idempotentlik
+- [x] **H-4** odometr validatsiyasi, **H-5** atomik status, **H-6** reys raqami sanog'i
+- [x] **H-7/H-8** GPS unumdorligi va chegaralari, **H-15** haqiqiy health-check
+- [x] **H-9** web mobil responsive, **H-10** single-flight refresh, **H-16** token saqlash
+- [x] **H-11/H-12** mobil ma'lumot yo'qolishi (rad etilgan hodisalar, foto oqimi)
+- [x] **H-13/H-14** Dockerfile, production compose, nginx, CI/CD, Vercel SPA rewrites
+- [x] **M-1…M-17** helmet/compression, mijoz balansi, moliyaviy audit-log, dev-kod oqishi,
+      refresh reuse detection, sana/pagination validatsiyasi, pul formati, MIME sniffing,
+      batch N+1, cron distributed lock, ikki karra biriktirish, RBAC navigatsiya, JWT jonli
+      avtorizatsiya
+- [x] Kunlik shifrlangan zaxira + real tiklash tekshiruvi (`deploy/backup.sh`, `restore.sh`)
+- [x] Testlar: 103 backend unit + 206 real-PostgreSQL e2e + 23 web unit + 22 Playwright
+      (375/768/1440) + 23 Flutter — `docs/AUDIT-2026-08.md`
+
 ## 9-bosqich — Sayqal va pilot
 
 - [ ] `chat`: logist ↔ haydovchi (matn + foto + ovozli xabar)
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
 - [ ] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
-- [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
-- [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
-- [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
+- [x] Production Docker Compose (backend, web, nginx, backup cron), HTTPS — 6.5-bosqich
+- [x] Kunlik zaxira nusxa + tiklash tekshiruvi — 6.5-bosqich
+- [x] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log (TZ §9) — 6.5-bosqich
 - [ ] Seed/demo ma'lumotlar, pilot firma onboarding qo'llanmasi (TZ §12.2 — 2 firma, 2 oy bepul)
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →
       tasdiqlash → reys P&L → dashboard

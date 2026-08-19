@@ -43,7 +43,11 @@ export class DriversService {
     const [data, total] = await Promise.all([
       db.driver.findMany({
         where,
-        orderBy: orderBy(query, ['fullName', 'createdAt', 'licenseExpiry', 'hireDate'], 'createdAt'),
+        orderBy: orderBy(
+          query,
+          ['fullName', 'createdAt', 'licenseExpiry', 'hireDate'],
+          'createdAt',
+        ),
         skip: query.skip,
         take: query.limit,
       }),

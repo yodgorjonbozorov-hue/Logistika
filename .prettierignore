@@ -1,0 +1,9 @@
+# Generated / vendored — not ours to format
+pnpm-lock.yaml
+**/dist/
+**/build/
+**/coverage/
+**/test-results/
+**/playwright-report/
+apps/backend/prisma/migrations/
+mobile/

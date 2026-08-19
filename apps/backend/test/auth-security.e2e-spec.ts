@@ -377,6 +377,87 @@ describe('Auth security', () => {
     });
   });
 
+  describe('token revocation', () => {
+    it('deactivating a user kills their refresh token immediately', async () => {
+      const company = await createCompany();
+      const owner = await login(app, company.owner);
+      const victim = await login(app, await createUser(company.id, 'LOGIST'));
+
+      await api(app).delete(`/api/v1/users/${victim.id}`).set(auth(owner.accessToken)).expect(200);
+
+      // Not "in 15 seconds", not "when the access token expires" — now.
+      // 401 rather than 403: the token was revoked outright, so it is refused
+      // before the account state is ever consulted. That is also the better
+      // answer — it tells an attacker nothing about why.
+      const refused = await api(app)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: victim.refreshToken })
+        .expect(401);
+      expect(refused.body.error.code).toBe('AUTH_REFRESH_INVALID');
+      expect(
+        await prisma.refreshToken.count({ where: { userId: victim.id, revokedAt: null } }),
+      ).toBe(0);
+    });
+
+    it('changing a password kills every existing session', async () => {
+      const company = await createCompany();
+      const owner = await login(app, company.owner);
+      const target = await login(app, await createUser(company.id, 'LOGIST'));
+      expect(
+        await prisma.refreshToken.count({ where: { userId: target.id, revokedAt: null } }),
+      ).toBe(1);
+
+      await api(app)
+        .patch(`/api/v1/users/${target.id}`)
+        .set(auth(owner.accessToken))
+        .send({ password: 'a-brand-new-password-2026' })
+        .expect(200);
+
+      // The whole point of a password reset after a compromise.
+      await api(app)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: target.refreshToken })
+        .expect(401);
+      expect(
+        await prisma.refreshToken.count({ where: { userId: target.id, revokedAt: null } }),
+      ).toBe(0);
+    });
+
+    it('changing a role kills existing sessions so the new one is re-issued', async () => {
+      const company = await createCompany();
+      const owner = await login(app, company.owner);
+      const target = await login(app, await createUser(company.id, 'ACCOUNTANT'));
+
+      await api(app)
+        .patch(`/api/v1/users/${target.id}`)
+        .set(auth(owner.accessToken))
+        .send({ role: 'LOGIST' })
+        .expect(200);
+
+      await api(app)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: target.refreshToken })
+        .expect(401);
+    });
+
+    it('an ordinary edit does NOT log the user out', async () => {
+      const company = await createCompany();
+      const owner = await login(app, company.owner);
+      const target = await login(app, await createUser(company.id, 'LOGIST'));
+
+      await api(app)
+        .patch(`/api/v1/users/${target.id}`)
+        .set(auth(owner.accessToken))
+        .send({ fullName: 'Renamed Person' })
+        .expect(200);
+
+      await api(app)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: target.refreshToken })
+        .expect(200);
+    });
+  });
+
   describe('credentials handling', () => {
     it('never returns a password hash from /auth/me', async () => {
       const company = await createCompany();
