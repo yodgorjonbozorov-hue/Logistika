@@ -44,6 +44,8 @@ export default defineConfig({
       // CA, by deploy/smoke-test.sh.
       name: 'staging',
       testMatch: /staging\.spec\.ts/,
+      // Room for one wait-out of the login rate limit (see signIn()).
+      timeout: 150_000,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },

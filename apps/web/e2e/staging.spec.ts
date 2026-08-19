@@ -23,29 +23,50 @@ const PASSWORD = process.env.STAGING_PASSWORD;
 
 test.skip(!WEB_URL || !EMAIL || !PASSWORD, 'no staging deployment configured');
 
+/**
+ * Logs in, tolerating the API's five-a-minute login limit.
+ *
+ * A staging box shares one source address with whatever else is talking to it
+ * — `deploy/smoke-test.sh` deliberately floods the login endpoint — so a
+ * throttled attempt here is the limiter working, not the app being broken. It
+ * is waited out once rather than failing the run.
+ */
+async function signIn(page: import('@playwright/test').Page): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto(`${WEB_URL}/login`);
+    await page.locator('input[autocomplete="username"]').fill(EMAIL!);
+    await page.locator('input[type="password"]').fill(PASSWORD!);
+    await page.getByRole('button', { name: 'Kirish' }).click();
+    try {
+      await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
+      return;
+    } catch (error) {
+      const text = await page.locator('body').innerText();
+      // Anything other than the rate limit is a genuine failure.
+      if (!/juda ko|слишком|rate/i.test(text) || attempt === 1) throw error;
+      await page.waitForTimeout(61_000);
+    }
+  }
+}
+
 test.describe('staging: the web app talks to the real API', () => {
   test('an owner logs in and the dashboard renders live figures', async ({ page }) => {
     const failures: string[] = [];
     // A CSP violation or a blocked cross-origin call shows up here and nowhere
-    // else — the page would simply render empty cards.
+    // else — the page would simply render empty cards. A 429 is filtered out:
+    // signIn() waits the login limiter out and retries, and the browser logs
+    // the throttled attempt as a console error either way.
     page.on('console', (message) => {
-      if (message.type() === 'error') failures.push(message.text());
+      const text = message.text();
+      if (message.type() === 'error' && !/status of 429/.test(text)) failures.push(text);
     });
     page.on('requestfailed', (request) =>
       failures.push(`${request.method()} ${request.url()} — ${request.failure()?.errorText}`),
     );
 
-    await page.goto(`${WEB_URL}/login`);
-    await page
-      .getByLabel(/email|телефон|Email/i)
-      .first()
-      .fill(EMAIL!);
-    await page.locator('input[type="password"]').fill(PASSWORD!);
-    await page.getByRole('button', { name: 'Kirish' }).click();
-
     // The default landing page is the dashboard, and its figures come from
     // /finance/summary on the other origin.
-    await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
+    await signIn(page);
     await expect(page.getByRole('heading', { name: 'Boshqaruv paneli' })).toBeVisible();
 
     // Every KPI label is present and none of them reads as a raw i18n key.
@@ -66,14 +87,7 @@ test.describe('staging: the web app talks to the real API', () => {
     // session from the httpOnly refresh cookie, which requires the cookie to
     // have been set with the right SameSite and the refresh call to be allowed
     // cross-origin with credentials.
-    await page.goto(`${WEB_URL}/login`);
-    await page
-      .getByLabel(/email|телефон|Email/i)
-      .first()
-      .fill(EMAIL!);
-    await page.locator('input[type="password"]').fill(PASSWORD!);
-    await page.getByRole('button', { name: 'Kirish' }).click();
-    await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
+    await signIn(page);
 
     await page.reload();
     await expect(page).toHaveURL(/\/dashboard$/);
