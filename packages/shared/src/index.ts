@@ -163,3 +163,123 @@ export const ERROR_CODES = [
   'SERVICE_UNAVAILABLE',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
+
+// ---------- Finance analytics (TZ §6) ----------
+//
+// Money is a decimal STRING of tiyin end to end — a JSON number is a double and
+// cannot hold a company's yearly turnover exactly. Distances are km with one
+// decimal, volumes litres with two, and every ratio is in basis points
+// (1% = 100 bp) so nothing on this contract is ever a float.
+
+export interface FinancePeriodTotals {
+  /** Agreed price of the trips in the period, tiyin. */
+  revenue: string;
+  /** Income booked in the period, tiyin. Reported beside revenue, never added. */
+  invoiced: string;
+  /** Income marked PAID, tiyin. */
+  received: string;
+  /** invoiced − received, tiyin. */
+  outstanding: string;
+  expenses: string;
+  fuelCost: string;
+  /** revenue − expenses, tiyin. Negative when the period lost money. */
+  profit: string;
+  marginBp: number;
+}
+
+export interface FinanceSummary extends FinancePeriodTotals {
+  from: string;
+  to: string;
+  trips: { total: number; completed: number; cancelled: number; inProgress: number };
+  /** Distinct vehicles that started a trip in the period. */
+  trucksDispatched: number;
+  routesUsed: number;
+  distanceKm: string;
+  fuelLitres: string;
+  costPerKm: string | null;
+  revenuePerKm: string | null;
+  profitPerKm: string | null;
+  profitPerTrip: string | null;
+  expensesByCategory: Array<{ category: string; amount: string; shareBp: number }>;
+}
+
+export interface TripFinanceRow {
+  tripId: string;
+  tripNumber: string;
+  status: TripStatus;
+  periodAt: string;
+  routeId: string | null;
+  routeName: string | null;
+  vehicleId: string | null;
+  plateNumber: string | null;
+  driverName: string | null;
+  clientName: string | null;
+  distanceKm: string;
+  revenue: string;
+  expenses: string;
+  fuelCost: string;
+  profit: string;
+  marginBp: number;
+  profitPerKm: string | null;
+}
+
+export interface RouteFinanceRow {
+  routeId: string | null;
+  /** "UNASSIGNED" for trips that were never given a route. */
+  routeName: string;
+  trips: number;
+  completedTrips: number;
+  distanceKm: string;
+  revenue: string;
+  expenses: string;
+  profit: string;
+  marginBp: number;
+  profitPerTrip: string | null;
+  profitPerKm: string | null;
+}
+
+export interface VehicleFinanceRow {
+  vehicleId: string;
+  plateNumber: string;
+  trips: number;
+  distanceKm: string;
+  revenue: string;
+  expenses: string;
+  profit: string;
+  marginBp: number;
+  profitPerKm: string | null;
+  fuelLitres: string;
+  fuelCost: string;
+  consumption: string | null;
+  normConsumption: string | null;
+  deviationBp: number | null;
+}
+
+export interface MonthlyFinanceRow {
+  /** YYYY-MM */
+  month: string;
+  trips: number;
+  trucksDispatched: number;
+  routesUsed: number;
+  distanceKm: string;
+  revenue: string;
+  expenses: string;
+  profit: string;
+  marginBp: number;
+  revenueChangeBp: number | null;
+  profitChangeBp: number | null;
+}
+
+export interface FuelFinanceRow {
+  vehicleId: string;
+  plateNumber: string;
+  refuels: number;
+  litres: string;
+  cost: string;
+  distanceKm: string;
+  consumption: string | null;
+  normConsumption: string | null;
+  deviationBp: number | null;
+  /** Burning more than the configured alert threshold over the norm. */
+  overNorm: boolean;
+}

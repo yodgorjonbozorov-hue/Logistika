@@ -22,6 +22,11 @@ export class CreateTripDto {
   @IsUUID()
   clientId?: string;
 
+  /** The lane this trip runs. Route analytics group by it (TZ §6). */
+  @IsOptional()
+  @IsUUID()
+  routeId?: string;
+
   @IsOptional()
   @IsUUID()
   vehicleId?: string;
@@ -153,6 +158,10 @@ export class ListTripsDto extends PaginationDto {
   @IsOptional()
   @IsUUID()
   clientId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  routeId?: string;
 
   /**
    * `@Type(() => Date)` alone turns `?from=abc` into an Invalid Date, which

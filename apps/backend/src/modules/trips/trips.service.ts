@@ -66,6 +66,7 @@ export class TripsService {
       vehicleId: filter.vehicleId,
       driverId: filter.driverId,
       clientId: filter.clientId,
+      routeId: filter.routeId,
       createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
     };
     const [data, total] = await Promise.all([
@@ -74,7 +75,7 @@ export class TripsService {
         orderBy: { createdAt: 'desc' },
         skip: filter.skip,
         take: filter.limit,
-        include: { client: true, vehicle: true, driver: true },
+        include: { client: true, vehicle: true, driver: true, route: true },
       }),
       db.trip.count({ where }),
     ]);
@@ -176,7 +177,7 @@ export class TripsService {
   async getById(actor: CurrentUserPayload, id: string): Promise<Trip> {
     const trip = await this.prisma.forCompany(actor.companyId).trip.findUnique({
       where: { id },
-      include: { client: true, vehicle: true, trailer: true, driver: true },
+      include: { client: true, vehicle: true, trailer: true, driver: true, route: true },
     });
     if (!trip) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
     return trip;
@@ -346,7 +347,13 @@ export class TripsService {
    */
   private async assertRefsExist(
     actor: CurrentUserPayload,
-    refs: { vehicleId?: string; trailerId?: string; driverId?: string; clientId?: string },
+    refs: {
+      vehicleId?: string;
+      trailerId?: string;
+      driverId?: string;
+      clientId?: string;
+      routeId?: string;
+    },
   ): Promise<void> {
     const db = this.prisma.forCompany(actor.companyId);
     const checks: Array<[string | undefined, () => Promise<unknown | null>]> = [
@@ -354,6 +361,7 @@ export class TripsService {
       [refs.trailerId, () => db.vehicle.findUnique({ where: { id: refs.trailerId! } })],
       [refs.driverId, () => db.driver.findUnique({ where: { id: refs.driverId! } })],
       [refs.clientId, () => db.client.findUnique({ where: { id: refs.clientId! } })],
+      [refs.routeId, () => db.route.findUnique({ where: { id: refs.routeId! } })],
     ];
     for (const [id, lookup] of checks) {
       if (id && !(await lookup())) {

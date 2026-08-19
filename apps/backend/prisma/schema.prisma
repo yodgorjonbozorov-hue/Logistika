@@ -135,6 +135,7 @@ model Company {
   drivers       Driver[]
   vehicles      Vehicle[]
   clients       Client[]
+  routes        Route[]
   trips         Trip[]
   tripEvents    TripEvent[]
   expenses      Expense[]
@@ -278,6 +279,34 @@ model Client {
   @@map("clients")
 }
 
+// ---------- Routes ----------
+
+// A named lane the company actually runs (Toshkent → Samarqand).
+//
+// Route analytics cannot be built on the free-text loading/unloading addresses:
+// three logists typing "Toshkent", "toshkent" and "Tashkent" produce three
+// "routes" and the numbers become fiction. A trip points at a Route the logist
+// picked, so grouping is exact.
+model Route {
+  id                String   @id @default(uuid())
+  companyId         String   @map("company_id")
+  name              String
+  originName        String   @map("origin_name")
+  destinationName   String   @map("destination_name")
+  /// Reference distance used for planning and for the per-km figures when a
+  /// trip has no measured distance of its own.
+  plannedDistanceKm Decimal? @map("planned_distance_km") @db.Decimal(9, 1)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id])
+  trips   Trip[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+  @@map("routes")
+}
+
 // ---------- Trips ----------
 
 model Trip {
@@ -285,6 +314,7 @@ model Trip {
   companyId         String     @map("company_id")
   tripNumber        String     @map("trip_number")
   clientId          String?    @map("client_id")
+  routeId           String?    @map("route_id")
   vehicleId         String?    @map("vehicle_id")
   trailerId         String?    @map("trailer_id")
   driverId          String?    @map("driver_id")
@@ -324,11 +354,17 @@ model Trip {
   incomes       Income[]
   gpsTracks     GpsTrack[]
   trackingLinks TrackingLink[]
+  route         Route?         @relation(fields: [routeId], references: [id])
 
   @@unique([companyId, tripNumber])
   @@index([companyId, status])
   @@index([companyId, driverId, status])
   @@index([companyId, vehicleId, status])
+  // Finance rollups scan by period; the period of a trip is
+  // COALESCE(finished_at, started_at, created_at).
+  @@index([companyId, routeId, status])
+  @@index([companyId, finishedAt])
+  @@index([companyId, startedAt])
   @@map("trips")
 }
 
@@ -393,6 +429,8 @@ model Expense {
   @@unique([companyId, clientTxId])
   @@index([companyId, expenseDate])
   @@index([companyId, tripId])
+  @@index([companyId, vehicleId, expenseDate])
+  @@index([companyId, category, expenseDate])
   @@map("expenses")
 }
 
@@ -411,6 +449,9 @@ model FuelLog {
   lng           Float?
   receiptPhoto  String?  @map("receipt_photo")
   refuelTime    DateTime @map("refuel_time")
+  /// Client-supplied idempotency key: a retried POST returns the first row.
+  clientTxId    String?  @map("client_tx_id")
+  createdById   String?  @map("created_by")
   createdAt     DateTime @default(now()) @map("created_at")
 
   company Company @relation(fields: [companyId], references: [id])
@@ -418,7 +459,10 @@ model FuelLog {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   driver  Driver? @relation(fields: [driverId], references: [id])
 
+  @@unique([companyId, clientTxId])
   @@index([companyId, vehicleId, refuelTime])
+  @@index([companyId, refuelTime])
+  @@index([companyId, tripId])
   @@map("fuel_logs")
 }
 

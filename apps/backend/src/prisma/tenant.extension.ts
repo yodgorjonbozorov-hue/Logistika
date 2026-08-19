@@ -12,6 +12,7 @@ export const TENANT_MODELS: ReadonlySet<string> = new Set([
   'Driver',
   'Vehicle',
   'Client',
+  'Route',
   'Trip',
   'TripEvent',
   'Expense',

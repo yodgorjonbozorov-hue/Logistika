@@ -104,6 +104,70 @@ const CASES: Case[] = [
     body: { name: 'x' },
     allow: ['OWNER'],
   },
+  {
+    name: 'list routes',
+    method: 'get',
+    path: '/routes',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'create route',
+    method: 'post',
+    path: '/routes',
+    body: { name: 'RBAC lane', originName: 'A', destinationName: 'B' },
+    allow: ['OWNER', 'LOGIST'],
+  },
+  {
+    name: 'list fuel logs',
+    method: 'get',
+    path: '/fuel-logs',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'create fuel log',
+    method: 'post',
+    path: '/fuel-logs',
+    body: { vehicleId: '00000000-0000-4000-8000-000000000000', liters: '10.00' },
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  // Company money. A DRIVER is denied every one of these by the guard, not by
+  // the web app hiding the menu.
+  {
+    name: 'finance summary',
+    method: 'get',
+    path: '/finance/summary',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'finance per trip',
+    method: 'get',
+    path: '/finance/trips',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'finance per route',
+    method: 'get',
+    path: '/finance/routes',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'finance per vehicle',
+    method: 'get',
+    path: '/finance/vehicles',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'finance monthly',
+    method: 'get',
+    path: '/finance/monthly',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
+  {
+    name: 'finance fuel',
+    method: 'get',
+    path: '/finance/fuel',
+    allow: ['OWNER', 'LOGIST', 'ACCOUNTANT'],
+  },
   { name: 'admin companies', method: 'get', path: '/admin/companies', allow: [] },
 ];
 
@@ -184,6 +248,9 @@ describe('RBAC matrix', () => {
       ['/expenses', 'get'],
       ['/tracking/live', 'get'],
       ['/company', 'get'],
+      ['/routes', 'get'],
+      ['/fuel-logs', 'get'],
+      ['/finance/summary', 'get'],
     ] as Array<[string, Method]>)('%s requires a token', async (path, method) => {
       const response = await api(app)[method](`/api/v1${path}`);
       expect(response.status).toBe(401);

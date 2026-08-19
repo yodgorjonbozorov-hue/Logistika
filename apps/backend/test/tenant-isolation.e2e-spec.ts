@@ -89,6 +89,21 @@ describe('Tenant isolation', () => {
       .set(auth(ownerA.accessToken))
       .send({ amount: '90000000', tripId: trip.body.data.id })
       .expect(201);
+    const route = await api(app)
+      .post('/api/v1/routes')
+      .set(auth(ownerA.accessToken))
+      .send({ name: `Secret lane ${uniqueSuffix()}`, originName: 'A', destinationName: 'B' })
+      .expect(201);
+    const fuelLog = await api(app)
+      .post('/api/v1/fuel-logs')
+      .set(auth(ownerA.accessToken))
+      .send({
+        vehicleId: vehicle.body.data.id,
+        liters: '250.00',
+        pricePerLiter: '1250',
+        refuelTime: new Date().toISOString(),
+      })
+      .expect(201);
 
     return {
       vehicleId: vehicle.body.data.id as string,
@@ -97,6 +112,8 @@ describe('Tenant isolation', () => {
       tripId: trip.body.data.id as string,
       expenseId: expense.body.data.id as string,
       incomeId: income.body.data.id as string,
+      routeId: route.body.data.id as string,
+      fuelLogId: fuelLog.body.data.id as string,
     };
   }
 
@@ -109,6 +126,7 @@ describe('Tenant isolation', () => {
         ['vehicles', a.vehicleId],
         ['drivers', a.driverId],
         ['clients', a.clientId],
+        ['routes', a.routeId],
       ];
       for (const [resource, id] of reads) {
         const response = await api(app)
@@ -122,7 +140,16 @@ describe('Tenant isolation', () => {
     it('list endpoints return only the calling tenant’s rows', async () => {
       await seedCompanyA();
 
-      for (const resource of ['trips', 'vehicles', 'drivers', 'clients', 'expenses', 'incomes']) {
+      for (const resource of [
+        'trips',
+        'vehicles',
+        'drivers',
+        'clients',
+        'expenses',
+        'incomes',
+        'routes',
+        'fuel-logs',
+      ]) {
         const response = await api(app)
           .get(`/api/v1/${resource}`)
           .set(auth(ownerB.accessToken))
