@@ -20,6 +20,10 @@ import {
   Spinner,
   StatusChip,
   Table,
+  CardList,
+  ListCard,
+  ListState,
+  MetaItem,
 } from '../../shared/ui';
 import { dateInputToIso, formatDate } from '../../shared/utils/date';
 import { RESOURCE_STATE_TONE, vehicleState } from '../../shared/utils/status';
@@ -75,7 +79,47 @@ export function VehiclesPage() {
       />
       <ErrorMessage error={error} />
 
-      <Card className="overflow-hidden p-0">
+      {/* Mobile: plate first, then who is driving it and what it is doing. */}
+      <div className="md:hidden">
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
+            {rows.map(({ vehicle, trip, state }) => (
+              <ListCard
+                key={vehicle.id}
+                title={vehicle.plateNumber}
+                subtitle={
+                  [vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' · ') || '—'
+                }
+                trailing={
+                  <StatusChip tone={RESOURCE_STATE_TONE[state]}>
+                    {t(`resourceState.${state}`)}
+                  </StatusChip>
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('trips.driver')}>{trip?.driver?.fullName ?? '—'}</MetaItem>
+                    <MetaItem label={t('vehicles.currentTrip')}>
+                      <span className="tabular-nums text-accent-300">
+                        {trip?.tripNumber ?? '—'}
+                      </span>
+                    </MetaItem>
+                    <MetaItem label={t('vehicles.odometer')}>
+                      {vehicle.currentOdometer != null
+                        ? `${vehicle.currentOdometer.toLocaleString()} km`
+                        : '—'}
+                    </MetaItem>
+                    <MetaItem label={t('vehicles.techExpiry')}>
+                      {formatDate(vehicle.techInspectionExpiry)}
+                    </MetaItem>
+                  </>
+                }
+              />
+            ))}
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
         {isLoading ? (
           <Spinner />
         ) : rows.length === 0 ? (

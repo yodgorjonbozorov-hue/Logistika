@@ -8,12 +8,16 @@ import {
   Button,
   Card,
   CardLabel,
+  CardList,
   Cell,
   EmptyState,
   ErrorMessage,
   Field,
   Icon,
   Input,
+  ListCard,
+  ListState,
+  MetaItem,
   Modal,
   PageHeader,
   Row,
@@ -61,7 +65,7 @@ export function FinancePage() {
         subtitle={t('finance.subtitle')}
         actions={
           <>
-            <Button variant="secondary" icon="export">
+            <Button variant="secondary" icon="export" className="hidden md:inline-flex">
               {t('common.export')}
             </Button>
             <Button
@@ -76,7 +80,7 @@ export function FinancePage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 md:gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MoneyCard label={t('finance.totalRevenue')} amount={totals.total} />
         <MoneyCard
           label={t('finance.paymentStatuses.PAID')}
@@ -143,47 +147,40 @@ function IncomesTab() {
   const rows = data ?? [];
 
   return (
-    <Card className="overflow-hidden p-0">
-      <ErrorMessage error={error ?? update.error} />
-      {isLoading ? (
-        <Spinner />
-      ) : rows.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th className="pl-[18px]">{t('finance.date')}</th>
-              <th>{t('trips.title')}</th>
-              <th>{t('trips.client')}</th>
-              <th className="text-right">{t('finance.amountShort')}</th>
-              <th className="pl-4">{t('trips.status')}</th>
-              <th>{t('finance.method')}</th>
-              <th className="pr-[18px]" />
-            </tr>
-          </thead>
-          <tbody>
+    <>
+      <div className="md:hidden">
+        <ErrorMessage error={error ?? update.error} />
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
             {rows.map((income) => (
-              <Row key={income.id}>
-                <Cell className="whitespace-nowrap pl-[18px] text-neutral-400">
-                  {formatDate(income.paymentDate ?? income.createdAt)}
-                </Cell>
-                <Cell className="font-medium tabular-nums text-accent-300">
-                  {tripNumber(income.tripId)}
-                </Cell>
-                <Cell className="whitespace-nowrap">{clientName(income.clientId)}</Cell>
-                <Cell align="right" className="whitespace-nowrap font-medium">
-                  {formatTiyin(income.amount)} {t('common.som')}
-                </Cell>
-                <Cell className="pl-4">
+              <ListCard
+                key={income.id}
+                title={
+                  <span className="tabular-nums">
+                    {formatTiyin(income.amount)} {t('common.som')}
+                  </span>
+                }
+                subtitle={clientName(income.clientId)}
+                trailing={
                   <StatusChip tone={PAYMENT_STATUS_TONE[income.status]}>
                     {t(`finance.paymentStatuses.${income.status}`)}
                   </StatusChip>
-                </Cell>
-                <Cell className="text-neutral-400">{income.paymentMethod ?? '—'}</Cell>
-                <Cell className="pr-[18px] text-right">
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('finance.date')}>
+                      {formatDate(income.paymentDate ?? income.createdAt)}
+                    </MetaItem>
+                    <MetaItem label={t('trips.title')}>
+                      <span className="tabular-nums text-accent-300">
+                        {tripNumber(income.tripId)}
+                      </span>
+                    </MetaItem>
+                    <MetaItem label={t('finance.method')}>{income.paymentMethod ?? '—'}</MetaItem>
+                  </>
+                }
+                footer={
                   <Select
-                    className="w-auto py-1 text-[12px]"
                     aria-label={t('finance.paymentStatus')}
                     value={income.status}
                     onChange={(e) =>
@@ -196,13 +193,74 @@ function IncomesTab() {
                       </option>
                     ))}
                   </Select>
-                </Cell>
-              </Row>
+                }
+              />
             ))}
-          </tbody>
-        </Table>
-      )}
-    </Card>
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
+        <ErrorMessage error={error ?? update.error} />
+        {isLoading ? (
+          <Spinner />
+        ) : rows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <th className="pl-[18px]">{t('finance.date')}</th>
+                <th>{t('trips.title')}</th>
+                <th>{t('trips.client')}</th>
+                <th className="text-right">{t('finance.amountShort')}</th>
+                <th className="pl-4">{t('trips.status')}</th>
+                <th>{t('finance.method')}</th>
+                <th className="pr-[18px]" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((income) => (
+                <Row key={income.id}>
+                  <Cell className="whitespace-nowrap pl-[18px] text-neutral-400">
+                    {formatDate(income.paymentDate ?? income.createdAt)}
+                  </Cell>
+                  <Cell className="font-medium tabular-nums text-accent-300">
+                    {tripNumber(income.tripId)}
+                  </Cell>
+                  <Cell className="whitespace-nowrap">{clientName(income.clientId)}</Cell>
+                  <Cell align="right" className="whitespace-nowrap font-medium">
+                    {formatTiyin(income.amount)} {t('common.som')}
+                  </Cell>
+                  <Cell className="pl-4">
+                    <StatusChip tone={PAYMENT_STATUS_TONE[income.status]}>
+                      {t(`finance.paymentStatuses.${income.status}`)}
+                    </StatusChip>
+                  </Cell>
+                  <Cell className="text-neutral-400">{income.paymentMethod ?? '—'}</Cell>
+                  <Cell className="pr-[18px] text-right">
+                    <Select
+                      className="w-auto py-1 text-[12px]"
+                      aria-label={t('finance.paymentStatus')}
+                      value={income.status}
+                      onChange={(e) =>
+                        void update.mutateAsync({ id: income.id, body: { status: e.target.value } })
+                      }
+                    >
+                      {Object.values(PaymentStatus).map((status) => (
+                        <option key={status} value={status}>
+                          {t(`finance.paymentStatuses.${status}`)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Cell>
+                </Row>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </>
   );
 }
 
@@ -221,70 +279,125 @@ function ExpensesTab() {
     trips.data?.find((trip) => trip.id === id)?.tripNumber ?? '—';
 
   return (
-    <Card className="overflow-hidden p-0">
-      <ErrorMessage error={error ?? post.error} />
-      {isLoading ? (
-        <Spinner />
-      ) : rows.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th className="pl-[18px]">{t('finance.date')}</th>
-              <th>{t('finance.category')}</th>
-              <th>{t('trips.title')}</th>
-              <th className="text-right">{t('finance.amountShort')}</th>
-              <th className="pl-4">{t('finance.method')}</th>
-              <th>{t('trips.status')}</th>
-              <th className="pr-[18px]" />
-            </tr>
-          </thead>
-          <tbody>
+    <>
+      <div className="md:hidden">
+        <ErrorMessage error={error ?? post.error} />
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
             {rows.map((expense) => (
-              <Row key={expense.id}>
-                <Cell className="whitespace-nowrap pl-[18px] text-neutral-400">
-                  {formatDate(expense.expenseDate)}
-                </Cell>
-                <Cell>
-                  <span className="flex items-center gap-2">
-                    <Icon
-                      name={CATEGORY_ICONS[expense.category]}
-                      size={15}
-                      style={{ color: 'var(--color-neutral-500)' }}
-                    />
-                    {t(`finance.categories.${expense.category}`)}
+              <ListCard
+                key={expense.id}
+                leading={
+                  <Icon
+                    name={CATEGORY_ICONS[expense.category]}
+                    size={20}
+                    style={{ color: 'var(--color-neutral-500)' }}
+                  />
+                }
+                title={
+                  <span className="tabular-nums">
+                    {formatTiyin(expense.amount)} {t('common.som')}
                   </span>
-                </Cell>
-                <Cell className="font-medium tabular-nums text-accent-300">
-                  {tripNumber(expense.tripId)}
-                </Cell>
-                <Cell align="right" className="whitespace-nowrap font-medium">
-                  {formatTiyin(expense.amount)} {t('common.som')}
-                </Cell>
-                <Cell className="pl-4 text-neutral-400">{expense.paymentMethod ?? '—'}</Cell>
-                <Cell>
+                }
+                subtitle={t(`finance.categories.${expense.category}`)}
+                trailing={
                   <StatusChip tone={expense.isApproved ? 'positive' : 'warning'}>
                     {t(expense.isApproved ? 'finance.approved' : 'finance.notApproved')}
                   </StatusChip>
-                </Cell>
-                <Cell className="pr-[18px] text-right">
-                  {canApprove && !expense.isApproved ? (
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('finance.date')}>{formatDate(expense.expenseDate)}</MetaItem>
+                    <MetaItem label={t('trips.title')}>
+                      <span className="tabular-nums text-accent-300">
+                        {tripNumber(expense.tripId)}
+                      </span>
+                    </MetaItem>
+                    <MetaItem label={t('finance.method')}>{expense.paymentMethod ?? '—'}</MetaItem>
+                  </>
+                }
+                footer={
+                  canApprove && !expense.isApproved ? (
                     <Button
-                      variant="ghost"
-                      className="text-[12px]"
+                      variant="secondary"
+                      className="w-full"
                       onClick={() => void post.mutateAsync({ id: expense.id, verb: 'approve' })}
                     >
                       {t('finance.approve')}
                     </Button>
-                  ) : null}
-                </Cell>
-              </Row>
+                  ) : undefined
+                }
+              />
             ))}
-          </tbody>
-        </Table>
-      )}
-    </Card>
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
+        <ErrorMessage error={error ?? post.error} />
+        {isLoading ? (
+          <Spinner />
+        ) : rows.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <th className="pl-[18px]">{t('finance.date')}</th>
+                <th>{t('finance.category')}</th>
+                <th>{t('trips.title')}</th>
+                <th className="text-right">{t('finance.amountShort')}</th>
+                <th className="pl-4">{t('finance.method')}</th>
+                <th>{t('trips.status')}</th>
+                <th className="pr-[18px]" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((expense) => (
+                <Row key={expense.id}>
+                  <Cell className="whitespace-nowrap pl-[18px] text-neutral-400">
+                    {formatDate(expense.expenseDate)}
+                  </Cell>
+                  <Cell>
+                    <span className="flex items-center gap-2">
+                      <Icon
+                        name={CATEGORY_ICONS[expense.category]}
+                        size={15}
+                        style={{ color: 'var(--color-neutral-500)' }}
+                      />
+                      {t(`finance.categories.${expense.category}`)}
+                    </span>
+                  </Cell>
+                  <Cell className="font-medium tabular-nums text-accent-300">
+                    {tripNumber(expense.tripId)}
+                  </Cell>
+                  <Cell align="right" className="whitespace-nowrap font-medium">
+                    {formatTiyin(expense.amount)} {t('common.som')}
+                  </Cell>
+                  <Cell className="pl-4 text-neutral-400">{expense.paymentMethod ?? '—'}</Cell>
+                  <Cell>
+                    <StatusChip tone={expense.isApproved ? 'positive' : 'warning'}>
+                      {t(expense.isApproved ? 'finance.approved' : 'finance.notApproved')}
+                    </StatusChip>
+                  </Cell>
+                  <Cell className="pr-[18px] text-right">
+                    {canApprove && !expense.isApproved ? (
+                      <Button
+                        variant="ghost"
+                        className="text-[12px]"
+                        onClick={() => void post.mutateAsync({ id: expense.id, verb: 'approve' })}
+                      >
+                        {t('finance.approve')}
+                      </Button>
+                    ) : null}
+                  </Cell>
+                </Row>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </>
   );
 }
 

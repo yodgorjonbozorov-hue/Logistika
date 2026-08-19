@@ -22,10 +22,14 @@ import {
   Table,
   initialsOf,
   type ChipTone,
+  CardList,
+  ListCard,
+  ListState,
+  MetaItem,
 } from '../../shared/ui';
 import { formatDateTime } from '../../shared/utils/date';
 
-/** Office roles the company owner can create; drivers sign in by SMS instead. */
+/** Office roles the company owner can create; drivers are managed on their own page. */
 const OFFICE_ROLES = [UserRole.OWNER, UserRole.LOGIST, UserRole.ACCOUNTANT] as const;
 
 const ROLE_TONE: Record<UserRole, ChipTone> = {
@@ -70,7 +74,44 @@ export function UsersPage() {
       />
       <ErrorMessage error={error} />
 
-      <Card className="mb-3.5 overflow-hidden p-0">
+      {/* Mobile: name and role first; the permission matrix below stays a table. */}
+      <div className="mb-3.5 md:hidden">
+        <ListState isLoading={isLoading} error={error} isEmpty={office.length === 0}>
+          <CardList>
+            {office.map((user) => (
+              <ListCard
+                key={user.id}
+                leading={<Avatar initials={initialsOf(user.fullName)} size={34} tone="accent" />}
+                title={user.fullName}
+                subtitle={user.email ?? user.phone ?? '—'}
+                trailing={
+                  <StatusChip tone={ROLE_TONE[user.role]}>{t(`roles.${user.role}`)}</StatusChip>
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('users.lastActive')}>
+                      {formatDateTime(user.lastLogin)}
+                    </MetaItem>
+                    <MetaItem label={t('trips.status')}>
+                      <span
+                        style={{
+                          color: user.isActive
+                            ? 'var(--color-positive-text)'
+                            : 'var(--color-neutral-500)',
+                        }}
+                      >
+                        {t(user.isActive ? 'users.active' : 'users.inactive')}
+                      </span>
+                    </MetaItem>
+                  </>
+                }
+              />
+            ))}
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="mb-3.5 hidden overflow-hidden p-0 md:block">
         {isLoading ? (
           <Spinner />
         ) : office.length === 0 ? (

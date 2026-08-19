@@ -37,6 +37,10 @@
 
 - [x] `companies` (sozlamalar, obuna maydonlari) + superadmin `/admin/companies`
 - [x] `users` CRUD; haydovchi auth (telefon + SMS-kod, 5 daq TTL, 5 urinish, enumeratsiyasiz)
+- [x] Mobile-first responsive web: pastki tab-bar, karta ro'yxatlari, bottom-sheet
+      modallar/filtrlar, 44px tegish maydonlari, skeleton/empty/error holatlari,
+      safe-area, PWA (manifest + service worker), marshrutlar bo'yicha lazy-load.
+      320/375/390/414/430/768 px larda brauzerda tekshirilgan
 - [x] Ochiq ro'yxatdan o'tish: `POST /auth/register` + web `/register` — kompaniya va birinchi
       OWNER bitta tranzaksiyada, 14 kunlik bepul trial, kirish faqat login+parol
       (SMS va Google keyingi bosqichda)

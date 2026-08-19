@@ -112,6 +112,13 @@ qoidasining strukturaviy kafolati.
 - `SUPERADMIN` (TZ §2 — sotuvchi) alohida guard bilan: firmalarni ro'yxatga olish, obuna
   boshqaruvi; tenant ichki ma'lumotlariga kirmaydi.
 
+**Mobil (web) moslashuvi:** bitta React ilova, ikkita qobiq. `md` (768px) dan pastda
+sidebar o'rniga pastki tab-bar (5 ta yo'nalish) + menyu sheet'i; jadval o'rniga karta
+ro'yxati; modal o'rniga pastdan chiquvchi sheet; tegish maydonlari ≥44px, input'lar 16px
+(iOS zoom'ining oldini oladi); `env(safe-area-inset-*)` bilan notch va home-indikator
+hisobga olinadi. Desktop layout `md` dan yuqorida o'zgarmagan. Marshrutlar `React.lazy`
+bilan bo'linadi, ilova PWA sifatida o'rnatiladi (manifest + offline shell service worker).
+
 **Auth oqimi:**
 
 - Ro'yxatdan o'tish (ochiq): `POST /auth/register` — kompaniya + birinchi OWNER bitta

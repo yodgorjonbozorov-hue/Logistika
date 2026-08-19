@@ -118,26 +118,50 @@ export function TripCreatePage() {
   return (
     <div className="max-w-[980px]">
       <div className="mb-2.5 flex items-center gap-1.5 text-[12.5px] text-neutral-500">
-        <Link to="/trips">{t('trips.title')}</Link>
+        <Link to="/trips" className="-ml-1 inline-flex min-h-[44px] items-center px-1">
+          {t('trips.title')}
+        </Link>
         <Icon name="caret-right" size={10} />
         <span>{t('trips.new')}</span>
       </div>
 
-      <div className="mb-5 flex items-center gap-3">
-        <h3 className="m-0 text-[22px]">{t('trips.createTitle')}</h3>
+      <div className="mb-4 flex flex-wrap items-center gap-3 md:mb-5">
+        <h3 className="m-0 text-[20px] md:text-[22px]">{t('trips.createTitle')}</h3>
         <Tag variant="outline" className="text-[11.5px] tabular-nums">
           {t('trips.numberAuto')}
         </Tag>
       </div>
 
+      {/* Phone: a progress line instead of the five-item rail, which would
+          push the form itself below the fold. */}
+      <div className="mb-3 md:hidden">
+        <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
+          <span className="font-medium">{t(`trips.steps.${step}.title`)}</span>
+          <span className="tabular-nums text-neutral-500">
+            {step} / {STEPS.length}
+          </span>
+        </div>
+        <div className="flex gap-1">
+          {STEPS.map((n) => (
+            <span
+              key={n}
+              className="h-1 flex-1 rounded-full"
+              style={{
+                background: n <= step ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="grid items-start gap-5 lg:grid-cols-[240px_1fr]">
-        <div className="flex flex-col gap-0.5">
+        <div className="hidden flex-col gap-0.5 md:flex">
           {STEPS.map((n) => (
             <StepButton key={n} n={n} current={step} onClick={() => setStep(n)} />
           ))}
         </div>
 
-        <Card className="px-[22px] py-5">
+        <Card className="px-4 py-4 md:px-[22px] md:py-5">
           {step === 1 ? (
             <>
               <StepTitle>{t('trips.steps.1.title')}</StepTitle>
@@ -379,17 +403,31 @@ export function TripCreatePage() {
 
           <ErrorMessage error={create.error} />
 
-          <div className="mt-5 flex gap-2 border-t border-divider pt-4">
+          <div className="sticky-actions mt-5 flex gap-2 border-t border-divider pt-4">
             <Button
               variant="ghost"
               icon="arrow-left"
               disabled={step === 1}
               onClick={() => setStep((step - 1) as Step)}
+              className="hidden md:inline-flex"
             >
               {t('common.back')}
             </Button>
-            <div className="flex-1" />
-            <Button variant="ghost" disabled={create.isPending} onClick={() => void submit(true)}>
+            <Button
+              variant="secondary"
+              icon="arrow-left"
+              aria-label={t('common.back')}
+              disabled={step === 1}
+              onClick={() => setStep((step - 1) as Step)}
+              className="btn-icon !flex-none md:hidden"
+            />
+            <div className="hidden flex-1 md:block" />
+            <Button
+              variant="ghost"
+              disabled={create.isPending}
+              onClick={() => void submit(true)}
+              className="hidden md:inline-flex"
+            >
               {t('trips.saveDraft')}
             </Button>
             <Button

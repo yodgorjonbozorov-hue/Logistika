@@ -21,6 +21,19 @@ export default tseslint.config(
     },
   },
   {
+    // Service worker — brauzerning worker global'lari bilan ishlaydi.
+    files: ['apps/web/public/sw.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],

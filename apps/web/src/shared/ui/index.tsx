@@ -144,13 +144,22 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('mb-4 flex flex-wrap items-end gap-4', className)}>
-      <div>
-        <h3 className="m-0 mb-[3px] text-[22px]">{title}</h3>
+    // Stacked on a phone so the primary action gets a full-width tap target;
+    // the desktop row is unchanged from `md` up.
+    <div
+      className={cn(
+        'mb-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:gap-4',
+        className,
+      )}
+    >
+      <div className="min-w-0">
+        <h3 className="m-0 mb-[3px] text-[20px] md:text-[22px]">{title}</h3>
         {subtitle ? <div className="text-[13px] text-neutral-500">{subtitle}</div> : null}
       </div>
-      <div className="flex-1" />
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      <div className="hidden flex-1 md:block" />
+      {actions ? (
+        <div className="grid grid-cols-1 gap-2 md:flex md:flex-wrap md:items-center">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -176,7 +185,7 @@ export function Card({
 /** The small uppercase kicker that labels a card's metric. */
 export function CardLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-2 text-[11.5px] font-medium uppercase tracking-[0.04em] text-neutral-500">
+    <div className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-neutral-500 md:mb-2 md:text-[11.5px]">
       {children}
     </div>
   );
@@ -207,10 +216,12 @@ export function StatCard({
   }[deltaTone];
 
   return (
-    <Card className="px-4 py-[14px]">
+    <Card className="px-3 py-3 md:px-4 md:py-[14px]">
       <CardLabel>{label}</CardLabel>
-      <div className="flex items-baseline gap-2">
-        <span className="text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{value}</span>
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums md:text-[26px]">
+          {value}
+        </span>
         {unit ? <span className="text-xs text-neutral-500">{unit}</span> : null}
       </div>
       {delta ? (
@@ -255,7 +266,10 @@ export function MeterRow({
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="overflow-x-auto">
+    // `relative` so an absolutely positioned descendant (a screen-reader-only
+    // span, say) resolves against this box and gets clipped with the table,
+    // instead of escaping to the viewport and widening the page.
+    <div className="relative overflow-x-auto">
       <table className={cn('table', className)}>{children}</table>
     </div>
   );
@@ -502,7 +516,7 @@ export function Pagination({
           type="button"
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
-          className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40 md:h-[26px] md:w-[26px]"
         >
           <Icon name="caret-left" size={12} />
         </button>
@@ -513,7 +527,7 @@ export function Pagination({
             onClick={() => onPage(n)}
             aria-current={n === page ? 'page' : undefined}
             className={cn(
-              'flex h-[26px] w-[26px] items-center justify-center rounded-[6px]',
+              'flex h-10 w-10 items-center justify-center rounded-[6px] md:h-[26px] md:w-[26px]',
               n === page ? 'font-semibold text-accent-200' : 'text-neutral-400',
             )}
             style={
@@ -529,7 +543,7 @@ export function Pagination({
           type="button"
           disabled={page >= pages}
           onClick={() => onPage(page + 1)}
-          className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-neutral-800 disabled:opacity-40 md:h-[26px] md:w-[26px]"
         >
           <Icon name="caret-right" size={12} />
         </button>
@@ -546,3 +560,22 @@ export function pageNumbers(page: number, pages: number, window = 3): number[] {
   if (start + size - 1 > total) start = total - size + 1;
   return Array.from({ length: size }, (_, i) => start + i);
 }
+
+// ---------- Mobile kit ----------
+
+export {
+  CardList,
+  EmptyBlock,
+  ErrorBlock,
+  FilterButton,
+  FilterSheet,
+  ListCard,
+  ListState,
+  MetaItem,
+  PageSkeleton,
+  SearchInput,
+  Sheet,
+  Skeleton,
+  SkeletonCards,
+  SkeletonList,
+} from './mobile';

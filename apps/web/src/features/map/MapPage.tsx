@@ -126,7 +126,7 @@ function LiveMap({ mode, onMode }: { mode: Mode; onMode: (mode: Mode) => void })
         <Spinner />
       ) : (
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[290px_1fr]">
-          <div className="flex flex-col gap-2 overflow-y-auto">
+          <div className="flex flex-col gap-2 lg:overflow-y-auto">
             <Card className="px-3.5 py-3">
               <div className="mb-2 text-[13px] font-medium">{t('map.statusBreakdown')}</div>
               <div className="flex flex-col gap-2">
@@ -153,7 +153,7 @@ function LiveMap({ mode, onMode }: { mode: Mode; onMode: (mode: Mode) => void })
             ))}
           </div>
 
-          <div className="min-h-[480px] overflow-hidden rounded-md border border-neutral-800">
+          <div className="min-h-[320px] overflow-hidden rounded-md border border-neutral-800 md:min-h-[480px]">
             <MapContainer
               center={TASHKENT}
               zoom={6}
@@ -238,7 +238,7 @@ function HistoryMap({ mode, onMode }: { mode: Mode; onMode: (mode: Mode) => void
         <Select
           value={vehicleId}
           onChange={(e) => setVehicleId(e.target.value)}
-          className="w-56"
+          className="w-full sm:w-56"
           aria-label={t('map.selectVehicle')}
         >
           <option value="">{t('map.selectVehicle')}</option>
@@ -261,7 +261,7 @@ function HistoryMap({ mode, onMode }: { mode: Mode; onMode: (mode: Mode) => void
           <span className="self-center text-[13px] text-neutral-500">{t('map.noTrack')}</span>
         ) : null}
       </div>
-      <div className="min-h-[480px] flex-1 overflow-hidden rounded-md border border-neutral-800">
+      <div className="min-h-[320px] flex-1 overflow-hidden rounded-md border border-neutral-800 md:min-h-[480px]">
         <MapContainer
           center={TASHKENT}
           zoom={6}

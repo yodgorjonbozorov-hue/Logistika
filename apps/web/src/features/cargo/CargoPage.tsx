@@ -13,6 +13,10 @@ import {
   Spinner,
   StatusChip,
   Table,
+  CardList,
+  ListCard,
+  ListState,
+  MetaItem,
 } from '../../shared/ui';
 import { TRIP_STATUS_TONE } from '../../shared/utils/status';
 
@@ -36,7 +40,42 @@ export function CargoPage() {
       <PageHeader title={t('cargo.title')} subtitle={t('cargo.subtitle')} />
       <ErrorMessage error={error} />
 
-      <Card className="overflow-hidden p-0">
+      {/* Mobile: the load and where it is going, then the trip it belongs to. */}
+      <div className="md:hidden">
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
+            {rows.map((trip) => (
+              <ListCard
+                key={trip.id}
+                onClick={() => navigate(`/trips/${trip.id}`)}
+                title={trip.cargoName ?? '—'}
+                subtitle={`${trip.loadingAddress ?? '—'} → ${trip.unloadingAddress ?? '—'}`}
+                trailing={
+                  <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>
+                    {t(`status.${trip.status}`)}
+                  </StatusChip>
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('cargo.weight')}>
+                      {trip.cargoWeight ? `${trip.cargoWeight} ${t('common.ton')}` : '—'}
+                    </MetaItem>
+                    <MetaItem label={t('cargo.volume')}>
+                      {trip.cargoVolume ? `${trip.cargoVolume} m³` : '—'}
+                    </MetaItem>
+                    <MetaItem label={t('trips.client')}>{trip.client?.name ?? '—'}</MetaItem>
+                    <MetaItem label={t('trips.number')}>
+                      <span className="tabular-nums text-accent-300">{trip.tripNumber}</span>
+                    </MetaItem>
+                  </>
+                }
+              />
+            ))}
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
         {isLoading ? (
           <Spinner />
         ) : rows.length === 0 ? (

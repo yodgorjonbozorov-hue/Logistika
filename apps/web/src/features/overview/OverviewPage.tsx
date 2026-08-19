@@ -15,12 +15,15 @@ import { useAuth } from '../../shared/auth/AuthContext';
 import {
   Avatar,
   Card,
+  CardList,
   Cell,
   EmptyState,
   Icon,
+  ListCard,
+  MetaItem,
   Row,
   Segmented,
-  Spinner,
+  SkeletonCards,
   StatCard,
   StatusChip,
   Table,
@@ -103,9 +106,9 @@ export function OverviewPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-end gap-4">
-        <div>
-          <h3 className="m-0 mb-[3px] text-[22px]">{greeting}</h3>
+      <div className="mb-4 flex flex-col gap-3 md:mb-5 md:flex-row md:flex-wrap md:items-end md:gap-4">
+        <div className="min-w-0">
+          <h3 className="m-0 mb-[3px] text-[20px] md:text-[22px]">{greeting}</h3>
           <div className="text-[13px] text-neutral-500">
             {formatToday(data.now)} ·{' '}
             {t('overview.subtitle', {
@@ -114,7 +117,7 @@ export function OverviewPage() {
             })}
           </div>
         </div>
-        <div className="flex-1" />
+        <div className="hidden flex-1 md:block" />
         <Segmented<DashMode>
           value={mode}
           onChange={setMode}
@@ -126,7 +129,10 @@ export function OverviewPage() {
       </div>
 
       {isLoading ? (
-        <Spinner />
+        <div className="flex flex-col gap-3">
+          <SkeletonCards count={6} height={96} />
+          <SkeletonCards count={2} height={200} />
+        </div>
       ) : mode === 'panel' ? (
         <DashboardPanel data={data} />
       ) : (
@@ -178,7 +184,7 @@ function DashboardPanel({ data }: { data: OverviewData }) {
 
   return (
     <>
-      <div className="mb-3.5 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 md:mb-3.5 md:grid-cols-3 md:gap-3 xl:grid-cols-6">
         <StatCard label={t('overview.kpi.activeTrips')} value={data.open.length}>
           <Sparkline points={data.perDay.map((d) => d.count)} />
         </StatCard>
@@ -446,67 +452,107 @@ function ActiveTripsCard({ trips }: { trips: Trip[] }) {
           <div className="text-xs text-neutral-500">{t('overview.active.subtitle')}</div>
         </div>
         <div className="flex-1" />
-        <Link to="/trips" className="flex items-center gap-1 text-[12.5px]">
+        <Link to="/trips" className="flex min-h-[40px] items-center gap-1 text-[12.5px]">
           {t('common.all')} <Icon name="arrow-right" size={12} />
         </Link>
       </div>
       {trips.length === 0 ? (
         <EmptyState />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th className="pl-[18px]">{t('trips.number')}</th>
-              <th>{t('trips.vehicle')}</th>
-              <th>{t('trips.driver')}</th>
-              <th>{t('trips.route')}</th>
-              <th>{t('trips.cargoName')}</th>
-              <th>{t('trips.status')}</th>
-              <th>{t('trips.departure')}</th>
-              <th>{t('trips.eta')}</th>
-              <th className="pr-[18px]" />
-            </tr>
-          </thead>
-          <tbody>
-            {trips.slice(0, 5).map((trip) => (
-              <Row key={trip.id} onClick={() => navigate(`/trips/${trip.id}`)}>
-                <Cell className="pl-[18px] font-semibold tabular-nums text-accent-300">
-                  {trip.tripNumber}
-                </Cell>
-                <Cell>
-                  <div className="font-medium">{trip.vehicle?.plateNumber ?? '—'}</div>
-                  <div className="text-[11.5px] text-neutral-500">
-                    {[trip.vehicle?.brand, trip.vehicle?.model].filter(Boolean).join(' ') || '—'}
-                  </div>
-                </Cell>
-                <Cell>{trip.driver?.fullName ?? '—'}</Cell>
-                <Cell>
-                  <RouteCell from={trip.loadingAddress} to={trip.unloadingAddress} />
-                </Cell>
-                <Cell>
-                  <div>{trip.cargoName ?? '—'}</div>
-                  <div className="text-[11.5px] text-neutral-500">
-                    {trip.cargoWeight ? `${trip.cargoWeight} ${t('common.ton')}` : ''}
-                  </div>
-                </Cell>
-                <Cell>
-                  <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>
-                    {t(`status.${trip.status}`)}
-                  </StatusChip>
-                </Cell>
-                <Cell className="tabular-nums text-neutral-400">
-                  {formatDateTime(trip.startedAt ?? trip.loadingDate)}
-                </Cell>
-                <Cell className="tabular-nums text-neutral-400">
-                  {formatDateTime(trip.unloadingDate)}
-                </Cell>
-                <Cell className="pr-[18px] text-right">
-                  <Icon name="dots-three" size={16} style={{ color: 'var(--color-neutral-500)' }} />
-                </Cell>
-              </Row>
-            ))}
-          </tbody>
-        </Table>
+        <>
+          <div className="px-3 pb-3 md:hidden">
+            <CardList>
+              {trips.slice(0, 5).map((trip) => (
+                <ListCard
+                  key={trip.id}
+                  onClick={() => navigate(`/trips/${trip.id}`)}
+                  title={<span className="tabular-nums text-accent-300">{trip.tripNumber}</span>}
+                  subtitle={`${trip.loadingAddress ?? '—'} → ${trip.unloadingAddress ?? '—'}`}
+                  trailing={
+                    <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>
+                      {t(`status.${trip.status}`)}
+                    </StatusChip>
+                  }
+                  meta={
+                    <>
+                      <MetaItem label={t('trips.vehicle')}>
+                        {trip.vehicle?.plateNumber ?? '—'}
+                      </MetaItem>
+                      <MetaItem label={t('trips.driver')}>{trip.driver?.fullName ?? '—'}</MetaItem>
+                      <MetaItem label={t('trips.departure')}>
+                        {formatDateTime(trip.startedAt ?? trip.loadingDate)}
+                      </MetaItem>
+                      <MetaItem label={t('trips.eta')}>
+                        {formatDateTime(trip.unloadingDate)}
+                      </MetaItem>
+                    </>
+                  }
+                />
+              ))}
+            </CardList>
+          </div>
+          <div className="hidden md:block">
+            <Table>
+              <thead>
+                <tr>
+                  <th className="pl-[18px]">{t('trips.number')}</th>
+                  <th>{t('trips.vehicle')}</th>
+                  <th>{t('trips.driver')}</th>
+                  <th>{t('trips.route')}</th>
+                  <th>{t('trips.cargoName')}</th>
+                  <th>{t('trips.status')}</th>
+                  <th>{t('trips.departure')}</th>
+                  <th>{t('trips.eta')}</th>
+                  <th className="pr-[18px]" />
+                </tr>
+              </thead>
+              <tbody>
+                {trips.slice(0, 5).map((trip) => (
+                  <Row key={trip.id} onClick={() => navigate(`/trips/${trip.id}`)}>
+                    <Cell className="pl-[18px] font-semibold tabular-nums text-accent-300">
+                      {trip.tripNumber}
+                    </Cell>
+                    <Cell>
+                      <div className="font-medium">{trip.vehicle?.plateNumber ?? '—'}</div>
+                      <div className="text-[11.5px] text-neutral-500">
+                        {[trip.vehicle?.brand, trip.vehicle?.model].filter(Boolean).join(' ') ||
+                          '—'}
+                      </div>
+                    </Cell>
+                    <Cell>{trip.driver?.fullName ?? '—'}</Cell>
+                    <Cell>
+                      <RouteCell from={trip.loadingAddress} to={trip.unloadingAddress} />
+                    </Cell>
+                    <Cell>
+                      <div>{trip.cargoName ?? '—'}</div>
+                      <div className="text-[11.5px] text-neutral-500">
+                        {trip.cargoWeight ? `${trip.cargoWeight} ${t('common.ton')}` : ''}
+                      </div>
+                    </Cell>
+                    <Cell>
+                      <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>
+                        {t(`status.${trip.status}`)}
+                      </StatusChip>
+                    </Cell>
+                    <Cell className="tabular-nums text-neutral-400">
+                      {formatDateTime(trip.startedAt ?? trip.loadingDate)}
+                    </Cell>
+                    <Cell className="tabular-nums text-neutral-400">
+                      {formatDateTime(trip.unloadingDate)}
+                    </Cell>
+                    <Cell className="pr-[18px] text-right">
+                      <Icon
+                        name="dots-three"
+                        size={16}
+                        style={{ color: 'var(--color-neutral-500)' }}
+                      />
+                    </Cell>
+                  </Row>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </>
       )}
     </Card>
   );

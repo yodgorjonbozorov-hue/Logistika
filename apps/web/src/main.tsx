@@ -17,6 +17,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// The offline shell. Registered after first paint so it never competes with
+// the app's own bundle for a slow connection, and only in a real build —
+// a stale worker in dev would serve yesterday's modules.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

@@ -17,7 +17,15 @@
     "settings": "Sozlamalar",
     "groupMain": "Asosiy",
     "groupAdmin": "Boshqaruv",
-    "help": "Yordam va qo'llab-quvvatlash"
+    "help": "Yordam va qo'llab-quvvatlash",
+    "menu": "Menyu",
+    "short": {
+      "overview": "Panel",
+      "trips": "Reyslar",
+      "drivers": "Haydovchi",
+      "vehicles": "Texnika",
+      "reports": "Hisobot"
+    }
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -106,7 +114,14 @@
     "no": "Yo'q",
     "mln": "mln",
     "mlnSom": "mln so'm",
-    "ton": "t"
+    "ton": "t",
+    "filters": "Filtrlar",
+    "apply": "Qo'llash",
+    "retry": "Qayta urinish",
+    "errorTitle": "Yuklab bo‘lmadi",
+    "details": "Batafsil",
+    "more": "Yana",
+    "showAll": "Hammasini ko'rish"
   },
   "status": {
     "DRAFT": "Qoralama",
@@ -230,7 +245,9 @@
         "title": "Ko'rib chiqish",
         "sub": "Tasdiqlash"
       }
-    }
+    },
+    "emptyTitle": "Hozircha reys yo‘q",
+    "emptyBody": "Birinchi reysni yarating — mashina, haydovchi va marshrut tanlansa, hisob avtomatik yuritiladi."
   },
   "vehicles": {
     "title": "Avtopark",
@@ -269,7 +286,7 @@
       "PERCENT": "Foiz",
       "PER_KM": "Km ga"
     },
-    "subtitle": "{{count}} haydovchi · SMS-kod orqali mobil ilovaga kirishadi",
+    "subtitle": "{{count}} haydovchi · mobil ilovaga login va parol bilan kirishadi",
     "activeTrip": "Faol reys"
   },
   "clients": {
@@ -454,7 +471,8 @@
       "VEHICLE": "Texnika",
       "DRIVER": "Haydovchi",
       "COMPANY": "Tashkilot"
-    }
+    },
+    "emptyTitle": "Hujjat arxivi bo‘sh"
   },
   "reports": {
     "title": "Hisobotlar",
@@ -570,7 +588,7 @@
         },
         "driverApp": {
           "title": "Haydovchi ilovasi",
-          "body": "Haydovchi SMS-kod bilan kiradi, bitta tugma bilan reysni boshlaydi, chek fotosini yuklaydi. O'rgatish shart emas."
+          "body": "Haydovchi login va parol bilan kiradi, bitta tugma bilan reysni boshlaydi, chek fotosini yuklaydi. O'rgatish shart emas."
         },
         "finance": {
           "title": "Moliya va qarzdorlik",

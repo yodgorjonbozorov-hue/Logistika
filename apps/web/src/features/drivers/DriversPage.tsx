@@ -21,6 +21,10 @@ import {
   StatusChip,
   Table,
   initialsOf,
+  CardList,
+  ListCard,
+  ListState,
+  MetaItem,
 } from '../../shared/ui';
 import { dateInputToIso, formatDate } from '../../shared/utils/date';
 import { formatTiyin, somToTiyin } from '../../shared/utils/money';
@@ -59,7 +63,44 @@ export function DriversPage() {
       />
       <ErrorMessage error={error} />
 
-      <Card className="overflow-hidden p-0">
+      {/* Mobile: who they are and whether they are free, before the paperwork. */}
+      <div className="md:hidden">
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
+            {rows.map(({ driver, trip, state }) => (
+              <ListCard
+                key={driver.id}
+                leading={<Avatar initials={initialsOf(driver.fullName)} size={34} />}
+                title={driver.fullName}
+                subtitle={driver.phone ?? '—'}
+                trailing={
+                  <StatusChip tone={RESOURCE_STATE_TONE[state]}>
+                    {t(`resourceState.${state}`)}
+                  </StatusChip>
+                }
+                meta={
+                  <>
+                    <MetaItem label={t('trips.vehicle')}>
+                      {trip?.vehicle?.plateNumber ?? '—'}
+                    </MetaItem>
+                    <MetaItem label={t('drivers.activeTrip')}>
+                      <span className="tabular-nums text-accent-300">
+                        {trip?.tripNumber ?? '—'}
+                      </span>
+                    </MetaItem>
+                    <MetaItem label={t('drivers.license')}>{driver.licenseNumber ?? '—'}</MetaItem>
+                    <MetaItem label={t('drivers.salaryValue')}>
+                      {formatSalary(driver.salaryType, driver.salaryValue, t)}
+                    </MetaItem>
+                  </>
+                }
+              />
+            ))}
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
         {isLoading ? (
           <Spinner />
         ) : rows.length === 0 ? (

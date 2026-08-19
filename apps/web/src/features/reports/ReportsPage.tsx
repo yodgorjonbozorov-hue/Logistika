@@ -11,9 +11,12 @@ import {
 import {
   Button,
   Card,
+  CardList,
   Cell,
   EmptyState,
+  ListCard,
   MeterRow,
+  MetaItem,
   PageHeader,
   Row,
   Segmented,
@@ -140,7 +143,7 @@ export function ReportsPage() {
                 label: t(`reports.periods.${value}`),
               }))}
             />
-            <Button variant="secondary" icon="export">
+            <Button variant="secondary" icon="export" className="hidden md:inline-flex">
               {t('reports.export')}
             </Button>
           </>
@@ -226,30 +229,53 @@ export function ReportsPage() {
               {report.topDrivers.length === 0 ? (
                 <EmptyState />
               ) : (
-                <Table>
-                  <thead>
-                    <tr>
-                      <th className="pl-[18px]">{t('trips.driver')}</th>
-                      <th className="text-right">{t('trips.title')}</th>
-                      <th className="text-right">Km</th>
-                      <th className="pr-[18px] text-right">{t('reports.revenue')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.topDrivers.map((driver) => (
-                      <Row key={driver.id}>
-                        <Cell className="pl-[18px] font-medium">{driver.label}</Cell>
-                        <Cell align="right">{driver.trips}</Cell>
-                        <Cell align="right" className="text-neutral-400">
-                          {driver.km.toLocaleString()}
-                        </Cell>
-                        <Cell align="right" className="pr-[18px]">
-                          {formatTiyin(driver.revenue)}
-                        </Cell>
-                      </Row>
-                    ))}
-                  </tbody>
-                </Table>
+                <>
+                  <div className="px-3.5 pb-3.5 md:hidden">
+                    <CardList>
+                      {report.topDrivers.map((driver) => (
+                        <ListCard
+                          key={driver.id}
+                          title={driver.label}
+                          meta={
+                            <>
+                              <MetaItem label={t('trips.title')}>{driver.trips}</MetaItem>
+                              <MetaItem label="Km">{driver.km.toLocaleString()}</MetaItem>
+                              <MetaItem label={t('reports.revenue')} full>
+                                <span className="tabular-nums">{formatTiyin(driver.revenue)}</span>
+                              </MetaItem>
+                            </>
+                          }
+                        />
+                      ))}
+                    </CardList>
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <thead>
+                        <tr>
+                          <th className="pl-[18px]">{t('trips.driver')}</th>
+                          <th className="text-right">{t('trips.title')}</th>
+                          <th className="text-right">Km</th>
+                          <th className="pr-[18px] text-right">{t('reports.revenue')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.topDrivers.map((driver) => (
+                          <Row key={driver.id}>
+                            <Cell className="pl-[18px] font-medium">{driver.label}</Cell>
+                            <Cell align="right">{driver.trips}</Cell>
+                            <Cell align="right" className="text-neutral-400">
+                              {driver.km.toLocaleString()}
+                            </Cell>
+                            <Cell align="right" className="pr-[18px]">
+                              {formatTiyin(driver.revenue)}
+                            </Cell>
+                          </Row>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                </>
               )}
             </Card>
           </div>

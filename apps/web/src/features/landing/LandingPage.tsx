@@ -42,7 +42,7 @@ export function LandingPage() {
 
   return (
     <div className="bg-bg font-body text-[15px] text-ink">
-      <header className="mx-auto flex max-w-[1140px] flex-wrap items-center gap-7 px-6 py-[18px]">
+      <header className="mx-auto flex max-w-[1140px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6 sm:py-[18px] md:gap-7">
         <div className="flex items-center gap-2.5">
           <div
             className="flex h-[30px] w-[30px] items-center justify-center rounded-md border border-accent text-accent"
@@ -62,7 +62,10 @@ export function LandingPage() {
           ))}
         </nav>
         <div className="flex-1" />
-        <Link to="/login" className="text-[13.5px] text-neutral-300 hover:text-accent-300">
+        <Link
+          to="/login"
+          className="inline-flex min-h-[44px] items-center px-1 text-[13.5px] text-neutral-300 hover:text-accent-300"
+        >
           {t('landing.signIn')}
         </Link>
         <Link to="/register" className="btn btn-primary">
@@ -70,12 +73,12 @@ export function LandingPage() {
         </Link>
       </header>
 
-      <section className="mx-auto grid max-w-[1140px] items-center gap-12 px-6 pb-10 pt-16 lg:grid-cols-[1fr_1.1fr]">
+      <section className="mx-auto grid max-w-[1140px] items-center gap-10 px-4 pb-10 pt-10 sm:px-6 sm:pt-16 md:gap-12 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <Tag variant="accent" className="mb-[18px] text-[11.5px]">
             {t('landing.hero.eyebrow')}
           </Tag>
-          <h1 className="m-0 mb-[18px] text-[44px] font-medium leading-[1.12] tracking-[-0.025em]">
+          <h1 className="m-0 mb-[18px] text-[32px] font-medium leading-[1.12] tracking-[-0.025em] sm:text-[38px] lg:text-[44px]">
             {t('landing.hero.titleLine1')}
             <br />
             <span className="text-accent-300">{t('landing.hero.titleLine2')}</span>
@@ -83,7 +86,7 @@ export function LandingPage() {
           <p className="m-0 mb-7 max-w-[460px] text-base leading-[1.65] text-neutral-400">
             {t('landing.hero.body')}
           </p>
-          <div className="mb-[26px] flex gap-2.5">
+          <div className="mb-[26px] flex flex-col gap-2.5 sm:flex-row">
             <Link to="/register" className="btn btn-primary px-5 py-2.5 text-sm">
               {t('landing.getStarted')}
               <Icon name="arrow-right" size={15} />
@@ -104,7 +107,7 @@ export function LandingPage() {
         <AppPreview />
       </section>
 
-      <section className="mx-auto max-w-[1140px] px-6 pb-14 pt-7">
+      <section className="mx-auto max-w-[1140px] px-4 sm:px-6 pb-14 pt-7">
         <div className="mb-4 text-xs uppercase tracking-[0.1em] text-neutral-600">
           {t('landing.customers')}
         </div>
@@ -115,8 +118,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-[1140px] px-6 pb-6 pt-10">
-        <h2 className="m-0 mb-2 text-[30px] font-medium tracking-[-0.02em]">
+      <section id="features" className="mx-auto max-w-[1140px] px-4 pb-6 pt-10 sm:px-6">
+        <h2 className="m-0 mb-2 text-[24px] font-medium tracking-[-0.02em] sm:text-[30px]">
           {t('landing.features.title')}
         </h2>
         <p className="m-0 mb-8 max-w-[520px] text-[15px] text-neutral-400">
@@ -137,7 +140,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="solutions" className="mx-auto max-w-[1140px] px-6 py-12">
+      <section id="solutions" className="mx-auto max-w-[1140px] px-4 sm:px-6 py-12">
         <div className="mb-14 grid items-center gap-12 lg:grid-cols-2">
           <div>
             <Tag variant="outline" className="mb-3.5 text-[11px]">
@@ -176,7 +179,7 @@ export function LandingPage() {
             'linear-gradient(135deg, #2a2650, color-mix(in srgb, #2a2650 70%, var(--color-bg)))',
         }}
       >
-        <div className="mx-auto grid max-w-[1140px] grid-cols-2 gap-6 px-6 py-11 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-[1140px] grid-cols-2 gap-6 px-4 py-11 sm:px-6 lg:grid-cols-4">
           {STATS.map((key) => (
             <div key={key}>
               <div className="text-[32px] font-semibold tracking-[-0.02em]">
@@ -190,7 +193,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="mx-auto max-w-[1140px] px-6 py-12">
+      <section id="pricing" className="mx-auto max-w-[1140px] px-4 sm:px-6 py-12">
         <h2 className="m-0 mb-2 text-[28px] font-medium tracking-[-0.02em]">
           {t('landing.why.title')}
         </h2>
@@ -210,7 +213,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1140px] px-6 pb-[72px] pt-8">
+      <section className="mx-auto max-w-[1140px] px-4 sm:px-6 pb-[72px] pt-8">
         <Card
           className="flex flex-wrap items-center gap-8 px-12 py-11"
           style={{
@@ -224,7 +227,10 @@ export function LandingPage() {
             </h2>
             <p className="m-0 text-sm text-neutral-400">{t('landing.cta.body')}</p>
           </div>
-          <Link to="/register" className="btn btn-primary shrink-0 px-[22px] py-[11px] text-sm">
+          <Link
+            to="/register"
+            className="btn btn-primary w-full shrink-0 px-[22px] py-[11px] text-sm sm:w-auto"
+          >
             {t('landing.getStarted')}
             <Icon name="arrow-right" size={15} />
           </Link>
@@ -232,20 +238,29 @@ export function LandingPage() {
       </section>
 
       <footer id="footer" className="border-t border-divider">
-        <div className="mx-auto flex max-w-[1140px] flex-wrap items-center gap-6 px-6 py-7 text-[12.5px] text-neutral-500">
+        <div className="mx-auto flex max-w-[1140px] flex-wrap items-center gap-x-6 gap-y-1 px-4 py-5 text-[12.5px] text-neutral-500 sm:px-6 sm:py-7">
           <div className="flex items-center gap-2">
             <Icon name="truck" size={15} style={{ color: 'var(--color-accent)' }} />
             <span className="font-semibold text-neutral-300">Truck Control</span>
           </div>
           <span>{t('landing.footer.copyright')}</span>
           <div className="flex-1" />
-          <a href="#footer" className="text-inherit hover:text-accent-300">
+          <a
+            href="#footer"
+            className="inline-flex min-h-[40px] items-center text-inherit hover:text-accent-300"
+          >
             {t('landing.footer.privacy')}
           </a>
-          <a href="#footer" className="text-inherit hover:text-accent-300">
+          <a
+            href="#footer"
+            className="inline-flex min-h-[40px] items-center text-inherit hover:text-accent-300"
+          >
             {t('landing.footer.terms')}
           </a>
-          <a href="tel:+998712024480" className="text-inherit hover:text-accent-300">
+          <a
+            href="tel:+998712024480"
+            className="inline-flex min-h-[40px] items-center text-inherit hover:text-accent-300"
+          >
             {t('landing.footer.contact')}
           </a>
         </div>
@@ -265,7 +280,7 @@ function AppPreview() {
   const grid = 'grid grid-cols-[1.2fr_1fr_1.3fr_0.9fr] gap-1.5 px-[9px] py-1.5';
 
   return (
-    <div className="relative">
+    <div className="relative isolate overflow-hidden">
       <div
         className="pointer-events-none absolute -inset-10"
         style={{

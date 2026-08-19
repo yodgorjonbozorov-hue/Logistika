@@ -443,6 +443,17 @@ select.input > option {
   margin-top: var(--space-2);
 }
 
+/* Leaflet ships 30px controls; on a phone they need a thumb's worth of room. */
+@media (max-width: 767px) {
+  /* Matching Leaflet's own `.leaflet-touch .leaflet-bar a` specificity. */
+  .leaflet-touch .leaflet-bar a,
+  .leaflet-bar a {
+    width: 42px;
+    height: 42px;
+    line-height: 42px;
+  }
+}
+
 /* — leaflet — the map is a panel of the dark ground, not a white cut-out — */
 .leaflet-container {
   background: #101220;
@@ -461,4 +472,362 @@ select.input > option {
   border-bottom-color: var(--color-neutral-800);
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Mobile layer.
+
+   Everything below either introduces a class only the mobile shell uses, or
+   sits inside `@media (max-width: 767px)`. Nothing here can reach the desktop
+   layout — that stays exactly as the Nocturne handoff drew it.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* A tap should not flash the platform's blue box over our own active states. */
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full height that survives the mobile browser's collapsing address bar.
+   `dvh` overrides the `vh` fallback where it is supported. */
+.tc-app-height {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* — bottom tab bar — the mobile shell's primary navigation — */
+.tabbar {
+  /* Owned by this file rather than a utility class: nocturne.css loads last, so
+     a `display: grid` here would outrank Tailwind's `md:hidden`. */
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: none;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--color-divider);
+  background: color-mix(in srgb, var(--color-bg) 92%, black);
+  /* The bar sits above scrolling content, so it needs its own ground. */
+  backdrop-filter: blur(12px);
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px 7px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-500);
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+/* The label only — the icon wrapper above it holds the count badge, which
+   must be allowed to sit outside its box. */
+.tab > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab[aria-current='page'] {
+  color: var(--color-accent-200);
+}
+
+/* The active mark is a short accent bar at the top edge of the tab, echoing
+   the sidebar's inset rule on desktop. */
+.tab[aria-current='page']::before {
+  position: absolute;
+  top: 0;
+  width: 26px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--color-accent);
+  content: '';
+}
+
+/* — bottom sheet — modals, filters and menus on a phone — */
+.sheet-backdrop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: color-mix(in srgb, var(--color-neutral-900) 55%, transparent);
+  inset: 0;
+}
+
+.sheet {
+  display: flex;
+  width: 100%;
+  max-height: 92vh;
+  max-height: 92dvh;
+  flex-direction: column;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  animation: tc-sheet-in 0.22s ease-out;
+}
+
+@keyframes tc-sheet-in {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  flex-shrink: 0;
+  margin: 8px auto 2px;
+  border-radius: 2px;
+  background: var(--color-neutral-700);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: var(--font-heading-weight);
+}
+
+.sheet-body {
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-4);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-divider);
+}
+
+.sheet-actions > * {
+  flex: 1;
+}
+
+/* — sticky form footer — the primary action stays reachable with one thumb.
+     Only on a phone: the offset clears the fixed tab bar and the home indicator. — */
+@media (max-width: 767px) {
+  .sticky-actions {
+    position: sticky;
+    z-index: 20;
+    bottom: calc(58px + env(safe-area-inset-bottom));
+    margin: 0 -16px -16px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--color-divider);
+    background: color-mix(in srgb, var(--color-surface) 96%, black);
+  }
+
+  .sticky-actions > .btn {
+    flex: 1;
+  }
+}
+
+/* — skeletons — a loading shape rather than a spinner, so the page does not
+     jump when the data lands — */
+.skel {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-900) 25%,
+    color-mix(in srgb, var(--color-neutral-800) 70%, transparent) 37%,
+    var(--color-neutral-900) 63%
+  );
+  background-size: 400% 100%;
+  animation: tc-skel 1.4s ease-in-out infinite;
+}
+
+@keyframes tc-skel {
+  from {
+    background-position: 100% 50%;
+  }
+
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+  }
+}
+
+/* ── Phone and small-tablet adjustments ─────────────────────────────────── */
+@media (max-width: 767px) {
+  .tabbar {
+    display: grid;
+  }
+
+  /* Touch targets. 44px is the smallest reliably hittable control. */
+  .btn {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 13.5px;
+  }
+
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  /* 16px is the threshold below which iOS Safari zooms the page on focus. */
+  .input {
+    min-height: 46px;
+    padding: 11px 12px;
+    font-size: 16px;
+  }
+
+  textarea.input {
+    min-height: 96px;
+  }
+
+  .seg {
+    display: flex;
+    width: 100%;
+  }
+
+  .seg-opt {
+    min-height: 42px;
+    flex: 1;
+    font-size: 13px;
+  }
+
+  /* A dialog becomes a bottom sheet: reachable, and it can never overflow the
+     viewport the way a centred box does once the keyboard opens. */
+  .dialog-backdrop {
+    padding: 0;
+    place-items: end stretch;
+  }
+
+  /* The grabber that tells a phone user this panel is a sheet. */
+  .dialog::before {
+    width: 36px;
+    height: 4px;
+    align-self: center;
+    margin-bottom: 2px;
+    border-radius: 2px;
+    background: var(--color-neutral-700);
+    content: '';
+  }
+
+  .dialog {
+    width: 100% !important;
+    max-height: 92vh;
+    max-height: 92dvh;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: tc-sheet-in 0.22s ease-out;
+  }
+
+  .dialog-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    margin-top: var(--space-3);
+    padding-top: var(--space-2);
+    background: var(--color-surface);
+  }
+
+  .dialog-actions > .btn {
+    flex: 1;
+  }
+
+  /* A table that does survive on mobile (they are the exception — most lists
+     switch to cards) scrolls inside its own box, never the page. */
+  .table th,
+  .table td {
+    padding-inline: var(--space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+}
+
+/* ── Utility precedence ────────────────────────────────────────────────────
+   This file is imported after Tailwind (see main.tsx) so its tokens beat the
+   preflight. The side effect is that a component class here — `.btn`, `.seg`,
+   `.tabbar` — outranks Tailwind's display utilities at equal specificity, so
+   `class="btn hidden md:inline-flex"` would still render the button. Restating
+   those utilities last, in source order, hands precedence back to them.
+   ─────────────────────────────────────────────────────────────────────── */
+.hidden {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .md\:hidden {
+    display: none;
+  }
+
+  .md\:block {
+    display: block;
+  }
+
+  .md\:flex {
+    display: flex;
+  }
+
+  .md\:inline-flex {
+    display: inline-flex;
+  }
+
+  .md\:inline {
+    display: inline;
+  }
+
+  .md\:grid {
+    display: grid;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:hidden {
+    display: none;
+  }
+
+  .lg\:block {
+    display: block;
+  }
+
+  .lg\:flex {
+    display: flex;
+  }
+
+  .lg\:inline {
+    display: inline;
+  }
 }

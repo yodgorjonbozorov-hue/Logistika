@@ -17,6 +17,10 @@ import {
   Row,
   Spinner,
   Table,
+  CardList,
+  ListCard,
+  ListState,
+  MetaItem,
 } from '../../shared/ui';
 import { formatMillionsTiyin, formatTiyin } from '../../shared/utils/money';
 import { openTrips } from '../overview/metrics';
@@ -70,7 +74,47 @@ export function ClientsPage() {
       />
       <ErrorMessage error={error} />
 
-      <Card className="overflow-hidden p-0">
+      {/* Mobile: the balance is what a manager opens this page for, so it leads. */}
+      <div className="md:hidden">
+        <ListState isLoading={isLoading} error={error} isEmpty={rows.length === 0}>
+          <CardList>
+            {rows.map(({ client, active, completed, revenue }) => {
+              const balance = BigInt(client.balance);
+              return (
+                <ListCard
+                  key={client.id}
+                  title={client.name}
+                  subtitle={client.phone ?? '—'}
+                  trailing={
+                    <span
+                      className="whitespace-nowrap text-[13px] font-semibold tabular-nums"
+                      style={{ color: balanceColor(balance) }}
+                    >
+                      {formatTiyin(client.balance)}
+                    </span>
+                  }
+                  meta={
+                    <>
+                      <MetaItem label={t('clients.activeTrips')}>{active}</MetaItem>
+                      <MetaItem label={t('status.COMPLETED')}>{completed}</MetaItem>
+                      <MetaItem label={t('clients.totalRevenue')}>
+                        <span className="tabular-nums">{formatTiyin(revenue)}</span>
+                      </MetaItem>
+                      <MetaItem label={t('clients.paymentTerms')}>
+                        {client.paymentTermsDays != null
+                          ? t('clients.termsDays', { count: client.paymentTermsDays })
+                          : t('clients.prepaid')}
+                      </MetaItem>
+                    </>
+                  }
+                />
+              );
+            })}
+          </CardList>
+        </ListState>
+      </div>
+
+      <Card className="hidden overflow-hidden p-0 md:block">
         {isLoading ? (
           <Spinner />
         ) : rows.length === 0 ? (

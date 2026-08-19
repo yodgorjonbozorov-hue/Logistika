@@ -55,47 +55,41 @@ export function TripDetailPage() {
   const remaining = BigInt(trip.agreedPrice) - BigInt(trip.driverAdvance);
 
   return (
-    <div>
-      <div className="mb-2.5 flex items-center gap-1.5 text-[12.5px] text-neutral-500">
-        <Link to="/trips">{t('trips.title')}</Link>
+    // On a phone the sections are re-ordered with `order-*` into the sequence a
+    // driver or dispatcher reads on a small screen — header, status, the facts,
+    // then the actions — while `md:` keeps the desktop layout byte-for-byte.
+    <div className="flex flex-col md:block">
+      <div className="order-1 mb-2.5 flex items-center gap-1.5 text-[12.5px] text-neutral-500">
+        <Link to="/trips" className="-ml-1 inline-flex min-h-[44px] items-center px-1">
+          {t('trips.title')}
+        </Link>
         <Icon name="caret-right" size={10} />
         <span>{trip.tripNumber}</span>
       </div>
 
-      <div className="mb-[18px] flex flex-wrap items-center gap-3">
+      <div className="order-2 mb-3 flex flex-wrap items-center gap-3 md:mb-[18px]">
         <h3 className="m-0 text-2xl tabular-nums">{trip.tripNumber}</h3>
         <StatusChip tone={TRIP_STATUS_TONE[trip.status]}>{t(`status.${trip.status}`)}</StatusChip>
-        <div className="flex-1" />
-        {canAssign ? (
-          <Button variant="secondary" icon="pencil-simple" onClick={() => setDialog('assign')}>
-            {t('trips.assign')}
-          </Button>
-        ) : null}
-        {canStart ? (
-          <Button icon="play" onClick={() => setDialog('start')}>
-            {t('trips.start')}
-          </Button>
-        ) : null}
-        {canComplete ? (
-          <Button icon="flag-checkered" onClick={() => setDialog('complete')}>
-            {t('trips.complete')}
-          </Button>
-        ) : null}
-        <ShareLinkButton tripId={id} />
-        {canCancel ? (
-          <Button variant="ghost" icon="x-circle" onClick={() => setDialog('cancel')}>
-            <span className="text-danger-text">{t('trips.cancelTrip')}</span>
-          </Button>
-        ) : null}
+        <div className="hidden flex-1 md:block" />
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <TripActions />
+        </div>
       </div>
 
-      <ErrorMessage error={action.error} />
+      <div className="order-3">
+        <ErrorMessage error={action.error} />
+      </div>
 
-      <Card className="mb-3.5 px-5 pb-3.5 pt-[18px]">
+      {/* Phone: the actions sit under the facts, as its own stacked block. */}
+      <div className="order-5 mb-3.5 grid grid-cols-1 gap-2 md:hidden">
+        <TripActions />
+      </div>
+
+      <Card className="order-6 mb-3.5 overflow-hidden px-0 pb-3.5 pt-[18px] md:px-5">
         <Lifecycle steps={tripLifecycle(trip)} />
       </Card>
 
-      <div className="mb-3.5 grid gap-3 lg:grid-cols-3">
+      <div className="order-4 mb-3.5 grid gap-3 lg:grid-cols-3">
         <Card className="px-4 py-3.5">
           <SectionLabel>{t('trips.cards.vehicleDriver')}</SectionLabel>
           <div className="mb-2.5 flex items-center gap-2.5">
@@ -156,13 +150,16 @@ export function TripDetailPage() {
         </Card>
       </div>
 
-      <div className="mb-3.5 flex border-b border-divider">
+      {/* The four tabs scroll rather than shrink, so none drops below 44px. */}
+      <div className="order-7 -mx-4 mb-3.5 flex overflow-x-auto border-b border-divider px-4 md:mx-0 md:overflow-visible md:px-0">
         {TABS.map((key) => (
           <button
             key={key}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className="mr-5 cursor-pointer px-0.5 py-2 text-[13px]"
+            className="mr-5 min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap px-0.5 text-[13px] md:min-h-0 md:py-2"
             style={{
               borderBottom: `2px solid ${tab === key ? 'var(--color-accent)' : 'transparent'}`,
               color: tab === key ? 'var(--color-text)' : 'var(--color-neutral-500)',
@@ -173,10 +170,12 @@ export function TripDetailPage() {
         ))}
       </div>
 
-      {tab === 'documents' ? <DocumentsTab /> : null}
-      {tab === 'payments' ? <PaymentsTab trip={trip} /> : null}
-      {tab === 'notes' ? <NotesTab /> : null}
-      {tab === 'log' ? <ActivityTab trip={trip} /> : null}
+      <div className="order-8">
+        {tab === 'documents' ? <DocumentsTab /> : null}
+        {tab === 'payments' ? <PaymentsTab trip={trip} /> : null}
+        {tab === 'notes' ? <NotesTab /> : null}
+        {tab === 'log' ? <ActivityTab trip={trip} /> : null}
+      </div>
 
       <AssignDialog open={dialog === 'assign'} onClose={() => setDialog(null)} tripId={id} />
       <OdometerDialog
@@ -206,6 +205,35 @@ export function TripDetailPage() {
       />
     </div>
   );
+
+  /** The same buttons in both places; only their container differs. */
+  function TripActions() {
+    return (
+      <>
+        {canAssign ? (
+          <Button variant="secondary" icon="pencil-simple" onClick={() => setDialog('assign')}>
+            {t('trips.assign')}
+          </Button>
+        ) : null}
+        {canStart ? (
+          <Button icon="play" onClick={() => setDialog('start')}>
+            {t('trips.start')}
+          </Button>
+        ) : null}
+        {canComplete ? (
+          <Button icon="flag-checkered" onClick={() => setDialog('complete')}>
+            {t('trips.complete')}
+          </Button>
+        ) : null}
+        <ShareLinkButton tripId={id} />
+        {canCancel ? (
+          <Button variant="ghost" icon="x-circle" onClick={() => setDialog('cancel')}>
+            <span className="text-danger-text">{t('trips.cancelTrip')}</span>
+          </Button>
+        ) : null}
+      </>
+    );
+  }
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -238,9 +266,9 @@ function MoneyRow({ label, value, strong }: { label: string; value: string; stro
 function Lifecycle({ steps }: { steps: LifecycleStep[] }) {
   const { t } = useTranslation();
   return (
-    <div className="flex">
+    <div className="flex overflow-x-auto px-5 md:overflow-visible md:px-0">
       {steps.map((step, index) => (
-        <div key={step.key} className="min-w-0 flex-1">
+        <div key={step.key} className="min-w-[96px] flex-1 md:min-w-0">
           <div className="flex w-full items-center">
             <span
               className="shrink-0 rounded-full"

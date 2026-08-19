@@ -108,7 +108,7 @@ export function RegisterPage() {
         <div className="text-xs text-neutral-600">{t('auth.copyright')}</div>
       </section>
 
-      <section className="flex w-full shrink-0 items-center justify-center p-10 lg:w-[520px]">
+      <section className="flex w-full shrink-0 items-center justify-center px-5 py-8 sm:p-10 lg:w-[520px]">
         <form onSubmit={onSubmit} className="w-full max-w-[360px]">
           <h2 className="m-0 mb-1 text-[22px] font-medium">{t('auth.register.title')}</h2>
           <p className="m-0 mb-5 text-[13px] text-neutral-500">{t('auth.register.subtitle')}</p>
@@ -196,7 +196,7 @@ export function RegisterPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                className="absolute right-[11px] top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-neutral-500 hover:text-neutral-300"
               >
                 <Icon name={showPassword ? 'eye-slash' : 'eye'} size={16} />
               </button>
@@ -232,7 +232,10 @@ export function RegisterPage() {
           </button>
 
           <p className="m-0 mt-[18px] text-center text-[12.5px] text-neutral-500">
-            {t('auth.register.haveAccount')} <Link to="/login">{t('auth.register.signIn')}</Link>
+            {t('auth.register.haveAccount')}{' '}
+            <Link to="/login" className="inline-flex min-h-[40px] items-center px-1">
+              {t('auth.register.signIn')}
+            </Link>
           </p>
         </form>
       </section>

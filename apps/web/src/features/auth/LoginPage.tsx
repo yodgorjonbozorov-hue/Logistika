@@ -77,7 +77,7 @@ export function LoginPage() {
         <div className="text-xs text-neutral-600">{t('auth.copyright')}</div>
       </section>
 
-      <section className="flex w-full shrink-0 items-center justify-center p-10 lg:w-[520px]">
+      <section className="flex w-full shrink-0 items-center justify-center px-5 py-8 sm:p-10 lg:w-[520px]">
         <form onSubmit={onSubmit} className="w-full max-w-[360px]">
           <h2 className="m-0 mb-1 text-[22px] font-medium">{t('auth.loginTitle')}</h2>
           <p className="m-0 mb-6 text-[13px] text-neutral-500">{t('auth.loginSubtitle')}</p>
@@ -96,7 +96,10 @@ export function LoginPage() {
           <div className="field mb-1.5">
             <label className="mb-[5px] flex justify-between text-xs text-neutral-400">
               <span>{t('auth.password')}</span>
-              <Link to="/login" className="text-xs font-normal">
+              <Link
+                to="/login"
+                className="-my-3 inline-flex min-h-[44px] items-center text-xs font-normal"
+              >
                 {t('auth.forgotPassword')}
               </Link>
             </label>
@@ -114,7 +117,7 @@ export function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                className="absolute right-[11px] top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-neutral-500 hover:text-neutral-300"
               >
                 <Icon name={showPassword ? 'eye-slash' : 'eye'} size={16} />
               </button>
@@ -125,11 +128,11 @@ export function LoginPage() {
             <ErrorMessage error={error} />
           </div>
 
-          <label className="my-3.5 mb-5 flex cursor-pointer items-center gap-2 text-[13px] text-neutral-400">
+          <label className="my-2 mb-3 flex min-h-[44px] cursor-pointer items-center gap-2.5 text-[13px] text-neutral-400">
             <input
               type="checkbox"
               defaultChecked
-              className="h-[15px] w-[15px]"
+              className="h-[18px] w-[18px] md:h-[15px] md:w-[15px]"
               style={{ accentColor: 'var(--color-accent)' }}
             />
             {t('auth.rememberMe')}
@@ -145,7 +148,10 @@ export function LoginPage() {
           </button>
 
           <p className="m-0 mt-[18px] text-center text-[12.5px] text-neutral-500">
-            {t('auth.noAccount')} <Link to="/register">{t('auth.registerLink')}</Link>
+            {t('auth.noAccount')}{' '}
+            <Link to="/register" className="inline-flex min-h-[40px] items-center px-1">
+              {t('auth.registerLink')}
+            </Link>
           </p>
         </form>
       </section>

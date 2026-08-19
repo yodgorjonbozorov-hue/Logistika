@@ -44,14 +44,17 @@ export function SettingsPage() {
     <div className="max-w-[960px]">
       <PageHeader title={t('settings.title')} />
       <div className="grid items-start gap-5 lg:grid-cols-[210px_1fr]">
-        <nav className="flex flex-col gap-0.5 text-[13px]">
+        {/* Phone: the six sections scroll as chips rather than stacking six rows
+            of navigation above the settings they lead to. */}
+        <nav className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 text-[13px] md:mx-0 md:flex-col md:gap-0.5 md:overflow-visible md:px-0 md:pb-0">
           {SECTIONS.map((value) => (
             <button
               key={value}
               type="button"
+              aria-pressed={section === value}
               onClick={() => setSection(value)}
               className={cn(
-                'rounded-md px-2.5 py-2 text-left',
+                'min-h-[44px] shrink-0 whitespace-nowrap rounded-md border border-neutral-800 px-3 text-left md:min-h-0 md:border-0 md:px-2.5 md:py-2',
                 section === value
                   ? 'font-medium text-accent-200'
                   : 'text-neutral-400 hover:bg-neutral-800/50',
