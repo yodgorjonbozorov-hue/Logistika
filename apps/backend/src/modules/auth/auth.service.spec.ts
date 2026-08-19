@@ -32,6 +32,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let prisma: {
     user: { update: jest.Mock };
+    company: { findUnique: jest.Mock };
     refreshToken: {
       create: jest.Mock;
       findUnique: jest.Mock;
@@ -61,6 +62,8 @@ describe('AuthService', () => {
 
     prisma = {
       user: { update: jest.fn() },
+      // Every test tenant is in good standing unless a test says otherwise.
+      company: { findUnique: jest.fn().mockResolvedValue({ isActive: true }) },
       refreshToken: {
         create: jest.fn(),
         findUnique: jest.fn(),
@@ -95,6 +98,31 @@ describe('AuthService', () => {
         expect.objectContaining({ where: { id: 'user-1' } }),
       );
       expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'LOGIN' }));
+    });
+
+    it('refuses a suspended company, and never issues it a token', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      prisma.company.findUnique.mockResolvedValue({ isActive: false });
+
+      await expect(service.login('owner@test.uz', 'correct-password')).rejects.toMatchObject({
+        code: 'AUTH_COMPANY_INACTIVE',
+        httpStatus: 403,
+      });
+      expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('does not look for a company when the account has none (platform staff)', async () => {
+      usersService.findByIdentifier.mockResolvedValue({
+        ...user,
+        companyId: null,
+        role: 'SUPERADMIN',
+      });
+
+      await expect(service.login('admin@truckcontrol.uz', 'correct-password')).resolves.toEqual(
+        expect.objectContaining({ accessToken: expect.any(String) }),
+      );
+      expect(prisma.company.findUnique).not.toHaveBeenCalled();
     });
 
     it('rejects unknown identifier with AUTH_INVALID_CREDENTIALS', async () => {
@@ -152,6 +180,24 @@ describe('AuthService', () => {
 
       await expect(service.refresh(refreshToken)).rejects.toMatchObject({
         code: 'AUTH_REFRESH_INVALID',
+      });
+    });
+
+    it('ends a live session once the tenant is suspended', async () => {
+      usersService.findByIdentifier.mockResolvedValue(user);
+      usersService.findById.mockResolvedValue(user);
+      const { refreshToken } = await service.login('owner@test.uz', 'correct-password');
+      const storedHash = prisma.refreshToken.create.mock.calls[0][0].data.tokenHash;
+      prisma.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        tokenHash: storedHash,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+      prisma.company.findUnique.mockResolvedValue({ isActive: false });
+
+      await expect(service.refresh(refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_COMPANY_INACTIVE',
       });
     });
 

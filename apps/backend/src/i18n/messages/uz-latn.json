@@ -1,6 +1,7 @@
 {
   "AUTH_INVALID_CREDENTIALS": "Login yoki parol noto'g'ri",
   "AUTH_USER_INACTIVE": "Hisobingiz faol emas. Administratorga murojaat qiling",
+  "AUTH_COMPANY_INACTIVE": "Kompaniyangiz vaqtincha to'xtatilgan. Administratorga murojaat qiling",
   "AUTH_TOKEN_INVALID": "Kirish tokeni yaroqsiz",
   "AUTH_TOKEN_EXPIRED": "Sessiya muddati tugadi, qaytadan kiring",
   "AUTH_REFRESH_INVALID": "Sessiyani yangilab bo'lmadi, qaytadan kiring",

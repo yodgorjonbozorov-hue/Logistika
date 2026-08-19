@@ -45,6 +45,7 @@ export class AuthService {
     if (!user.isActive) {
       throw new AppException('AUTH_USER_INACTIVE', HttpStatus.FORBIDDEN);
     }
+    await this.assertCompanyActive(user);
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
     this.audit.log({
@@ -70,6 +71,10 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new AppException('AUTH_USER_INACTIVE', HttpStatus.FORBIDDEN);
     }
+    // Checked here as well as at login, so suspending a tenant ends its live
+    // sessions at the next refresh rather than whenever people happen to sign
+    // out. An access token stays valid for its own short lifetime.
+    await this.assertCompanyActive(user);
 
     // Rotation: the old token dies the moment a new pair is issued.
     await this.prisma.refreshToken.update({
@@ -94,6 +99,21 @@ export class AuthService {
     }
     const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
+  }
+
+  /**
+   * A suspended tenant's staff cannot sign in. Platform accounts have no
+   * company and skip the check.
+   */
+  private async assertCompanyActive(user: User): Promise<void> {
+    if (!user.companyId) return;
+    const company = await this.prisma.company.findUnique({
+      where: { id: user.companyId },
+      select: { isActive: true },
+    });
+    if (!company?.isActive) {
+      throw new AppException('AUTH_COMPANY_INACTIVE', HttpStatus.FORBIDDEN);
+    }
   }
 
   async issueTokens(user: User): Promise<AuthTokens> {
