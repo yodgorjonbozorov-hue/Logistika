@@ -22,8 +22,16 @@ tashqarida bo'lishi shart:
    **pooler** (PgBouncer) URL'ini oling, to'g'ridan-to'g'ri ulanishni emas.
    Neon'da bu `-pooler` qo'shilgan host, Supabase'da 6543-port.
 2. **S3-mos fayl saqlash.** Cloudflare R2, AWS S3 yoki Supabase Storage.
-   MinIO klienti oddiy S3 protokolida gaplashadi, shuning uchun kod
-   o'zgarmaydi — faqat `MINIO_*` o'zgaruvchilari boshqa endpoint'ga qaraydi.
+   Kod AWS SDK (`@aws-sdk/client-s3`) orqali oddiy S3 protokolida gaplashadi,
+   shuning uchun bir xil kod dev'dagi MinIO'ga ham, productiondagi istalgan
+   S3-mos do'konga ham boradi — faqat `S3_*` o'zgaruvchilari o'zgaradi.
+   Eski `MINIO_*` nomlari ham ishlaydi (docker-compose o'zgarmaydi).
+
+   **Supabase Storage** S3'ni `/storage/v1/s3` yo'li ostida beradi va sessiya
+   tokeni bilan autentifikatsiya qiladi: `S3_ACCESS_KEY_ID` = loyiha ref'i,
+   `S3_SECRET_ACCESS_KEY` = anon key, `S3_SESSION_TOKEN` = service role key.
+   Shuning uchun `S3_ENDPOINT` to'liq URL sifatida beriladi va
+   `S3_FORCE_PATH_STYLE=true` bo'lishi shart.
 
 > Redis hozircha kodda ishlatilmaydi (`REDIS_URL` faqat env sxemasida turibdi),
 > shuning uchun deploy uchun Redis shart emas.
@@ -40,27 +48,27 @@ tashqarida bo'lishi shart:
 
 **Environment Variables**
 
-| O'zgaruvchi           | Qiymat                                       | Izoh                                                        |
-| --------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| `DATABASE_URL`        | `postgresql://…-pooler…`                     | **pooled** URL                                              |
-| `JWT_ACCESS_SECRET`   | tasodifiy ≥16 belgi                          | `openssl rand -base64 32`                                   |
-| `JWT_REFRESH_SECRET`  | tasodifiy ≥16 belgi                          | boshqa qiymat                                               |
-| `JWT_ACCESS_TTL`      | `15m`                                        |                                                             |
-| `JWT_REFRESH_TTL`     | `30d`                                        |                                                             |
-| `WEB_URL`             | `https://app.truckcontrol.uz`                | vergul bilan bir nechta bo'lishi mumkin                     |
-| `WEB_PREVIEW_SUFFIX`  | `.vercel.app`                                | preview deploy'lariga CORS ruxsati                          |
-| `CRON_SECRET`         | tasodifiy ≥16 belgi                          | Vercel Cron shu bilan kiradi                                |
-| `MINIO_ENDPOINT`      | masalan `<account>.r2.cloudflarestorage.com` | port/host, `https://` siz                                   |
-| `MINIO_PORT`          | `443`                                        |                                                             |
-| `MINIO_USE_SSL`       | `true`                                       |                                                             |
-| `MINIO_ROOT_USER`     | access key                                   |                                                             |
-| `MINIO_ROOT_PASSWORD` | secret key                                   |                                                             |
-| `MINIO_BUCKET`        | `truckcontrol`                               | bucket oldindan yaratilgan bo'lsin                          |
-| `MINIO_REGION`        | `auto` (R2) yoki `us-east-1` (AWS)           |                                                             |
-| `SMS_PROVIDER_URL`    | SMS shlyuzi endpoint'i                       | **productionda majburiy** — pastga qarang                   |
-| `SMS_PROVIDER_TOKEN`  | shlyuz tokeni                                | `SMS_PROVIDER_URL` bilan birga                              |
-| `NODE_ENV`            | `production`                                 |                                                             |
-| `API_PORT`            | `3000`                                       | serverless'da ishlatilmaydi, lekin env sxemasi talab qiladi |
+| O'zgaruvchi            | Qiymat                                                        | Izoh                                                        |
+| ---------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `DATABASE_URL`         | `postgresql://…-pooler…`                                      | **pooled** URL                                              |
+| `JWT_ACCESS_SECRET`    | tasodifiy ≥16 belgi                                           | `openssl rand -base64 32`                                   |
+| `JWT_REFRESH_SECRET`   | tasodifiy ≥16 belgi                                           | boshqa qiymat                                               |
+| `JWT_ACCESS_TTL`       | `15m`                                                         |                                                             |
+| `JWT_REFRESH_TTL`      | `30d`                                                         |                                                             |
+| `WEB_URL`              | `https://app.truckcontrol.uz`                                 | vergul bilan bir nechta bo'lishi mumkin                     |
+| `WEB_PREVIEW_SUFFIX`   | `.vercel.app`                                                 | preview deploy'lariga CORS ruxsati                          |
+| `CRON_SECRET`          | tasodifiy ≥16 belgi                                           | Vercel Cron shu bilan kiradi                                |
+| `S3_ENDPOINT`          | to'liq URL, masalan `https://<ref>.supabase.co/storage/v1/s3` | yo'l prefiksi bilan ham bo'ladi                             |
+| `S3_BUCKET`            | `truckcontrol`                                                | yo'q bo'lsa avtomatik yaratiladi                            |
+| `S3_REGION`            | `us-east-1` (Supabase) / `auto` (R2)                          |                                                             |
+| `S3_ACCESS_KEY_ID`     | access key                                                    | Supabase'da — loyiha ref'i                                  |
+| `S3_SECRET_ACCESS_KEY` | secret key                                                    | Supabase'da — anon key                                      |
+| `S3_SESSION_TOKEN`     | ixtiyoriy                                                     | Supabase'da — service role key                              |
+| `S3_FORCE_PATH_STYLE`  | `true`                                                        | MinIO va yo'l prefiksli endpoint'lar uchun; AWS'da `false`  |
+| `SMS_PROVIDER_URL`     | SMS shlyuzi endpoint'i                                        | **productionda majburiy** — pastga qarang                   |
+| `SMS_PROVIDER_TOKEN`   | shlyuz tokeni                                                 | `SMS_PROVIDER_URL` bilan birga                              |
+| `NODE_ENV`             | `production`                                                  |                                                             |
+| `API_PORT`             | `3000`                                                        | serverless'da ishlatilmaydi, lekin env sxemasi talab qiladi |
 
 `CRON_SECRET` berilmasa `/api/v1/cron/*` endpoint'lari **yopiq** turadi —
 noto'g'ri sozlangan deploy ularni ochib qo'ymaydi.
@@ -100,16 +108,35 @@ oldindan `nest build` (tsc) bilan yig'iladi.
 
 ## 2. Migratsiyalar
 
-Vercel build'i migratsiya ishlatmaydi (build vaqtida bazaga tegmagan ma'qul).
-Birinchi deploydan oldin, keyin esa har sxema o'zgarganda mahalliy ravishda
-ishga tushiring:
+Migratsiya build'ning bir qismi (`apps/backend/deploy-db.sh`). Sabab: ko'p
+muhitda bazaga faqat build konteyneridan tarmoq bor. `prisma migrate deploy`
+faqat hali qo'llanmagan migratsiyalarni qo'llaydi — hech qachon reset, drop
+yoki mavjud ma'lumotni qayta yozish qilmaydi, shuning uchun har deployda
+takrorlanishi xavfsiz va odatda hech nima qilmaydi.
+
+Migratsiya **to'g'ridan-to'g'ri** ulanishni talab qiladi (DDL pooler orqali
+o'tmaydi). Supabase buni `POSTGRES_URL_NON_POOLING` sifatida beradi; ishlab
+turgan ilova esa pooled `DATABASE_URL` dan foydalanadi. Skript
+`POSTGRES_URL_NON_POOLING` yoki `DIRECT_DATABASE_URL` ni oladi; ikkalasi ham
+bo'lmasa migratsiyani jimgina o'tkazib yuboradi.
+
+Mahalliy ravishda ham ishga tushirish mumkin:
 
 ```bash
 DATABASE_URL="<to'g'ridan-to'g'ri, pooler emas>" pnpm --filter backend db:deploy
 ```
 
-`prisma/migrations/20260819000000_init` — joriy sxemaning bazaviy migratsiyasi.
-Pooler orqali migratsiya qilmang: DDL uchun to'g'ridan-to'g'ri ulanish kerak.
+### Birinchi administrator
+
+Yangi bazada hech kim yo'q, API esa foydalanuvchi yaratish uchun
+autentifikatsiya talab qiladi. `src/scripts/bootstrap-superadmin.ts` shu
+tugunni yechadi va u ham build'da ishlaydi:
+
+- `SEED_SUPERADMIN_EMAIL` va `SEED_SUPERADMIN_PASSWORD` ikkalasi qo'yilmasa —
+  hech nima qilmaydi;
+- allaqachon SUPERADMIN bo'lsa — tegmaydi (parolni qayta yozmaydi).
+
+Birinchi deploydan keyin bu ikki o'zgaruvchini o'chirib qo'ysangiz ham bo'ladi.
 
 ## 3. Rejalashtirilgan vazifalar (cron)
 

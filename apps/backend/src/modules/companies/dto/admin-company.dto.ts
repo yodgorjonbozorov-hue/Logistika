@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsEmail,
   IsNotEmpty,
+  IsNotEmptyObject,
   IsOptional,
   IsString,
   MaxLength,
@@ -41,6 +42,12 @@ export class AdminCreateCompanyDto {
   @IsDateString()
   subscriptionUntil?: string;
 
+  /**
+   * `@ValidateNested` alone silently passes when the object is missing, and the
+   * service then dereferences it — a request without `owner` produced a 500
+   * instead of a 400. `@IsNotEmptyObject` makes the requirement explicit.
+   */
+  @IsNotEmptyObject()
   @ValidateNested()
   @Type(() => AdminCreateOwnerDto)
   owner!: AdminCreateOwnerDto;

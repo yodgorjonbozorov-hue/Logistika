@@ -183,7 +183,9 @@ export class TrackingService {
     const moved = await this.prisma.$executeRaw`
       WITH moved AS (
         DELETE FROM gps_tracks
-        WHERE recorded_at < now() - make_interval(days => ${GPS_RETENTION_DAYS})
+        -- Prisma binds a JS number as bigint; make_interval takes integer, so
+        -- the cast is required or Postgres reports "function does not exist".
+        WHERE recorded_at < now() - make_interval(days => ${GPS_RETENTION_DAYS}::int)
         RETURNING *
       )
       INSERT INTO gps_tracks_archive

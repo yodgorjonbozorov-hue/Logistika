@@ -1,12 +1,20 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  CreateBucketCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { StoredFile } from '@prisma/client';
-import * as Minio from 'minio';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../prisma/prisma.service';
+import { resolveS3Settings } from './s3-config';
 
 /** Photos are downscaled before storage — 1500px is enough for OCR (TZ §8.3). */
 const MAX_IMAGE_DIMENSION = 1500;
@@ -24,7 +32,7 @@ export interface UploadedFileInput {
 @Injectable()
 export class FilesService {
   private readonly logger = new Logger(FilesService.name);
-  private readonly client: Minio.Client;
+  private readonly client: S3Client;
   private readonly bucket: string;
   private bucketReady = false;
 
@@ -32,16 +40,17 @@ export class FilesService {
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.bucket = config.get<string>('MINIO_BUCKET') ?? 'truckcontrol';
-    // The client speaks plain S3, so these settings point at MinIO in dev and at
-    // any managed S3-compatible bucket (R2, Supabase, AWS) in production.
-    this.client = new Minio.Client({
-      endPoint: config.get<string>('MINIO_ENDPOINT') ?? 'localhost',
-      port: Number(config.get<string>('MINIO_PORT') ?? 9000),
-      useSSL: config.get<string>('MINIO_USE_SSL') === 'true',
-      accessKey: config.get<string>('MINIO_ROOT_USER') ?? 'truckcontrol',
-      secretKey: config.get<string>('MINIO_ROOT_PASSWORD') ?? '',
-      region: config.get<string>('MINIO_REGION'),
+    const settings = resolveS3Settings((key) => config.get<string>(key));
+    this.bucket = settings.bucket;
+    this.client = new S3Client({
+      endpoint: settings.endpoint,
+      region: settings.region,
+      forcePathStyle: settings.forcePathStyle,
+      credentials: {
+        accessKeyId: settings.accessKeyId,
+        secretAccessKey: settings.secretAccessKey,
+        sessionToken: settings.sessionToken,
+      },
     });
   }
 
@@ -74,9 +83,15 @@ export class FilesService {
     // Object keys are tenant-prefixed so bucket listings can never cross companies.
     const key = `${actor.companyId}/${randomUUID()}${mimeType === 'application/pdf' ? '.pdf' : '.jpg'}`;
     await this.ensureBucket();
-    await this.client.putObject(this.bucket, key, body, body.length, {
-      'Content-Type': mimeType,
-    });
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: mimeType,
+        ContentLength: body.length,
+      }),
+    );
 
     return this.prisma.forCompany(actor.companyId).storedFile.create({
       data: {
@@ -99,19 +114,31 @@ export class FilesService {
       .forCompany(actor.companyId)
       .storedFile.findUnique({ where: { id } });
     if (!file) throw new AppException('NOT_FOUND', HttpStatus.NOT_FOUND);
-    const url = await this.client.presignedGetObject(this.bucket, file.key, SIGNED_URL_TTL_SECONDS);
+    const url = await getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: file.key }),
+      { expiresIn: SIGNED_URL_TTL_SECONDS },
+    );
     return { url, expiresIn: SIGNED_URL_TTL_SECONDS };
   }
 
   private async ensureBucket(): Promise<void> {
     if (this.bucketReady) return;
     try {
-      const exists = await this.client.bucketExists(this.bucket);
-      if (!exists) await this.client.makeBucket(this.bucket);
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      this.bucketReady = true;
+      return;
+    } catch {
+      // Falls through to creation — a missing bucket is the common case in dev.
+    }
+    try {
+      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
       this.bucketReady = true;
     } catch (error) {
       this.logger.error(
-        `MinIO bucket check failed: ${error instanceof Error ? error.message : String(error)}`,
+        `Object storage bucket check failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
       throw new AppException('INTERNAL_ERROR', HttpStatus.INTERNAL_SERVER_ERROR);
     }
