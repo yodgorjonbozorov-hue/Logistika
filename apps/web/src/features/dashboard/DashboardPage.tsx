@@ -17,7 +17,7 @@ import {
 import { formatDate, formatDateTime } from '../../shared/utils/date';
 import { formatTiyin } from '../../shared/utils/money';
 import { MonthlyProfitChart } from './MonthlyProfitChart';
-import { useFuelAlerts, useLiveFleet, useRecentEvents, useSummary } from './api';
+import { useAlertCounts, useLiveFleet, useRecentEvents, useSummary } from './api';
 
 const TASHKENT: [number, number] = [41.3, 69.25];
 
@@ -32,13 +32,14 @@ const STATUS_COLORS: Record<LiveStatus, string> = {
 export function DashboardPage() {
   const { t } = useTranslation();
   const { data, isLoading, error } = useSummary({});
-  const alerts = useFuelAlerts();
+  const alerts = useAlertCounts();
 
   if (isLoading) return <Spinner />;
   if (error) return <ErrorMessage error={error} />;
   if (!data) return <EmptyState />;
 
-  const flagged = alerts.data?.rows.filter((row) => row.overThreshold).length ?? 0;
+  const critical = alerts.data?.counts.CRITICAL ?? 0;
+  const alertTotal = alerts.data?.counts.total ?? 0;
   const profit = BigInt(data.netProfit);
 
   return (
@@ -75,13 +76,17 @@ export function DashboardPage() {
           tone="navy"
           trend={profit >= 0n ? 'up' : 'down'}
         />
-        <Link to="/fuel" className="rounded-lg focus-visible:outline-none">
+        <Link to="/alerts" className="rounded-lg focus-visible:outline-none">
           <StatCard
-            label={t('dashboard.fuelAlerts')}
-            value={flagged}
-            delta={flagged > 0 ? t('dashboard.seeFuel') : t('dashboard.allWithinNorm')}
-            trend={flagged > 0 ? 'down' : 'up'}
-            icon={flagged > 0 ? <IconAlert size={18} /> : undefined}
+            label={t('dashboard.alerts')}
+            value={critical}
+            delta={
+              alertTotal > 0
+                ? `${t('dashboard.alertsTotal')} ${alertTotal}`
+                : t('dashboard.noAlerts')
+            }
+            trend={critical > 0 ? 'down' : 'up'}
+            icon={critical > 0 ? <IconAlert size={18} /> : undefined}
           />
         </Link>
       </div>

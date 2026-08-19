@@ -115,14 +115,18 @@
 - [x] `fuel`: jurnal (CRUD) + W-8 nazorat jadvali, chegara oshsa signal
       (`companies.fuel_deviation_percent`, default 7%). AZS bo'yicha tahlil va
       haydovchi ilovasidan strukturalangan quyish ma'lumoti — keyingi ish
-- [ ] `maintenance`: TO tarixi, keyingi TO rejasi
-- [ ] `documents`: muddat eslatmalari 15/7/1 kun (BullMQ cron)
-- [ ] `alerts`: ogohlantirishlar markazi (W-10 ro'yxati)
+- [x] `maintenance`: TO tarixi, keyingi TO rejasi (`GET/POST /maintenance`, W-5 kartochkasida modal)
+- [~] `documents`: 15/7/1 kunlik muddat hisobi `alerts` ichida ishlaydi va W-10 da ko'rinadi;
+  BullMQ cron + push yuborish 8-bosqichda (Telegram/FCM bilan birga)
+- [x] `alerts`: ogohlantirishlar markazi (W-10) — 7 turdagi signal, uch darajali muhimlik,
+      o'qish paytida hisoblanadi; dashboard kartasi ham shundan oziqlanadi
 - [ ] `reports`: W-1 dashboard, W-9 hisobotlar (reys/mashina/yo'nalish/haydovchi/mijoz,
       xarajat strukturasi), Excel/PDF eksport
 - [x] Web: W-1 dashboard (6 karta, 12 oylik foyda grafigi + jadval ko'rinishi, jonli xarita,
       hodisalar lentasi), W-8 yoqilg'i nazorati, W-4 moliya tabi real P&L'ga ulandi
-- [ ] Web: W-7 moliya (kassa, qarzdorlar), W-9 hisobotlar, W-10 ogohlantirishlar
+- [x] Web: W-10 ogohlantirishlar markazi (filtr, muhimlik bo'yicha tartib, har signaldan
+      tegishli sahifaga o'tish)
+- [ ] Web: W-7 moliya (kassa, qarzdorlar), W-9 hisobotlar
 - [x] Moliya testlari: chegara holatlari, yaxlitlash, BigInt (eng yuqori qamrov) —
       kalkulyator 28 test, servis 15 test, fuel 9 test
 

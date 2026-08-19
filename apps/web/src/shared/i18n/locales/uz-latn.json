@@ -17,7 +17,8 @@
     "map": "Xarita",
     "menu": "Menyu",
     "dashboard": "Boshqaruv paneli",
-    "fuel": "Yoqilg'i"
+    "fuel": "Yoqilg'i",
+    "alerts": "Ogohlantirishlar"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -282,7 +283,10 @@
     "monthInProfit": "Foydali oy",
     "monthInLoss": "Zararli oy",
     "chartScale": "Shkala",
-    "profitChartAria": "Oxirgi {{count}} oy bo'yicha sof foyda diagrammasi"
+    "profitChartAria": "Oxirgi {{count}} oy bo'yicha sof foyda diagrammasi",
+    "alerts": "Ogohlantirishlar",
+    "alertsTotal": "Jami",
+    "noAlerts": "Hammasi joyida"
   },
   "fuel": {
     "title": "Yoqilg'i nazorati",
@@ -313,5 +317,48 @@
     "refuelTime": "Sana",
     "emptyHint": "Bu davrda reys ham, quyish ham qayd etilmagan",
     "journalEmptyHint": "Quyishlarni qo'lda kiriting yoki AI chek o'qishi bilan (8-bosqich)"
+  },
+  "alerts": {
+    "title": "Ogohlantirishlar markazi",
+    "subtitle": "Diqqat talab qiladigan holatlar — eng muhimi yuqorida",
+    "total": "Jami",
+    "open": "Ochish",
+    "allClear": "Ogohlantirish yo'q",
+    "allClearHint": "Hujjat muddatlari, TO, to‘lovlar va normalar — hammasi joyida",
+    "noneInFilter": "Bu filtrda ogohlantirish yo‘q",
+    "severity": {
+      "CRITICAL": "Kritik",
+      "WARNING": "Ogohlantirish",
+      "INFO": "Ma'lumot"
+    },
+    "docTypes": {
+      "insurance": "Sug'urta",
+      "techInspection": "Texko'rik",
+      "license": "Guvohnoma"
+    },
+    "messages": {
+      "DOCUMENT_EXPIRING": "{{docType}} muddati {{days}} kundan keyin tugaydi",
+      "SERVICE_DUE": "Texnik xizmatgacha {{remainingKm}} km qoldi",
+      "FUEL_OVERRUN": "Yoqilg'i normadan {{diff}} oshdi — zarar {{loss}} so'm",
+      "PAYMENT_OVERDUE": "To'lov {{daysLate}} kun kechikdi — {{amount}} so'm",
+      "VEHICLE_SILENT": "{{hours}} soatdan beri signal yo'q",
+      "ROUTE_DEVIATION": "Marshrutdan {{deviationKm}} km chetga chiqdi",
+      "BREAKDOWN": "Haydovchi nosozlik haqida xabar berdi"
+    }
+  },
+  "maintenance": {
+    "title": "Texnik xizmat",
+    "new": "Yangi yozuv",
+    "type": "Turi",
+    "odometer": "Probeg (km)",
+    "cost": "Narxi",
+    "serviceName": "Servis",
+    "serviceDate": "Sana",
+    "nextServiceOdometer": "Keyingi TO (km)",
+    "description": "Izoh",
+    "types": {
+      "PLANNED_TO": "Rejali TO",
+      "REPAIR": "Ta'mir"
+    }
   }
 }

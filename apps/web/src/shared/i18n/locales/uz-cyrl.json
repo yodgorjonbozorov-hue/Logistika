@@ -17,7 +17,8 @@
     "map": "Харита",
     "menu": "Меню",
     "dashboard": "Бошқарув панели",
-    "fuel": "Ёқилғи"
+    "fuel": "Ёқилғи",
+    "alerts": "Огоҳлантиришлар"
   },
   "auth": {
     "loginTitle": "Тизимга кириш",
@@ -282,7 +283,10 @@
     "monthInProfit": "Фойдали ой",
     "monthInLoss": "Зарарли ой",
     "chartScale": "Шкала",
-    "profitChartAria": "Охирги {{count}} ой бўйича соф фойда диаграммаси"
+    "profitChartAria": "Охирги {{count}} ой бўйича соф фойда диаграммаси",
+    "alerts": "Огоҳлантиришлар",
+    "alertsTotal": "Жами",
+    "noAlerts": "Ҳаммаси жойида"
   },
   "fuel": {
     "title": "Ёқилғи назорати",
@@ -313,5 +317,48 @@
     "refuelTime": "Сана",
     "emptyHint": "Бу даврда рейс ҳам, қуйиш ҳам қайд этилмаган",
     "journalEmptyHint": "Қуйишларни қўлда киритинг ёки AI чек ўқиши билан (8-босқич)"
+  },
+  "alerts": {
+    "title": "Огоҳлантиришлар маркази",
+    "subtitle": "Диққат талаб қиладиган ҳолатлар — энг муҳими юқорида",
+    "total": "Жами",
+    "open": "Очиш",
+    "allClear": "Огоҳлантириш йўқ",
+    "allClearHint": "Ҳужжат муддатлари, ТО, тўловлар ва нормалар — ҳаммаси жойида",
+    "noneInFilter": "Бу филтрда огоҳлантириш йўқ",
+    "severity": {
+      "CRITICAL": "Критик",
+      "WARNING": "Огоҳлантириш",
+      "INFO": "Маълумот"
+    },
+    "docTypes": {
+      "insurance": "Суғурта",
+      "techInspection": "Техкўрик",
+      "license": "Гувоҳнома"
+    },
+    "messages": {
+      "DOCUMENT_EXPIRING": "{{docType}} муддати {{days}} кундан кейин тугайди",
+      "SERVICE_DUE": "Техник хизматгача {{remainingKm}} км қолди",
+      "FUEL_OVERRUN": "Ёқилғи нормадан {{diff}} ошди — зарар {{loss}} сўм",
+      "PAYMENT_OVERDUE": "Тўлов {{daysLate}} кун кечикди — {{amount}} сўм",
+      "VEHICLE_SILENT": "{{hours}} соатдан бери сигнал йўқ",
+      "ROUTE_DEVIATION": "Маршрутдан {{deviationKm}} км четга чиқди",
+      "BREAKDOWN": "Ҳайдовчи носозлик ҳақида хабар берди"
+    }
+  },
+  "maintenance": {
+    "title": "Техник хизмат",
+    "new": "Янги ёзув",
+    "type": "Тури",
+    "odometer": "Пробег (км)",
+    "cost": "Нархи",
+    "serviceName": "Сервис",
+    "serviceDate": "Сана",
+    "nextServiceOdometer": "Кейинги ТО (км)",
+    "description": "Изоҳ",
+    "types": {
+      "PLANNED_TO": "Режали ТО",
+      "REPAIR": "Таъмир"
+    }
   }
 }

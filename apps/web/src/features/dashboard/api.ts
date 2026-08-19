@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { FinanceSummaryView, FuelControlView, LiveStatus } from 'shared';
+import type { AlertsView, FinanceSummaryView, LiveStatus } from 'shared';
 import { api } from '../../shared/api/client';
 
 export interface RecentEvent {
@@ -43,10 +43,11 @@ export function useLiveFleet() {
   });
 }
 
-/** The dashboard's alert count until the alerts centre (W-10) lands. */
-export function useFuelAlerts() {
+/** The W-10 feed, summarised into the dashboard's sixth card. */
+export function useAlertCounts() {
   return useQuery({
-    queryKey: ['fuel', 'control', {}],
-    queryFn: async () => (await api<FuelControlView>('/fuel/control')).data,
+    queryKey: ['alerts'],
+    queryFn: async () => (await api<AlertsView>('/alerts')).data,
+    refetchInterval: 60_000,
   });
 }

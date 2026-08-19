@@ -206,7 +206,14 @@ Prefiks: `/api/v1`. Ro'yxatlar: `?page=&limit=&sort=` → `meta.pagination`.
 
 ### maintenance
 
-- `GET/POST /maintenance` · `PATCH /maintenance/:id`
+- `GET /maintenance?vehicleId=` · `POST /maintenance` · `PATCH/DELETE /maintenance/:id`
+  (yozuvdagi `nextServiceOdometer` mashina kartochkasiga ham yoziladi — W-10 shuni o'qiydi)
+
+### alerts (W-10)
+
+- `GET /alerts` — o'qish paytida hisoblanadi (alohida jadval yo'q): hujjat muddatlari
+  (15/7/1 kun), TO yaqinlashuvi, to'lov kechikishi, signalsizlik, marshrutdan chetlash,
+  nosozlik, yoqilg'i normadan oshishi. Javob kod + parametr (matn klientda tarjima qilinadi)
 - `GET /maintenance/upcoming` — TO vaqti kelganlar
 
 ### documents

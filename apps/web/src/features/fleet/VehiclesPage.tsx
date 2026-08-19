@@ -23,11 +23,13 @@ import {
 } from '../../shared/ui';
 import { formatDate } from '../../shared/utils/date';
 import { dateInputToIso } from '../../shared/utils/date';
+import { MaintenanceModal } from './MaintenanceModal';
 
 export function VehiclesPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const [service, setService] = useState<Vehicle | null>(null);
   const { data, isLoading, error } = useList<Vehicle>('vehicles', page);
   const { remove } = useCrudMutations('vehicles');
 
@@ -77,19 +79,24 @@ export function VehiclesPage() {
                 <Cell numeric>{vehicle.currentOdometer ?? '—'}</Cell>
                 <Cell className="text-ink-secondary">{formatDate(vehicle.insuranceExpiry)}</Cell>
                 <Cell>
-                  {vehicle.isActive && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-danger"
-                      onClick={() =>
-                        window.confirm(t('common.confirmDeactivate')) &&
-                        void remove.mutateAsync(vehicle.id)
-                      }
-                    >
-                      {t('common.deactivate')}
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setService(vehicle)}>
+                      {t('maintenance.title')}
                     </Button>
-                  )}
+                    {vehicle.isActive && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-danger"
+                        onClick={() =>
+                          window.confirm(t('common.confirmDeactivate')) &&
+                          void remove.mutateAsync(vehicle.id)
+                        }
+                      >
+                        {t('common.deactivate')}
+                      </Button>
+                    )}
+                  </div>
                 </Cell>
               </Row>
             ))}
@@ -98,6 +105,14 @@ export function VehiclesPage() {
         </>
       )}
       <VehicleFormModal open={showForm} onClose={() => setShowForm(false)} />
+      {service ? (
+        <MaintenanceModal
+          vehicleId={service.id}
+          plateNumber={service.plateNumber}
+          open
+          onClose={() => setService(null)}
+        />
+      ) : null}
     </div>
   );
 }

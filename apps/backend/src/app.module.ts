@@ -9,6 +9,7 @@ import { ApiResponseInterceptor } from './common/interceptors/api-response.inter
 import { validateEnv } from './config/env.validation';
 import { HealthController } from './health.controller';
 import { I18nModule } from './i18n/i18n.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
@@ -19,6 +20,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
 import { FilesModule } from './modules/files/files.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { FuelModule } from './modules/fuel/fuel.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { PublicLinkModule } from './modules/public-link/public-link.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { TripsModule } from './modules/trips/trips.module';
@@ -45,6 +47,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ExpensesModule,
     FinanceModule,
     FuelModule,
+    MaintenanceModule,
+    AlertsModule,
     FilesModule,
     PublicLinkModule,
   ],

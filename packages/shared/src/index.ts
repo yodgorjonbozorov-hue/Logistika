@@ -239,6 +239,50 @@ export interface FuelControlView {
   totalLossTiyin: MoneyTiyin;
 }
 
+// ---------- Alerts (W-10) ----------
+
+/**
+ * The API sends a code and its parameters, never a sentence — the client
+ * renders the text in the user's language, exactly like error codes.
+ */
+export enum AlertType {
+  DOCUMENT_EXPIRING = 'DOCUMENT_EXPIRING',
+  SERVICE_DUE = 'SERVICE_DUE',
+  FUEL_OVERRUN = 'FUEL_OVERRUN',
+  PAYMENT_OVERDUE = 'PAYMENT_OVERDUE',
+  VEHICLE_SILENT = 'VEHICLE_SILENT',
+  ROUTE_DEVIATION = 'ROUTE_DEVIATION',
+  BREAKDOWN = 'BREAKDOWN',
+}
+
+export enum AlertSeverity {
+  CRITICAL = 'CRITICAL',
+  WARNING = 'WARNING',
+  INFO = 'INFO',
+}
+
+export type AlertEntityKind = 'vehicle' | 'driver' | 'trip' | 'client' | 'income';
+
+export interface AlertView {
+  /** Stable across refreshes: type + subject, so the UI can key on it. */
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  /** Plate number, driver name or client name — what the alert is about. */
+  subject: string;
+  entity: { kind: AlertEntityKind; id: string };
+  /** The deadline or the moment that triggered it, when there is one. */
+  at?: string;
+  /** Values the client interpolates into the translated sentence. */
+  params: Record<string, string | number>;
+}
+
+export interface AlertsView {
+  generatedAt: string;
+  counts: { CRITICAL: number; WARNING: number; INFO: number; total: number };
+  items: AlertView[];
+}
+
 // ---------- i18n ----------
 
 export const LOCALES = ['uz-latn', 'uz-cyrl', 'ru'] as const;

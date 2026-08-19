@@ -17,7 +17,8 @@
     "map": "Карта",
     "menu": "Меню",
     "dashboard": "Панель управления",
-    "fuel": "Топливо"
+    "fuel": "Топливо",
+    "alerts": "Уведомления"
   },
   "auth": {
     "loginTitle": "Вход в систему",
@@ -282,7 +283,10 @@
     "monthInProfit": "Прибыльный месяц",
     "monthInLoss": "Убыточный месяц",
     "chartScale": "Шкала",
-    "profitChartAria": "Диаграмма чистой прибыли за последние {{count}} мес."
+    "profitChartAria": "Диаграмма чистой прибыли за последние {{count}} мес.",
+    "alerts": "Уведомления",
+    "alertsTotal": "Всего",
+    "noAlerts": "Всё в порядке"
   },
   "fuel": {
     "title": "Контроль топлива",
@@ -313,5 +317,48 @@
     "refuelTime": "Дата",
     "emptyHint": "За этот период нет ни рейсов, ни заправок",
     "journalEmptyHint": "Вносите заправки вручную или через распознавание чеков (этап 8)"
+  },
+  "alerts": {
+    "title": "Центр уведомлений",
+    "subtitle": "Что требует внимания — самое важное сверху",
+    "total": "Всего",
+    "open": "Открыть",
+    "allClear": "Уведомлений нет",
+    "allClearHint": "Сроки документов, ТО, платежи и нормы — всё в порядке",
+    "noneInFilter": "В этом фильтре уведомлений нет",
+    "severity": {
+      "CRITICAL": "Критично",
+      "WARNING": "Предупреждение",
+      "INFO": "Информация"
+    },
+    "docTypes": {
+      "insurance": "Страховка",
+      "techInspection": "Техосмотр",
+      "license": "Права"
+    },
+    "messages": {
+      "DOCUMENT_EXPIRING": "Срок «{{docType}}» истекает через {{days}} дн.",
+      "SERVICE_DUE": "До техобслуживания осталось {{remainingKm}} км",
+      "FUEL_OVERRUN": "Расход выше нормы на {{diff}} — убыток {{loss}} сум",
+      "PAYMENT_OVERDUE": "Платёж просрочен на {{daysLate}} дн. — {{amount}} сум",
+      "VEHICLE_SILENT": "Нет сигнала уже {{hours}} ч",
+      "ROUTE_DEVIATION": "Отклонение от маршрута на {{deviationKm}} км",
+      "BREAKDOWN": "Водитель сообщил о поломке"
+    }
+  },
+  "maintenance": {
+    "title": "Техобслуживание",
+    "new": "Новая запись",
+    "type": "Тип",
+    "odometer": "Пробег (км)",
+    "cost": "Стоимость",
+    "serviceName": "Сервис",
+    "serviceDate": "Дата",
+    "nextServiceOdometer": "Следующее ТО (км)",
+    "description": "Примечание",
+    "types": {
+      "PLANNED_TO": "Плановое ТО",
+      "REPAIR": "Ремонт"
+    }
   }
 }

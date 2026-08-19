@@ -6,6 +6,7 @@ import { useAuth } from '../shared/auth/AuthContext';
 import { setLocale } from '../shared/i18n';
 import { useTheme } from '../shared/theme';
 import {
+  IconAlert,
   IconBriefcase,
   IconClose,
   IconGrid,
@@ -46,6 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clients', key: 'nav.clients', Icon: IconBriefcase },
   { to: '/finance', key: 'nav.finance', Icon: IconWallet, roles: FINANCE_ROLES },
   { to: '/fuel', key: 'nav.fuel', Icon: IconSparkles },
+  { to: '/alerts', key: 'nav.alerts', Icon: IconAlert },
 ];
 
 /** Only what this role may open — the API enforces the same list. */

@@ -3,6 +3,7 @@ import { UserRole } from 'shared';
 import { useAuth } from '../shared/auth/AuthContext';
 import { Spinner } from '../shared/ui';
 import { LoginPage } from '../features/auth/LoginPage';
+import { AlertsPage } from '../features/alerts/AlertsPage';
 import { ClientsPage } from '../features/clients/ClientsPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { DriversPage } from '../features/drivers/DriversPage';
@@ -41,6 +42,7 @@ export function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/finance" element={<FinancePage />} />
           <Route path="/fuel" element={<FuelPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
