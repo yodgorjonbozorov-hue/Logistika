@@ -9,6 +9,18 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Vercel Function entry'lari — CommonJS, Node global'lari bilan.
+    files: ['apps/*/api/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' },
+    },
+    rules: {
+      // CommonJS shim — bu yerda `require` aynan maqsadli ishlatiladi.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     rules: {
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],

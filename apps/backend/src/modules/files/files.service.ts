@@ -33,12 +33,15 @@ export class FilesService {
     config: ConfigService,
   ) {
     this.bucket = config.get<string>('MINIO_BUCKET') ?? 'truckcontrol';
+    // The client speaks plain S3, so these settings point at MinIO in dev and at
+    // any managed S3-compatible bucket (R2, Supabase, AWS) in production.
     this.client = new Minio.Client({
       endPoint: config.get<string>('MINIO_ENDPOINT') ?? 'localhost',
       port: Number(config.get<string>('MINIO_PORT') ?? 9000),
       useSSL: config.get<string>('MINIO_USE_SSL') === 'true',
       accessKey: config.get<string>('MINIO_ROOT_USER') ?? 'truckcontrol',
       secretKey: config.get<string>('MINIO_ROOT_PASSWORD') ?? '',
+      region: config.get<string>('MINIO_REGION'),
     });
   }
 

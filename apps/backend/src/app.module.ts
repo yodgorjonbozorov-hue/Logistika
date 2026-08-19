@@ -13,6 +13,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CompaniesModule } from './modules/companies/companies.module';
+import { CronModule } from './modules/cron/cron.module';
 import { DriversModule } from './modules/drivers/drivers.module';
 import { EventsModule } from './modules/events/events.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
@@ -40,6 +41,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TripsModule,
     EventsModule,
     TrackingModule,
+    CronModule,
     ExpensesModule,
     FilesModule,
     PublicLinkModule,

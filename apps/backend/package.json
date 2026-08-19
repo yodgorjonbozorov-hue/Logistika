@@ -2,11 +2,12 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI — NestJS API",
+  "description": "TruckControl AI \u2014 NestJS API",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
+    "db:deploy": "prisma migrate deploy",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.json",

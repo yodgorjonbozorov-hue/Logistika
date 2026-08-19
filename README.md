@@ -21,6 +21,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/TZ.md`](docs/TZ.md)                     | Texnik topshiriq — barcha talablar manbasi |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md)             | Vercel'ga deploy (backend + web)           |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek
@@ -35,7 +36,7 @@ apps/backend/      NestJS API (Prisma, BullMQ, AI)
 apps/web/          React web (logist + boshliq)
 packages/shared/   Umumiy TS tiplari (API kontrakt)
 mobile/            Flutter haydovchi ilovasi
-docs/              TZ, arxitektura, roadmap
+docs/              TZ, arxitektura, roadmap, deploy
 ```
 
 ## Ishga tushirish (dev)

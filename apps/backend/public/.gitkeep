@@ -1,0 +1,2 @@
+The API project ships no static files, but Vercel still expects an output
+directory to exist. Every request is served by the function in ../api/index.js.

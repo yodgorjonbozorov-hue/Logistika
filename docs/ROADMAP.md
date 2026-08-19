@@ -118,6 +118,20 @@ Claude Design'dan kelgan handoff (`Truck Control App.dc.html`, `Landing.dc.html`
 > Cheklov: `documents` ro'yxat endpoint'i hali yo'q (7-bosqich) — Hujjatlar ekrani va reys
 > kartochkasidagi «Hujjatlar»/«Izohlar» tablari dizayn bo'yicha bo'sh holatda turibdi.
 
+## 6.6-bosqich — Vercel deploy ✅
+
+- [x] Backend `apps/backend/api/index.js` + `src/serverless.ts` orqali bitta Vercel
+      Function'da ishlaydi (Nest ilovasi issiq instansiyalar orasida keshlanadi)
+- [x] `apps/backend/vercel.json` va `apps/web/vercel.json` — build, rewrite,
+      SPA fallback, aktiv keshlash va xavfsizlik sarlavhalari
+- [x] Serverless'da taymer yo'q — GPS arxivlash `GET /api/v1/cron/archive-gps`
+      orqali ochilgan, `CronGuard` (CRON_SECRET) bilan himoyalangan, Vercel Cron chaqiradi
+- [x] CORS bir nechta origin va `.vercel.app` preview deploylarini qo'llab-quvvatlaydi
+- [x] Prisma serverless engine (`rhel-openssl-3.0.x`) + bazaviy migratsiya
+      (`prisma/migrations/20260819000000_init`)
+- [x] Fayl saqlash tashqi S3-mos xizmatga (R2 / S3 / Supabase) yo'naltiriladi
+- [x] `docs/DEPLOY.md` — bosqichma-bosqich qo'llanma va cheklovlar ro'yxati
+
 ## 7-bosqich — Moliya yadrosi
 
 - [ ] `finance`: TZ §6 formulalari — reys foydasi, amortizatsiya, 1 km tannarxi, ROI

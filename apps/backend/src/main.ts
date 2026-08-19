@@ -1,19 +1,12 @@
 import './common/serialization';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { createApp } from './create-app';
 
+/** Long-running server entry (local dev, Docker). Vercel uses `serverless.ts`. */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
-  const config = app.get(ConfigService);
-
-  app.setGlobalPrefix('api/v1');
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: config.getOrThrow<string>('WEB_URL'), credentials: true });
+  const app = await createApp();
   app.enableShutdownHooks();
-
-  await app.listen(config.getOrThrow<number>('API_PORT'));
+  await app.listen(app.get(ConfigService).getOrThrow<number>('API_PORT'));
 }
 
 void bootstrap();

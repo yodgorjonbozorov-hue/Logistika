@@ -1,12 +1,28 @@
-import { HttpStatus, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { AppException } from '../common/exceptions/app.exception';
 import { tenantExtension } from './tenant.extension';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrismaService.name);
+
+  /**
+   * Warms the pool at start-up, but never blocks it. Prisma connects lazily on
+   * the first query anyway, and on a serverless platform a database that is
+   * briefly unreachable would otherwise fail every cold start instead of a
+   * single request.
+   */
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    try {
+      await this.$connect();
+    } catch (error) {
+      this.logger.error(
+        `Initial database connection failed, will retry on first query: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

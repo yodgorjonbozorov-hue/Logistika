@@ -51,6 +51,20 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   DEFAULT_TIMEZONE = 'Asia/Tashkent';
+
+  /** Extra origin family allowed by CORS, e.g. `.vercel.app` preview builds. */
+  @IsOptional()
+  @IsString()
+  WEB_PREVIEW_SUFFIX?: string;
+
+  /**
+   * Shared secret the platform scheduler presents on `/cron/*`. Serverless
+   * deployments need it; without it those endpoints stay closed.
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  CRON_SECRET?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

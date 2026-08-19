@@ -25,6 +25,9 @@ pnpm-debug.log*
 # Prisma
 apps/backend/prisma/*.db
 
+# Vercel CLI
+.vercel/
+
 # Docker volume'lar (lokal)
 .docker-data/
 
