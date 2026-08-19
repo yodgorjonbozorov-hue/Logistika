@@ -70,6 +70,20 @@ noto'g'ri sozlangan deploy ularni ochib qo'ymaydi.
 > productionda ikki barobar yomon: haydovchilar kod ololmaydi, kod esa deploy
 > loglarida ochiq turadi. Productionga chiqishdan oldin albatta to'ldiring.
 
+**Install buyrug'i nega shunday** (`cd ../.. && pnpm install --frozen-lockfile --prod=false`)
+
+Ikkita tuzoq bir qatorda hal qilinadi — ikkalasi ham real deployda yiqilishga
+olib kelgan:
+
+1. Vercel buyruqlarni **Root Directory** ichida ishga tushiradi. Workspace
+   paketi ichidagi oddiy `pnpm install` faqat o'sha paketning bog'liqliklarini
+   o'rnatadi, natijada `packages/shared` da `tsc` bo'lmaydi. Shuning uchun
+   ildizga chiqib o'rnatiladi.
+2. Vercel build vaqtida `NODE_ENV=production` qo'yadi, pnpm esa bunda
+   **devDependencies'ni o'tkazib yuboradi** — `typescript`, `@nestjs/cli` va
+   `prisma` aynan o'sha yerda. `--prod=false` ularni majburan o'rnatadi.
+   Log'dagi belgisi: `devDependencies: skipped because NODE_ENV is set to production`.
+
 **Build nima qiladi** (`apps/backend/vercel.json`):
 
 ```
@@ -160,9 +174,23 @@ DATABASE_URL="postgresql://…" pnpm --filter backend db:deploy
 Tekshirish:
 
 ```bash
-curl https://api.truckcontrol.uz/api/v1/health
+curl https://<api-domen>/api/v1/health
 # {"success":true,"data":{"status":"ok"},"error":null,"meta":null}
 ```
+
+### Joriy deploy (2026-08-19)
+
+| Loyiha | Vercel nomi            | Production URL                          |
+| ------ | ---------------------- | --------------------------------------- |
+| API    | `truck-control-ai-api` | https://truck-control-ai-api.vercel.app |
+| Web    | `truck-control-ai-web` | https://truck-control-ai-web.vercel.app |
+
+> **Diqqat:** `DATABASE_URL` hozircha `REPLACE_ME` placeholder'i. Ilova
+> ko'tariladi va `/health`, autentifikatsiya guard'lari, CORS hamda cron
+> himoyasi ishlaydi, lekin bazaga tegadigan har bir endpoint (login, reyslar,
+> moliya…) `500` qaytaradi. Real pooled Postgres URL'ini qo'yib, backend'ni
+> qayta deploy qilgach hammasi ishlaydi. Fayl saqlash uchun `MINIO_*`
+> o'zgaruvchilari ham hali qo'yilmagan.
 
 ## 6. Nimalarni bilib qo'yish kerak
 
