@@ -25,6 +25,7 @@ firmalari (5–40 texnika) uchun SaaS.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Arxitektura, modullar, API, qarorlar       |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md)           | 9 bosqichli reja, joriy holat              |
 | [`docs/DESIGN.md`](docs/DESIGN.md)             | Logixa AI dizayn tizimi (token, komponent) |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md)             | Production deploy (Docker Compose, HTTPS)  |
 | [`CLAUDE.md`](CLAUDE.md)                       | Ishlab chiqish qoidalari                   |
 
 ## Texnik stek
@@ -50,5 +51,14 @@ cp .env.example .env      # qiymatlarni to'ldiring
 pnpm install
 pnpm dev                  # backend + web
 ```
+
+## Ishga tushirish (production)
+
+```bash
+cp .env.production.example .env.production   # kalitlarni to'ldiring
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+Migratsiyalar, birinchi superadmin, HTTPS va backup — [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 Batafsil — [`CLAUDE.md`](CLAUDE.md).

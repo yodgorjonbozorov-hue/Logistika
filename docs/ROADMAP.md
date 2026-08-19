@@ -144,8 +144,11 @@
 - [ ] Haydovchi reytingi (kechikish, yoqilg'i farqi, nosozlik) — E-7 va W-6
 - [ ] i18n to'liq: uz-cyrl va ru tarjimalari (web, mobil, backend xabarlari)
 - [ ] Marshrutdan chetlash va «2+ soat qimirlamadi» ogohlantirishlari jonli
-- [ ] Production Docker Compose (backend, web, nginx, backup cron), HTTPS
-- [ ] Kunlik zaxira nusxa + tiklash tekshiruvi
+- [x] Production Docker Compose (backend, web, nginx, backup cron), HTTPS —
+      `docker-compose.prod.yml`, `apps/*/Dockerfile`, `deploy/`, `docs/DEPLOY.md`;
+      boshlang'ich Prisma migratsiyasi va birinchi superadmin bootstrap'i bilan
+- [ ] Kunlik zaxira nusxa + tiklash tekshiruvi — avtomatik `pg_dump` (retention bilan)
+      qo'shildi; tiklash real serverda sinovdan o'tkazilishi kerak
 - [ ] Xavfsizlik auditi: tenant-izolyatsiya, RBAC, audit-log, shifrlangan saqlash (TZ §9)
 - [ ] Seed/demo ma'lumotlar, pilot firma onboarding qo'llanmasi (TZ §12.2 — 2 firma, 2 oy bepul)
 - [ ] E2E smoke: reys ochish → haydovchi 10 tugma → xaritada ko'rinadi → chek foto → AI-2 →

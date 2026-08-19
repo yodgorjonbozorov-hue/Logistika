@@ -1,0 +1,32 @@
+# Optional: MinIO on its own subdomain, for when the documents UI starts
+# handing signed file URLs to the browser (7-bosqich). Mount it next to the app
+# template and add ${S3_SERVER_NAME} to the certificate:
+#   - ./deploy/nginx/s3.conf.template:/etc/nginx/templates/s3.conf.template:ro
+# Then set MINIO_ENDPOINT=${S3_SERVER_NAME}, MINIO_PORT=443, MINIO_USE_SSL=true
+# and add https://${S3_SERVER_NAME} to CSP_EXTRA.
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${S3_SERVER_NAME};
+
+    ssl_certificate     /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Uploads go through the API, but keep headroom for large objects.
+    client_max_body_size 100m;
+
+    location / {
+        proxy_pass http://minio:9000;
+        proxy_http_version 1.1;
+        # The signature covers the Host header — pass it through untouched.
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+}

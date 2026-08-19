@@ -1,0 +1,139 @@
+# Production stack — Logixa AI (TruckControl AI).
+#
+#   cp .env.production.example .env.production   # fill in real values
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Only the web container publishes ports; Postgres, Redis and MinIO stay on the
+# internal network. Details and the TLS steps: docs/DEPLOY.md.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    # Console on the host loopback only — reach it over an SSH tunnel.
+    ports:
+      - '127.0.0.1:9001:9001'
+    healthcheck:
+      test: ['CMD-SHELL', 'mc ready local || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    expose:
+      - '3000'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Same origin — nginx proxies /api/v1 to the backend.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ${SERVER_NAME}
+      BACKEND_UPSTREAM: backend:3000
+      # Extra origins the browser may load images from / connect to (e.g. the
+      # MinIO subdomain once documents are surfaced in the UI).
+      CSP_EXTRA: ${CSP_EXTRA:-}
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Swap NGINX_TEMPLATE to app-tls.conf.template after certbot has issued
+      # the certificates — see docs/DEPLOY.md.
+      - ./deploy/nginx/${NGINX_TEMPLATE:-app.conf.template}:/etc/nginx/templates/app.conf.template:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot
+
+  # One-shot, run by hand: issue or renew certificates.
+  #   docker compose -f docker-compose.prod.yml --profile certbot run --rm certbot
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ['certbot']
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      sh -c "certbot certonly --webroot -w /var/www/certbot
+      -d ${SERVER_NAME} --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email
+      --keep-until-expiring"
+
+  # Nightly pg_dump into a volume, with retention. Restore steps: docs/DEPLOY.md.
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-22}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./deploy/backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - backups:/backups
+    entrypoint: ['/bin/sh', '/usr/local/bin/backup.sh']
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  backups:
+  certbot-conf:
+  certbot-www:

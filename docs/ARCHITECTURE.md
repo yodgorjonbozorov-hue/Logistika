@@ -10,7 +10,10 @@ Logistika/
 ├── CLAUDE.md                  # Claude uchun ish qoidalari
 ├── README.md
 ├── docker-compose.yml         # postgres, redis, minio (dev-infra)
+├── docker-compose.prod.yml    # production stack (backend, web/nginx, backup)
+├── deploy/                    # nginx shablonlari, backend entrypoint, backup skripti
 ├── .env.example
+├── .env.production.example
 ├── package.json               # root: pnpm workspaces, umumiy skriptlar
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json         # umumiy TS sozlamalari
@@ -19,6 +22,8 @@ Logistika/
 ├── docs/
 │   ├── TZ.md                  # texnik topshiriq v1.0 — manba hujjat
 │   ├── ARCHITECTURE.md        # ushbu fayl
+│   ├── DESIGN.md              # Logixa AI dizayn tizimi
+│   ├── DEPLOY.md              # production deploy qo'llanmasi
 │   └── ROADMAP.md             # 9 bosqichli reja
 ├── apps/
 │   ├── backend/               # NestJS API
