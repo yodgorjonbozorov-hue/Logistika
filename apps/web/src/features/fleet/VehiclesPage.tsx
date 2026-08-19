@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VehicleType } from 'shared';
 import type { Vehicle } from '../../shared/api/entities';
-import { useCrudMutations, useList } from '../../shared/api/crud';
+import { useCrudMutations, useDebounced, useList } from '../../shared/api/crud';
 import {
   Badge,
   Button,
@@ -15,6 +15,7 @@ import {
   PageHeader,
   Pagination,
   Row,
+  SearchInput,
   Select,
   Spinner,
   Table,
@@ -25,9 +26,18 @@ import { dateInputToIso } from '../../shared/utils/date';
 export function VehiclesPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounced(search);
   const [showForm, setShowForm] = useState(false);
-  const { data, isLoading, error } = useList<Vehicle>('vehicles', page);
+  const { data, isLoading, error } = useList<Vehicle>(
+    'vehicles',
+    page,
+    debouncedSearch ? { search: debouncedSearch } : undefined,
+  );
   const { remove } = useCrudMutations('vehicles');
+
+  // A filtered result set is shorter; staying on page 7 would show nothing.
+  useEffect(() => setPage(1), [debouncedSearch]);
 
   const vehicles = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
@@ -36,7 +46,12 @@ export function VehiclesPage() {
     <div>
       <PageHeader
         title={t('vehicles.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('vehicles.new')}</Button>}
+        actions={
+          <>
+            <SearchInput value={search} onChange={setSearch} placeholder={t('common.search')} />
+            <Button onClick={() => setShowForm(true)}>+ {t('vehicles.new')}</Button>
+          </>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (

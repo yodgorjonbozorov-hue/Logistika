@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useCrudMutations, useList } from '../../shared/api/crud';
+import { useCrudMutations, useDebounced, useList } from '../../shared/api/crud';
 import type { Client } from '../../shared/api/entities';
 import {
   Button,
@@ -13,6 +13,7 @@ import {
   PageHeader,
   Pagination,
   Row,
+  SearchInput,
   Spinner,
   Table,
 } from '../../shared/ui';
@@ -21,8 +22,17 @@ import { formatTiyin } from '../../shared/utils/money';
 export function ClientsPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounced(search);
   const [showForm, setShowForm] = useState(false);
-  const { data, isLoading, error } = useList<Client>('clients', page);
+  const { data, isLoading, error } = useList<Client>(
+    'clients',
+    page,
+    debouncedSearch ? { search: debouncedSearch } : undefined,
+  );
+
+  // A filtered result set is shorter; staying on page 7 would show nothing.
+  useEffect(() => setPage(1), [debouncedSearch]);
 
   const clients = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
@@ -31,7 +41,12 @@ export function ClientsPage() {
     <div>
       <PageHeader
         title={t('clients.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('clients.new')}</Button>}
+        actions={
+          <>
+            <SearchInput value={search} onChange={setSearch} placeholder={t('common.search')} />
+            <Button onClick={() => setShowForm(true)}>+ {t('clients.new')}</Button>
+          </>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (

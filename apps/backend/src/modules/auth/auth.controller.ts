@@ -1,7 +1,20 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
-import type { CurrentUserPayload } from 'shared';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
+import type { AuthTokens, CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { AppException } from '../../common/exceptions/app.exception';
 import {
   PhoneRateLimit,
   PhoneRateLimitGuard,
@@ -15,12 +28,14 @@ import { DriverAuthService } from './driver-auth.service';
 import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { clearRefreshCookie, REFRESH_COOKIE, setRefreshCookie } from './refresh-cookie';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly driverAuthService: DriverAuthService,
+    private readonly config: ConfigService,
   ) {}
 
   @Public()
@@ -38,36 +53,81 @@ export class AuthController {
   @Post('driver/verify')
   @ThrottleSmsVerify()
   @HttpCode(HttpStatus.OK)
-  verifyCode(@Body() dto: VerifyCodeDto) {
-    return this.driverAuthService.verify(dto.phone, dto.code);
+  async verifyCode(
+    @Body() dto: VerifyCodeDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthTokens> {
+    return this.issue(await this.driverAuthService.verify(dto.phone, dto.code), response);
   }
 
   @Public()
   @Post('login')
   @ThrottleLogin()
   @HttpCode(HttpStatus.OK)
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.identifier, dto.password);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthTokens> {
+    return this.issue(await this.authService.login(dto.identifier, dto.password), response);
   }
 
   @Public()
   @Post('refresh')
   @ThrottleRefresh()
   @HttpCode(HttpStatus.OK)
-  refresh(@Body() dto: RefreshDto) {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(
+    @Body() dto: RefreshDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthTokens> {
+    return this.issue(await this.authService.refresh(this.readToken(dto, request)), response);
   }
 
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Body() dto: RefreshDto) {
-    await this.authService.logout(dto.refreshToken);
+  async logout(
+    @Body() dto: RefreshDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    await this.authService.logout(this.readToken(dto, request));
+    clearRefreshCookie(response, this.isProduction);
     return { loggedOut: true };
   }
 
   @Get('me')
   me(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.me(user.userId);
+  }
+
+  private get isProduction(): boolean {
+    return this.config.get<string>('NODE_ENV') === 'production';
+  }
+
+  /**
+   * Browsers get the refresh token as an httpOnly cookie; native clients read
+   * it from the body. Both are issued so one backend serves both without a
+   * per-client branch (H-16).
+   */
+  private issue(tokens: AuthTokens, response: Response): AuthTokens {
+    setRefreshCookie(response, tokens.refreshToken, {
+      isProduction: this.isProduction,
+      ttl: this.config.getOrThrow<string>('JWT_REFRESH_TTL'),
+    });
+    return tokens;
+  }
+
+  /**
+   * The cookie wins over the body: a browser session should not be steerable by
+   * whatever a script managed to put in the request payload.
+   */
+  private readToken(dto: RefreshDto, request: Request): string {
+    const cookies = (request as Request & { cookies?: Record<string, string> }).cookies;
+    const token = cookies?.[REFRESH_COOKIE] ?? dto.refreshToken;
+    if (!token) {
+      throw new AppException('AUTH_REFRESH_INVALID', HttpStatus.UNAUTHORIZED);
+    }
+    return token;
   }
 }

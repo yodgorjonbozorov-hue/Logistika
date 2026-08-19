@@ -1,0 +1,189 @@
+# Production compose: API + PostgreSQL + Redis + MinIO behind nginx.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# The web app is deployed separately (Vercel — apps/web/vercel.json). Use this
+# file when the frontend is self-hosted too: uncomment the `web` service and the
+# nginx site that serves it.
+#
+# MIGRATIONS ARE A SEPARATE ONE-SHOT SERVICE (`migrate`) that runs to completion
+# before the API starts. They must never run on every replica's boot: two
+# instances applying the same migration is how a deploy corrupts a schema.
+
+name: truckcontrol
+
+x-postgres-env: &postgres-env
+  POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+
+x-api-env: &api-env
+  NODE_ENV: production
+  API_PORT: 3000
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+  REDIS_URL: redis://redis:6379
+  WEB_URL: ${WEB_URL:?set WEB_URL (https:// origin)}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET (32+ chars)}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET (32+ chars)}
+  JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+  JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: 9000
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+  MINIO_BUCKET: ${MINIO_BUCKET:-truckcontrol}
+  MINIO_USE_SSL: 'false'
+  # nginx is the only hop in front of the API.
+  TRUST_PROXY: 1
+  SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
+  SMS_PROVIDER_TOKEN: ${SMS_PROVIDER_TOKEN:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      <<: *postgres-env
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # Not published: only the compose network reaches the database.
+    expose:
+      - '5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: &logging
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    volumes:
+      - redis-data:/data
+    expose:
+      - '6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    expose:
+      - '9000'
+      - '9001'
+    healthcheck:
+      test: ['CMD-SHELL', 'mc ready local || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  # One-shot: applies pending migrations, then exits. `api` waits for it.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: truckcontrol-api:${IMAGE_TAG:-latest}
+    restart: 'no'
+    environment: *api-env
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: truckcontrol-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment: *api-env
+    expose:
+      - '3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:3000/api/v1/health/ready || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+    logging: *logging
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  # Nightly encrypted backup with retention (see deploy/backup.sh).
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?set BACKUP_PASSPHRASE}
+      BACKUP_S3_TARGET: ${BACKUP_S3_TARGET:-}
+    volumes:
+      - ./deploy/backup.sh:/usr/local/bin/backup.sh:ro
+      - backup-data:/backups
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        apk add --no-cache gnupg coreutils >/dev/null
+        while true; do
+          # 02:00 UTC daily.
+          sleep $$(( ( $$(date -u -d 'tomorrow 02:00' +%s) - $$(date -u +%s) ) ))
+          sh /usr/local/bin/backup.sh || echo "backup failed"
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  backup-data:

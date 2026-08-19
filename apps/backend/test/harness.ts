@@ -46,6 +46,11 @@ export async function createTestApp(): Promise<NestExpressApplication> {
   // Listen for real on an ephemeral port: supertest otherwise calls
   // `server.listen(0)` per request, and 20 parallel calls then race each other
   // into ECONNRESET — an artefact of the harness, not of the application.
+  const cookieParser = (await import('cookie-parser')).default;
+  app.use(cookieParser());
+  // Listen for real on an ephemeral port: supertest otherwise calls
+  // `server.listen(0)` per request, and 20 parallel calls then race each other
+  // into ECONNRESET — an artefact of the harness, not of the application.
   await app.listen(0);
   return app;
 }

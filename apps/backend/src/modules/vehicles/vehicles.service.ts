@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Vehicle } from '@prisma/client';
+import { Prisma, type Vehicle } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ListQueryDto, orderBy } from '../../common/dto/list-query.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
@@ -23,16 +23,31 @@ export class VehiclesService {
 
   async list(
     actor: CurrentUserPayload,
-    pagination: PaginationDto,
+    query: ListQueryDto,
   ): Promise<{ data: Vehicle[]; total: number }> {
     const db = this.prisma.forCompany(actor.companyId);
+    const where: Prisma.VehicleWhereInput = query.search
+      ? {
+          OR: [
+            { plateNumber: { contains: query.search, mode: 'insensitive' } },
+            { brand: { contains: query.search, mode: 'insensitive' } },
+            { model: { contains: query.search, mode: 'insensitive' } },
+            { vin: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
     const [data, total] = await Promise.all([
       db.vehicle.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
+        where,
+        orderBy: orderBy(
+          query,
+          ['plateNumber', 'createdAt', 'insuranceExpiry', 'techInspectionExpiry'],
+          'createdAt',
+        ),
+        skip: query.skip,
+        take: query.limit,
       }),
-      db.vehicle.count(),
+      db.vehicle.count({ where }),
     ]);
     return { data, total };
   }

@@ -276,6 +276,107 @@ describe('Auth security', () => {
     });
   });
 
+  describe('H-16 refresh token lives in an httpOnly cookie for browsers', () => {
+    it('login sets an httpOnly, SameSite=Strict, auth-scoped cookie', async () => {
+      const company = await createCompany();
+      const response = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: company.owner.email, password: company.owner.password })
+        .expect(200);
+
+      const cookie = (response.headers['set-cookie'] as unknown as string[]).find((c) =>
+        c.startsWith('tc_refresh='),
+      );
+      expect(cookie).toBeDefined();
+      expect(cookie).toContain('HttpOnly');
+      expect(cookie).toContain('SameSite=Strict');
+      expect(cookie).toContain('Path=/api/v1/auth');
+    });
+
+    it('refresh works from the cookie alone, with no token in the body', async () => {
+      const company = await createCompany();
+      const loginResponse = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: company.owner.email, password: company.owner.password })
+        .expect(200);
+      const cookies = loginResponse.headers['set-cookie'] as unknown as string[];
+
+      const refreshed = await api(app)
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', cookies)
+        .send({})
+        .expect(200);
+
+      expect(refreshed.body.data.accessToken).toBeTruthy();
+      expect(
+        (refreshed.headers['set-cookie'] as unknown as string[]).some((c) =>
+          c.startsWith('tc_refresh='),
+        ),
+      ).toBe(true);
+    });
+
+    it('the cookie wins over a body token a script may have injected', async () => {
+      const victim = await createCompany();
+      const attacker = await createCompany();
+      const victimLogin = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: victim.owner.email, password: victim.owner.password })
+        .expect(200);
+      resetRateLimits(app);
+      const attackerLogin = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: attacker.owner.email, password: attacker.owner.password })
+        .expect(200);
+
+      const refreshed = await api(app)
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', victimLogin.headers['set-cookie'] as unknown as string[])
+        .send({ refreshToken: attackerLogin.body.data.refreshToken })
+        .expect(200);
+
+      // The session that continued is the cookie's, not the body's.
+      const me = await api(app)
+        .get('/api/v1/auth/me')
+        .set(auth(refreshed.body.data.accessToken))
+        .expect(200);
+      expect(me.body.data.email).toBe(victim.owner.email);
+    });
+
+    it('logout clears the cookie', async () => {
+      const company = await createCompany();
+      const loginResponse = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: company.owner.email, password: company.owner.password })
+        .expect(200);
+
+      const response = await api(app)
+        .post('/api/v1/auth/logout')
+        .set('Cookie', loginResponse.headers['set-cookie'] as unknown as string[])
+        .send({})
+        .expect(200);
+
+      const cleared = (response.headers['set-cookie'] as unknown as string[]).find((c) =>
+        c.startsWith('tc_refresh='),
+      );
+      expect(cleared).toContain('Expires=Thu, 01 Jan 1970');
+    });
+
+    it('native clients still get the token in the body', async () => {
+      const company = await createCompany();
+      const response = await api(app)
+        .post('/api/v1/auth/login')
+        .send({ identifier: company.owner.email, password: company.owner.password })
+        .expect(200);
+      expect(typeof response.body.data.refreshToken).toBe('string');
+      expect(response.body.data.refreshToken.length).toBeGreaterThan(20);
+    });
+
+    it('a refresh with neither cookie nor body token is rejected', async () => {
+      const response = await api(app).post('/api/v1/auth/refresh').send({}).expect(401);
+      expect(response.body.error.code).toBe('AUTH_REFRESH_INVALID');
+    });
+  });
+
   describe('credentials handling', () => {
     it('never returns a password hash from /auth/me', async () => {
       const company = await createCompany();

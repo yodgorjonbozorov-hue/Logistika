@@ -18,17 +18,39 @@ export function useTrip(id: string) {
   });
 }
 
-export function useTripFinance(tripId: string) {
+export interface TripFinanceSummary {
+  tripId: string;
+  agreedPrice: string;
+  expenseTotal: string;
+  incomeTotal: string;
+  balance: string;
+  expenseCount: number;
+  incomeCount: number;
+}
+
+/**
+ * Trip P&L (M-9).
+ *
+ * The totals come from a server-side aggregate rather than from summing a
+ * fetched page: the old code pulled `limit: 100` rows and added them up in the
+ * browser, so a trip with more than 100 transactions silently displayed a
+ * WRONG balance with nothing to indicate it. The row list is still paged — it
+ * is a table for humans — but the numbers no longer depend on it.
+ */
+export function useTripFinance(tripId: string, page = 1) {
+  const summary = useQuery({
+    queryKey: ['trips', tripId, 'finance'],
+    queryFn: async () => (await api<TripFinanceSummary>(`/trips/${tripId}/finance`)).data,
+  });
   const expenses = useQuery({
-    queryKey: ['expenses', { tripId }],
-    queryFn: async () =>
-      (await api<Expense[]>('/expenses', { query: { tripId, limit: 100 } })).data,
+    queryKey: ['expenses', { tripId, page }],
+    queryFn: () => api<Expense[]>('/expenses', { query: { tripId, page, limit: 20 } }),
   });
   const incomes = useQuery({
-    queryKey: ['incomes', { tripId }],
-    queryFn: async () => (await api<Income[]>('/incomes', { query: { tripId, limit: 100 } })).data,
+    queryKey: ['incomes', { tripId, page }],
+    queryFn: () => api<Income[]>('/incomes', { query: { tripId, page, limit: 20 } }),
   });
-  return { expenses, incomes };
+  return { summary, expenses, incomes };
 }
 
 /** Reference lists for form selects (first 100 is plenty for 5–40 vehicle fleets). */

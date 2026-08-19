@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Client } from '@prisma/client';
+import { Prisma, type Client } from '@prisma/client';
 import type { CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ListQueryDto, orderBy } from '../../common/dto/list-query.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateClientDto, UpdateClientDto } from './dto/client.dto';
@@ -23,16 +23,27 @@ export class ClientsService {
 
   async list(
     actor: CurrentUserPayload,
-    pagination: PaginationDto,
+    query: ListQueryDto,
   ): Promise<{ data: Client[]; total: number }> {
     const db = this.prisma.forCompany(actor.companyId);
+    const where: Prisma.ClientWhereInput = query.search
+      ? {
+          OR: [
+            { name: { contains: query.search, mode: 'insensitive' } },
+            { inn: { contains: query.search } },
+            { phone: { contains: query.search } },
+            { contactPerson: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
     const [data, total] = await Promise.all([
       db.client.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
+        where,
+        orderBy: orderBy(query, ['name', 'createdAt'], 'createdAt'),
+        skip: query.skip,
+        take: query.limit,
       }),
-      db.client.count(),
+      db.client.count({ where }),
     ]);
     return { data: await this.withBalances(actor, data), total };
   }

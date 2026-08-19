@@ -12,7 +12,8 @@ import {
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
+import { ListQueryDto } from '../../common/dto/list-query.dto';
+import { paginated } from '../../common/dto/pagination.dto';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 import { VehiclesService } from './vehicles.service';
 
@@ -22,9 +23,9 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Get()
-  async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {
-    const { data, total } = await this.vehiclesService.list(user, pagination);
-    return paginated(data, pagination, total);
+  async list(@CurrentUser() user: CurrentUserPayload, @Query() query: ListQueryDto) {
+    const { data, total } = await this.vehiclesService.list(user, query);
+    return paginated(data, query, total);
   }
 
   @Post()

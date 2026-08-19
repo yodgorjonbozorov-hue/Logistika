@@ -2,7 +2,7 @@
   "name": "truckcontrol",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI — logistika firmalari uchun SaaS boshqaruv tizimi",
+  "description": "TruckControl AI \u2014 logistika firmalari uchun SaaS boshqaruv tizimi",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
@@ -14,7 +14,11 @@
     "test": "pnpm -r test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "test:e2e": "pnpm --filter backend test:e2e",
+    "test:web-e2e": "pnpm --filter web test:e2e",
+    "prepare:workspace": "pnpm --filter shared build && pnpm --filter backend exec prisma generate"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -23,5 +27,14 @@
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "prisma",
+      "argon2",
+      "sharp",
+      "esbuild"
+    ]
   }
 }

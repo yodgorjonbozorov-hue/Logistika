@@ -12,7 +12,8 @@ import {
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
+import { ListQueryDto } from '../../common/dto/list-query.dto';
+import { paginated } from '../../common/dto/pagination.dto';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import { DriversService } from './drivers.service';
 
@@ -22,9 +23,9 @@ export class DriversController {
   constructor(private readonly driversService: DriversService) {}
 
   @Get()
-  async list(@CurrentUser() user: CurrentUserPayload, @Query() pagination: PaginationDto) {
-    const { data, total } = await this.driversService.list(user, pagination);
-    return paginated(data, pagination, total);
+  async list(@CurrentUser() user: CurrentUserPayload, @Query() query: ListQueryDto) {
+    const { data, total } = await this.driversService.list(user, query);
+    return paginated(data, query, total);
   }
 
   @Post()

@@ -14,13 +14,14 @@ import {
   Input,
   Modal,
   PageHeader,
+  Pagination,
   Row,
   Select,
   Spinner,
   Table,
 } from '../../shared/ui';
 import { formatDate, formatDateTime } from '../../shared/utils/date';
-import { formatTiyin, sumTiyin } from '../../shared/utils/money';
+import { formatTiyin } from '../../shared/utils/money';
 import { StatusBadge } from './StatusBadge';
 import { useRefLists, useTrip, useTripFinance, useTripMutations } from './api';
 
@@ -69,7 +70,7 @@ export function TripDetailPage() {
       <ErrorMessage error={action.error} />
 
       <Card className="mb-4">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 md:grid-cols-4">
           <Info label={t('trips.status')}>
             <StatusBadge status={trip.status} />
           </Info>
@@ -108,7 +109,7 @@ export function TripDetailPage() {
       </div>
 
       {tab === 'timeline' && <TimelineTab trip={trip} />}
-      {tab === 'finance' && <FinanceTab tripId={trip.id} agreedPrice={trip.agreedPrice} />}
+      {tab === 'finance' && <FinanceTab tripId={trip.id} />}
       {tab === 'documents' && (
         <Card>
           <p className="text-sm text-muted">{t('trips.documentsNote')}</p>
@@ -230,71 +231,78 @@ function TimelineTab({ trip }: { trip: import('../../shared/api/entities').Trip 
   );
 }
 
-function FinanceTab({ tripId, agreedPrice }: { tripId: string; agreedPrice: string }) {
+function FinanceTab({ tripId }: { tripId: string }) {
   const { t } = useTranslation();
-  const { expenses, incomes } = useTripFinance(tripId);
-  if (expenses.isLoading || incomes.isLoading) return <Spinner />;
+  const [page, setPage] = useState(1);
+  const { summary, expenses } = useTripFinance(tripId, page);
 
-  const expenseTotal = sumTiyin((expenses.data ?? []).map((e) => e.amount));
-  const incomeTotal = sumTiyin((incomes.data ?? []).map((i) => i.amount));
-  const planned = BigInt(agreedPrice);
-  const income = incomeTotal > 0n ? incomeTotal : planned;
-  const balance = income - expenseTotal;
+  if (summary.isLoading || expenses.isLoading) return <Spinner />;
+  if (summary.error) return <ErrorMessage error={summary.error} />;
+
+  // Totals come from the server aggregate: they cover every transaction on the
+  // trip, not just the page of rows shown below it (M-9).
+  const totals = summary.data;
+  const rows = expenses.data?.data ?? [];
+  const expenseCount = expenses.data?.meta?.pagination?.total ?? rows.length;
+  const balancePositive = totals ? BigInt(totals.balance) >= 0n : true;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card>
           <div className="text-xs uppercase text-muted">{t('trips.financeIncome')}</div>
           <div className="mt-1 text-lg font-bold tabular-nums text-success">
-            {formatTiyin(income)}
+            {formatTiyin(totals?.incomeTotal)}
           </div>
         </Card>
         <Card>
           <div className="text-xs uppercase text-muted">{t('trips.financeExpenses')}</div>
           <div className="mt-1 text-lg font-bold tabular-nums text-danger">
-            {formatTiyin(expenseTotal)}
+            {formatTiyin(totals?.expenseTotal)}
           </div>
         </Card>
         <Card>
           <div className="text-xs uppercase text-muted">{t('trips.financeBalance')}</div>
           <div
             className={
-              balance >= 0n
+              balancePositive
                 ? 'mt-1 text-lg font-bold tabular-nums text-success'
                 : 'mt-1 text-lg font-bold tabular-nums text-danger'
             }
           >
-            {formatTiyin(balance)}
+            {formatTiyin(totals?.balance)}
           </div>
         </Card>
       </div>
-      {(expenses.data ?? []).length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState />
       ) : (
-        <Table
-          headers={[
-            t('finance.date'),
-            t('finance.category'),
-            t('finance.amount'),
-            t('finance.description'),
-            '',
-          ]}
-        >
-          {(expenses.data ?? []).map((expense) => (
-            <Row key={expense.id}>
-              <Cell>{formatDate(expense.expenseDate)}</Cell>
-              <Cell>{t(`finance.categories.${expense.category}`)}</Cell>
-              <Cell className="tabular-nums">{formatTiyin(expense.amount)}</Cell>
-              <Cell>{expense.description ?? '—'}</Cell>
-              <Cell>
-                <Badge tone={expense.isApproved ? 'green' : 'gray'}>
-                  {expense.isApproved ? t('finance.approved') : t('finance.notApproved')}
-                </Badge>
-              </Cell>
-            </Row>
-          ))}
-        </Table>
+        <>
+          <Table
+            headers={[
+              t('finance.date'),
+              t('finance.category'),
+              t('finance.amount'),
+              t('finance.description'),
+              '',
+            ]}
+          >
+            {rows.map((expense) => (
+              <Row key={expense.id}>
+                <Cell>{formatDate(expense.expenseDate)}</Cell>
+                <Cell>{t(`finance.categories.${expense.category}`)}</Cell>
+                <Cell className="tabular-nums">{formatTiyin(expense.amount)}</Cell>
+                <Cell>{expense.description ?? '—'}</Cell>
+                <Cell>
+                  <Badge tone={expense.isApproved ? 'green' : 'gray'}>
+                    {expense.isApproved ? t('finance.approved') : t('finance.notApproved')}
+                  </Badge>
+                </Cell>
+              </Row>
+            ))}
+          </Table>
+          <Pagination page={page} limit={20} total={expenseCount} onPage={setPage} />
+        </>
       )}
     </div>
   );

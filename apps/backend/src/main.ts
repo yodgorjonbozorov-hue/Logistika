@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -35,6 +36,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
   app.use(compression());
+  // Refresh tokens travel as an httpOnly cookie for browser clients (H-16).
+  app.use(cookieParser());
 
   // Only trust X-Forwarded-* when a reverse proxy really is in front, otherwise
   // clients can forge their own IP and walk past the rate limits.

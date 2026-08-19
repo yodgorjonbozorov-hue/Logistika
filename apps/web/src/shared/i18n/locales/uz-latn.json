@@ -8,7 +8,8 @@
     "drivers": "Haydovchilar",
     "clients": "Mijozlar",
     "finance": "Moliya",
-    "map": "Xarita"
+    "map": "Xarita",
+    "openMenu": "Menyuni ochish"
   },
   "auth": {
     "loginTitle": "Tizimga kirish",
@@ -39,7 +40,12 @@
     "select": "Tanlang…",
     "notSet": "—",
     "theme": "Tungi rejim",
-    "language": "Til"
+    "language": "Til",
+    "reload": "Sahifani yangilash",
+    "retry": "Qayta urinish",
+    "crashTitle": "Nimadir noto'g'ri ketdi",
+    "search": "Qidirish",
+    "crashBody": "Sahifani yuklashda kutilmagan xatolik yuz berdi. Sahifani yangilab ko'ring."
   },
   "status": {
     "DRAFT": "Qoralama",

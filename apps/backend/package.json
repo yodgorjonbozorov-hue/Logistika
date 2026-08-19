@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI — NestJS API",
+  "description": "TruckControl AI \u2014 NestJS API",
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -13,7 +13,8 @@
     "prisma": "prisma",
     "prisma:seed": "prisma db seed",
     "prisma:generate": "prisma generate",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -32,6 +33,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
     "helmet": "^8.3.0",
     "ioredis": "^5.4.2",
     "minio": "^8.0.3",
@@ -44,6 +46,7 @@
     "@nestjs/cli": "^10.4.9",
     "@nestjs/testing": "^10.4.15",
     "@types/compression": "^1.8.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/multer": "^2.2.0",

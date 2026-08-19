@@ -9,8 +9,17 @@
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "shared": [
+        "../../packages/shared/src/index.ts"
+      ]
     }
   },
-  "include": ["src/**/*", "prisma/**/*.ts", "test/**/*"]
+  "include": [
+    "src/**/*",
+    "prisma/**/*.ts",
+    "test/**/*"
+  ]
 }

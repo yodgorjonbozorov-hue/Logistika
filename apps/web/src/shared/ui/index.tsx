@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../utils/cn';
 
@@ -23,7 +23,8 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'rounded-lg px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50',
+        // min-h-11 ≈ 44px: the minimum comfortable touch target on a phone.
+        'inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-50',
         BUTTON_STYLES[variant],
         className,
       )}
@@ -52,10 +53,46 @@ export function Field({
 }
 
 const CONTROL =
-  'w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 outline-none focus:border-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100';
+  // min-h-11 and text-base on mobile: anything under 16px makes iOS Safari zoom
+  // the whole page on focus, which then cannot be zoomed back out.
+  'w-full min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-base sm:text-sm text-gray-900 outline-none focus:border-accent dark:border-white/20 dark:bg-white/10 dark:text-gray-100';
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(CONTROL, props.className)} />;
+}
+
+/** Search box with a built-in clear affordance (L-5). */
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative w-full sm:w-64">
+      <Input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="pr-8"
+      />
+      {value ? (
+        <button
+          type="button"
+          aria-label="clear"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+          onClick={() => onChange('')}
+        >
+          ×
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -68,9 +105,11 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
-      <h1 className="text-xl font-bold">{title}</h1>
-      <div className="flex items-center gap-2">{actions}</div>
+    // Stacks on a phone: a row of action buttons next to a title is what forced
+    // the page wider than the viewport at 375px (H-9).
+    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <h1 className="text-lg font-bold sm:text-xl">{title}</h1>
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
@@ -152,6 +191,16 @@ export function Badge({
 
 // ---------- Modal ----------
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Accessible dialog (L-4).
+ *
+ * Previously a plain div: screen readers announced nothing, Tab wandered out
+ * into the page behind it, focus was never moved in or returned, and the page
+ * scrolled under the overlay on a phone. All four are handled here.
+ */
 export function Modal({
   title,
   open,
@@ -163,24 +212,66 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Move focus into the dialog so the keyboard lands somewhere useful.
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+    (focusables?.[0] ?? dialogRef.current)?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      // Focus trap: cycle within the dialog instead of escaping behind it.
+      const items = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (!items || items.length === 0) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
   }, [open, onClose]);
 
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3 pt-8 sm:p-4 sm:pt-16"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl outline-none sm:p-5 dark:bg-navy dark:text-gray-100 dark:ring-1 dark:ring-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">{title}</h2>
+        <h2 id={titleId} className="mb-4 text-lg font-bold">
+          {title}
+        </h2>
         {children}
       </div>
     </div>

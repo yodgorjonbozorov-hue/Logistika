@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Driver } from '@prisma/client';
+import { Prisma, type Driver } from '@prisma/client';
 import { UserRole, type CurrentUserPayload } from 'shared';
 import { AppException } from '../../common/exceptions/app.exception';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ListQueryDto, orderBy } from '../../common/dto/list-query.dto';
 import { rethrowPrismaError } from '../../common/prisma-errors';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -28,16 +28,26 @@ export class DriversService {
 
   async list(
     actor: CurrentUserPayload,
-    pagination: PaginationDto,
+    query: ListQueryDto,
   ): Promise<{ data: Driver[]; total: number }> {
     const db = this.prisma.forCompany(actor.companyId);
+    const where: Prisma.DriverWhereInput = query.search
+      ? {
+          OR: [
+            { fullName: { contains: query.search, mode: 'insensitive' } },
+            { phone: { contains: query.search } },
+            { licenseNumber: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
     const [data, total] = await Promise.all([
       db.driver.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit,
+        where,
+        orderBy: orderBy(query, ['fullName', 'createdAt', 'licenseExpiry', 'hireDate'], 'createdAt'),
+        skip: query.skip,
+        take: query.limit,
       }),
-      db.driver.count(),
+      db.driver.count({ where }),
     ]);
     return { data, total };
   }

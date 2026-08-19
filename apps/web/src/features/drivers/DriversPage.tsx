@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SalaryType } from 'shared';
-import { useCrudMutations, useList } from '../../shared/api/crud';
+import { useCrudMutations, useDebounced, useList } from '../../shared/api/crud';
 import type { Driver } from '../../shared/api/entities';
 import {
   Badge,
@@ -15,6 +15,7 @@ import {
   PageHeader,
   Pagination,
   Row,
+  SearchInput,
   Select,
   Spinner,
   Table,
@@ -25,9 +26,18 @@ import { formatTiyin, somToTiyin } from '../../shared/utils/money';
 export function DriversPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const { data, isLoading, error } = useList<Driver>('drivers', page);
+  const debouncedSearch = useDebounced(search);
+  const { data, isLoading, error } = useList<Driver>(
+    'drivers',
+    page,
+    debouncedSearch ? { search: debouncedSearch } : undefined,
+  );
   const { remove } = useCrudMutations('drivers');
+
+  // A filtered result set is shorter; staying on page 7 would show nothing.
+  useEffect(() => setPage(1), [debouncedSearch]);
 
   const drivers = data?.data ?? [];
   const total = data?.meta?.pagination?.total ?? 0;
@@ -36,7 +46,12 @@ export function DriversPage() {
     <div>
       <PageHeader
         title={t('drivers.title')}
-        actions={<Button onClick={() => setShowForm(true)}>+ {t('drivers.new')}</Button>}
+        actions={
+          <>
+            <SearchInput value={search} onChange={setSearch} placeholder={t('common.search')} />
+            <Button onClick={() => setShowForm(true)}>+ {t('drivers.new')}</Button>
+          </>
+        }
       />
       <ErrorMessage error={error} />
       {isLoading ? (

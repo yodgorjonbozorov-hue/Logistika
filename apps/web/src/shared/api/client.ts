@@ -3,8 +3,12 @@ import i18n from '../i18n';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-const ACCESS_KEY = 'tc.access';
-const REFRESH_KEY = 'tc.refresh';
+/**
+ * Marks "there is probably a session" so a reload can attempt a silent refresh.
+ * It is NOT a credential — the refresh token itself lives in an httpOnly cookie
+ * the browser attaches automatically and JavaScript cannot read (H-16).
+ */
+const SESSION_FLAG = 'tc.session';
 
 export class ApiError extends Error {
   constructor(
@@ -18,20 +22,32 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Access token storage.
+ *
+ * Deliberately a module-level variable rather than `localStorage`: a token in
+ * localStorage is readable by any script that ends up on the page (an XSS, a
+ * compromised dependency), and the refresh token used to sit there for 30 days.
+ * In memory the blast radius of the same XSS is one short-lived access token,
+ * and it dies with the tab.
+ */
+let accessToken: string | null = null;
+
 export const tokenStore = {
-  get access() {
-    return localStorage.getItem(ACCESS_KEY);
+  get access(): string | null {
+    return accessToken;
   },
-  get refresh() {
-    return localStorage.getItem(REFRESH_KEY);
+  /** True when a refresh cookie is expected to exist — not a credential. */
+  get hasSession(): boolean {
+    return localStorage.getItem(SESSION_FLAG) === '1';
   },
-  set(access: string, refresh: string) {
-    localStorage.setItem(ACCESS_KEY, access);
-    localStorage.setItem(REFRESH_KEY, refresh);
+  set(access: string) {
+    accessToken = access;
+    localStorage.setItem(SESSION_FLAG, '1');
   },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
+    localStorage.removeItem(SESSION_FLAG);
   },
 };
 
@@ -39,6 +55,7 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  signal?: AbortSignal;
 }
 
 async function rawRequest<T>(path: string, options: RequestOptions): Promise<ApiResponse<T>> {
@@ -53,6 +70,9 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
   const response = await fetch(url.toString(), {
     method: options.method ?? 'GET',
     headers,
+    // Required for the httpOnly refresh cookie to travel with /auth requests.
+    credentials: 'include',
+    signal: options.signal,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
   return (await response.json().catch(() => ({
@@ -63,19 +83,52 @@ async function rawRequest<T>(path: string, options: RequestOptions): Promise<Api
   }))) as ApiResponse<T>;
 }
 
-async function tryRefresh(): Promise<boolean> {
-  const refreshToken = tokenStore.refresh;
-  if (!refreshToken) return false;
-  const result = await rawRequest<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
-    method: 'POST',
-    body: { refreshToken },
-  });
-  if (result.success && result.data) {
-    tokenStore.set(result.data.accessToken, result.data.refreshToken);
-    return true;
-  }
-  tokenStore.clear();
-  return false;
+/**
+ * In-flight refresh, shared by every caller (H-10).
+ *
+ * A dashboard fires half a dozen requests at once; when the access token
+ * expires they all get AUTH_TOKEN_EXPIRED at the same moment. Each used to
+ * start its own refresh — the first rotated the token, the rest presented the
+ * now-revoked one, got a 401 and dumped the user on the login page mid-session.
+ * (Server-side, replaying a rotated token now also trips reuse detection and
+ * kills the whole family, so this is not cosmetic.)
+ *
+ * Everyone after the first waits on the same promise and then retries once.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= (async () => {
+    try {
+      const result = await rawRequest<{ accessToken: string; refreshToken: string }>(
+        '/auth/refresh',
+        { method: 'POST', body: {} },
+      );
+      if (result.success && result.data) {
+        tokenStore.set(result.data.accessToken);
+        return true;
+      }
+      tokenStore.clear();
+      return false;
+    } catch {
+      // A network failure is not proof the session is gone; do not log the
+      // user out over a dropped connection.
+      return false;
+    } finally {
+      // Cleared in a microtask so callers that awaited this exact promise all
+      // observe the same result before a new attempt can start.
+      queueMicrotask(() => {
+        refreshInFlight = null;
+      });
+    }
+  })();
+  return refreshInFlight;
+}
+
+/** Exposed for the app shell: restores a session on a full page reload. */
+export async function restoreSession(): Promise<boolean> {
+  if (!tokenStore.hasSession) return false;
+  return refreshSession();
 }
 
 /** Unwraps the { success, data, error, meta } envelope; auto-refreshes once on expiry. */
@@ -86,7 +139,7 @@ export async function api<T>(
   let result = await rawRequest<T>(path, options);
 
   if (!result.success && result.error?.code === 'AUTH_TOKEN_EXPIRED') {
-    if (await tryRefresh()) {
+    if (await refreshSession()) {
       result = await rawRequest<T>(path, options);
     } else {
       window.dispatchEvent(new CustomEvent('tc:logout'));
