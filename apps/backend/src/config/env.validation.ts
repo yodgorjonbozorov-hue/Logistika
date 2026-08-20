@@ -99,6 +99,19 @@ export class EnvironmentVariables {
   @IsString()
   DEFAULT_TIMEZONE = 'Asia/Tashkent';
 
+  /**
+   * SameSite for the refresh cookie.
+   *
+   * `strict` when the app and the API share an origin — the strongest setting
+   * and the default. `none` is REQUIRED when they do not (the app on Vercel,
+   * the API on its own domain): a browser will not even store a Strict cookie
+   * that arrives on a cross-site response, so sessions silently die on the
+   * first reload. The CSRF exposure `none` opens is closed by the Origin check
+   * on the auth routes.
+   */
+  @IsIn(['strict', 'none'])
+  AUTH_COOKIE_SAMESITE = 'strict';
+
   // ---------- Reverse proxy ----------
 
   /**

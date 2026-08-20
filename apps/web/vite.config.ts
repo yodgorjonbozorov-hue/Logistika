@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
+import fs from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -38,6 +39,67 @@ function assertApiUrl(command: string, mode: string): void {
   if (!/^https:\/\//.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(url)) {
     throw new Error(`VITE_API_URL must be an https:// origin in production (got ${url})`);
   }
+  assertCspAllowsApi(url);
+}
+
+/**
+ * The Content-Security-Policy served with the app must permit the API origin
+ * the bundle was built against.
+ *
+ * This is the nastiest failure mode this project has, because everything looks
+ * fine: the build succeeds, the page loads, the layout renders — and then every
+ * request dies in the browser with "Refused to connect", so the login button
+ * does nothing and the dashboard shows empty cards. It cannot happen in
+ * development, where the dev server sends no CSP at all, so it is discovered in
+ * production by a user.
+ *
+ * `vercel.json` is static and Vercel reads it before the build, so the policy
+ * cannot be generated from VITE_API_URL. What can be done is refuse to build a
+ * bundle the deployed policy would block.
+ */
+function assertCspAllowsApi(apiUrl: string): void {
+  const configPath = path.resolve(__dirname, 'vercel.json');
+  if (!fs.existsSync(configPath)) return; // not the Vercel deployment path
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+    headers?: Array<{ headers?: Array<{ key: string; value: string }> }>;
+  };
+  const csp = config.headers
+    ?.flatMap((entry) => entry.headers ?? [])
+    .find((header) => header.key.toLowerCase() === 'content-security-policy')?.value;
+  if (!csp) return; // no policy to contradict
+
+  const connectSrc = /connect-src ([^;]*)/.exec(csp)?.[1]?.trim();
+  if (!connectSrc) return;
+
+  const origin = new URL(apiUrl).origin;
+  const allowed = connectSrc.split(/\s+/).some((source) => {
+    if (source === "'self'") return false; // cross-origin by definition here
+    if (source === '*') return true;
+    // `https://*.example.com` covers one label, as the CSP spec defines it.
+    if (source.includes('*')) {
+      const pattern = new RegExp(`^${source.replace(/[.]/g, '\\.').replace(/\*/g, '[^.]+')}$`);
+      return pattern.test(origin);
+    }
+    return source.replace(/\/$/, '') === origin;
+  });
+
+  if (allowed) return;
+
+  const message =
+    `The Content-Security-Policy in apps/web/vercel.json does not allow ${origin}, ` +
+    `so the browser would block every API request from the deployed app.\n` +
+    `Add it to connect-src:\n\n` +
+    `    connect-src 'self' ${origin};\n\n` +
+    `Current connect-src: ${connectSrc}`;
+
+  // Vercel sets VERCEL=1 in its build environment. There, this file IS the
+  // policy the browser will enforce, so a mismatch is fatal. Anywhere else the
+  // app is served by nginx with its own headers and vercel.json is inert — the
+  // mismatch is still worth saying out loud, but failing the build over a file
+  // that will not be used would be wrong.
+  if (process.env.VERCEL) throw new Error(message);
+  console.warn(`\n[vite] warning: ${message}\n`);
 }
 
 export default defineConfig(({ command, mode }) => {

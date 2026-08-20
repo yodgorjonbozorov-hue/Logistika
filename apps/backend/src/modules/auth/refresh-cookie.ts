@@ -23,13 +23,41 @@ import { ttlToSeconds } from './auth.service';
 export const REFRESH_COOKIE = 'tc_refresh';
 export const REFRESH_COOKIE_PATH = '/api/v1/auth';
 
-function baseOptions(isProduction: boolean): CookieOptions {
+/** How the deployment is laid out, which decides what SameSite can be. */
+export type CookieSameSite = 'strict' | 'none';
+
+export interface CookieContext {
+  isProduction: boolean;
+  sameSite: CookieSameSite;
+}
+
+/**
+ * `sameSite` is configuration, not a constant, because the right answer depends
+ * on where the app is served from — and getting it wrong is invisible.
+ *
+ * `strict` is correct and strongest when the app and the API share an origin.
+ * When they do not — the app on Vercel, the API on its own domain — the browser
+ * does not merely decline to send a Strict cookie on cross-site requests: it
+ * REFUSES TO STORE IT AT ALL. Verified in a real browser across two separate
+ * registrable domains: the cookie never appears in the jar, the refresh call
+ * goes out without it, and the user is bounced to the login page by the first
+ * reload or as soon as the 15-minute access token expires.
+ *
+ * `none` is the only value that works cross-site, and it requires `secure`,
+ * which production already is. The CSRF exposure it would otherwise open is
+ * closed separately by the Origin check on the auth routes — see
+ * auth.controller.ts — so this is not a trade of a working session against a
+ * forged one.
+ */
+function baseOptions(context: CookieContext): CookieOptions {
   return {
     httpOnly: true,
     // Secure would make the cookie invisible over plain http://localhost during
     // development, breaking the dev login flow for no security benefit there.
-    secure: isProduction,
-    sameSite: 'strict',
+    // `sameSite: 'none'` REQUIRES Secure, so a cross-site development setup has
+    // to use https — browsers drop the cookie otherwise.
+    secure: context.isProduction || context.sameSite === 'none',
+    sameSite: context.sameSite,
     path: REFRESH_COOKIE_PATH,
   };
 }
@@ -37,14 +65,16 @@ function baseOptions(isProduction: boolean): CookieOptions {
 export function setRefreshCookie(
   response: Response,
   token: string,
-  options: { isProduction: boolean; ttl: string },
+  options: CookieContext & { ttl: string },
 ): void {
   response.cookie(REFRESH_COOKIE, token, {
-    ...baseOptions(options.isProduction),
+    ...baseOptions(options),
     maxAge: ttlToSeconds(options.ttl) * 1000,
   });
 }
 
-export function clearRefreshCookie(response: Response, isProduction: boolean): void {
-  response.clearCookie(REFRESH_COOKIE, baseOptions(isProduction));
+export function clearRefreshCookie(response: Response, context: CookieContext): void {
+  // The attributes must match the ones the cookie was set with, or the browser
+  // treats it as a different cookie and the old one survives the logout.
+  response.clearCookie(REFRESH_COOKIE, baseOptions(context));
 }

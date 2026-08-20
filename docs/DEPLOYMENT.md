@@ -228,6 +228,42 @@ Vercel:
 
 `VITE_API_URL` siz production build **ataylab yiqiladi** — bu regressiya emas.
 
+### Vercel: ikkita sozlama, ikkalasi ham majburiy
+
+Web Vercel'da, API boshqa domenda bo'lsa — ya'ni **cross-site** — quyidagi ikki
+narsa to'g'ri bo'lmasa ilova ishlamaydi va buni build ham, test ham aytmaydi:
+
+**1. CSP `connect-src` API originini ruxsat etishi shart.**
+
+`vercel.json` dagi siyosat brauzerda majburlanadi. `VITE_API_URL` u ruxsat
+etmagan originni ko'rsatsa, sahifa ochiladi, tugmalar chiziladi va **har bir
+so'rov brauzerda "Refused to connect" bilan o'ladi** — login hech narsa
+qilmaydi, dashboard bo'sh kartalar ko'rsatadi. Development'da bu hech qachon
+yuz bermaydi, chunki dev-server CSP yubormaydi.
+
+```json
+"connect-src 'self' https://api.<domen>"
+```
+
+Vercel'da build qilinayotganda (`VERCEL=1`) mos kelmasa build **yiqiladi** va
+qaysi qatorni qo'shish kerakligini aytadi.
+
+**2. `AUTH_COOKIE_SAMESITE=none` bo'lishi shart.**
+
+Refresh token httpOnly cookie'da yashaydi va web klient uni **faqat** cookie
+orqali yuboradi. Cross-site deploymentda `SameSite=Strict` cookie'ni brauzer
+**umuman saqlamaydi** (haqiqiy brauzerda tekshirilgan). Natija: login ishlagandek
+ko'rinadi, keyin birinchi sahifa yangilanishida yoki 15 daqiqadan so'ng
+foydalanuvchi login sahifasiga uchadi.
+
+`none` ochadigan CSRF yo'li auth route'laridagi `Origin` tekshiruvi bilan
+yopilgan — boshqa saytdan yuborilgan refresh/logout 403 oladi, native klient
+(Origin yubormaydi) esa ishlashda davom etadi.
+
+> Bu ikki muammoning ikkalasi ham **bitta domenda** (`--mode single-server`)
+> umuman mavjud emas: `connect-src 'self'` yetarli va `SameSite=Strict` ishlaydi.
+> Shuning uchun standart tanlov shu.
+
 ---
 
 ## 9. Backup

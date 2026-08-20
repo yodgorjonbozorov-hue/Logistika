@@ -28,7 +28,13 @@ import { DriverAuthService } from './driver-auth.service';
 import { RequestCodeDto, VerifyCodeDto } from './dto/driver-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { clearRefreshCookie, REFRESH_COOKIE, setRefreshCookie } from './refresh-cookie';
+import {
+  clearRefreshCookie,
+  REFRESH_COOKIE,
+  setRefreshCookie,
+  type CookieContext,
+  type CookieSameSite,
+} from './refresh-cookie';
 
 @Controller('auth')
 export class AuthController {
@@ -80,6 +86,7 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthTokens> {
+    this.assertSameOrigin(request);
     return this.issue(await this.authService.refresh(this.readToken(dto, request)), response);
   }
 
@@ -91,8 +98,9 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
+    this.assertSameOrigin(request);
     await this.authService.logout(this.readToken(dto, request));
-    clearRefreshCookie(response, this.isProduction);
+    clearRefreshCookie(response, this.cookieContext);
     return { loggedOut: true };
   }
 
@@ -105,6 +113,38 @@ export class AuthController {
     return this.config.get<string>('NODE_ENV') === 'production';
   }
 
+  private get cookieContext(): CookieContext {
+    return {
+      isProduction: this.isProduction,
+      sameSite: this.config.get<CookieSameSite>('AUTH_COOKIE_SAMESITE', 'strict'),
+    };
+  }
+
+  /**
+   * Rejects a cross-site request that carries the refresh cookie.
+   *
+   * `SameSite=Strict` is what normally makes this unnecessary — the browser
+   * simply never attaches the cookie to someone else's request. A cross-site
+   * deployment cannot use Strict (see refresh-cookie.ts), and `None` hands that
+   * protection back: an attacker's page could POST a form to /auth/refresh, the
+   * browser would attach the victim's cookie, and the token would rotate. The
+   * attacker cannot read the response — CORS sees to that — but the victim's
+   * own next refresh then presents a superseded token, reuse detection fires,
+   * and the whole family is revoked. A forced logout, on demand, from any site
+   * the user happens to visit.
+   *
+   * `Origin` is set by browsers on every POST, including the cross-site form
+   * post that is the whole attack, and cannot be forged by page JavaScript.
+   * Native clients send none and are unaffected — they carry the token in the
+   * body rather than a cookie.
+   */
+  private assertSameOrigin(request: Request): void {
+    const origin = request.headers.origin;
+    if (!origin) return;
+    if (origin === this.config.getOrThrow<string>('WEB_URL')) return;
+    throw new AppException('AUTH_FORBIDDEN', HttpStatus.FORBIDDEN);
+  }
+
   /**
    * Browsers get the refresh token as an httpOnly cookie; native clients read
    * it from the body. Both are issued so one backend serves both without a
@@ -112,7 +152,7 @@ export class AuthController {
    */
   private issue(tokens: AuthTokens, response: Response): AuthTokens {
     setRefreshCookie(response, tokens.refreshToken, {
-      isProduction: this.isProduction,
+      ...this.cookieContext,
       ttl: this.config.getOrThrow<string>('JWT_REFRESH_TTL'),
     });
     return tokens;
