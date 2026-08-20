@@ -25,9 +25,16 @@ function assertApiUrl(command: string, mode: string): void {
   if (!url) {
     throw new Error(
       'VITE_API_URL is required for a production build — set it to the API origin, ' +
-        'e.g. VITE_API_URL=https://api.truckcontrol.uz/api/v1',
+        'e.g. VITE_API_URL=https://api.truckcontrol.uz/api/v1, or /api/v1 when the ' +
+        'API is served from the same origin as the app',
     );
   }
+  // A path such as `/api/v1` means the API is served from the page's own
+  // origin — one server, one certificate, no cross-origin request at all. The
+  // client resolves it against `window.location.origin`, so it inherits the
+  // page's scheme: on an https page it is https, and it cannot be downgraded.
+  // That is strictly safer than a cross-origin https URL, not a loophole.
+  if (url.startsWith('/')) return;
   if (!/^https:\/\//.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(url)) {
     throw new Error(`VITE_API_URL must be an https:// origin in production (got ${url})`);
   }

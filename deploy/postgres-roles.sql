@@ -12,10 +12,25 @@
 --
 -- Neither is a SUPERUSER and neither may create databases or roles.
 --
--- Run as a superuser, once, before the first deployment:
+-- Run as a superuser against a freshly created, EMPTY database, BEFORE the
+-- first `prisma migrate deploy`:
 --
---   psql -v app_password="'…'" -v migrator_password="'…'" \
---        -f deploy/postgres-roles.sql -d truckai
+--   createdb truckai
+--   psql … -f deploy/postgres-roles.sql -d truckai      # 1. roles
+--   DATABASE_URL=<migrator url> npx prisma migrate deploy   # 2. schema
+--   psql … -f deploy/postgres-roles.sql -d truckai      # 3. roles again
+--
+-- Order matters, and so does running it TWICE.
+--
+--   * Before the migration, because the migrator must own the schema before it
+--     creates anything in it — otherwise every table is owned by whoever ran
+--     the migration and the default privileges below never fire.
+--   * After the migration, because `_prisma_migrations` does not exist on the
+--     first pass, so the REVOKE that keeps the application out of the migration
+--     bookkeeping cannot run until the table is there.
+--
+-- The file is idempotent; running it a third time changes nothing.
+-- deploy/go-live.sh does both passes for you.
 --
 -- Passwords are passed as psql variables so they are never written into this
 -- file and never reach the shell history of a `psql -c` invocation.
@@ -66,13 +81,43 @@ ALTER DEFAULT PRIVILEGES FOR ROLE truckai_migrator IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO truckai_app;
 
 -- Prisma's migration bookkeeping table is written only by the migrator.
-REVOKE ALL ON TABLE public._prisma_migrations FROM truckai_app;
+--
+-- Guarded, because this file has to run BEFORE the first migration — that is
+-- the whole point of it, since the migrator is what applies that migration —
+-- and at that moment the table does not exist yet. Unguarded, the statement
+-- aborts the script under ON_ERROR_STOP and every grant below it is silently
+-- skipped, which is how a first deployment ends up with a migrator that cannot
+-- migrate.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = '_prisma_migrations'
+  ) THEN
+    REVOKE ALL ON TABLE public._prisma_migrations FROM truckai_app;
+  END IF;
+END
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Connection privileges
 -- ---------------------------------------------------------------------------
 REVOKE CONNECT ON DATABASE truckai FROM PUBLIC;
 GRANT CONNECT ON DATABASE truckai TO truckai_app, truckai_migrator;
+
+-- CREATE on the DATABASE, for the migrator only.
+--
+-- Not optional and easy to miss: `prisma migrate deploy` issues
+-- `CREATE SCHEMA IF NOT EXISTS "public"` on every run because the connection
+-- string names a schema. Without this the very first production migration
+-- fails with "permission denied for database" — and it fails on launch day,
+-- because a database that was migrated by a superuser first never exercises
+-- this path.
+--
+-- The application role is deliberately NOT granted it: creating a schema is
+-- DDL, and DDL is the migrator's job.
+GRANT CREATE ON DATABASE truckai TO truckai_migrator;
+REVOKE CREATE ON DATABASE truckai FROM truckai_app;
 
 -- ---------------------------------------------------------------------------
 -- Verify (prints the state this file is supposed to produce)
@@ -84,4 +129,5 @@ ORDER BY rolname;
 
 SELECT
   has_schema_privilege('truckai_app', 'public', 'CREATE') AS app_can_create_in_schema,
-  has_database_privilege('truckai_app', current_database(), 'CREATE') AS app_can_create_schema;
+  has_database_privilege('truckai_app', current_database(), 'CREATE') AS app_can_create_schema,
+  has_database_privilege('truckai_migrator', current_database(), 'CREATE') AS migrator_can_migrate;

@@ -7,6 +7,23 @@ import { defineConfig, devices } from '@playwright/test';
  * viewport widths, because "is the layout broken on a phone" is not a question
  * a jsdom test can answer — it has no layout engine at all.
  */
+/**
+ * Chromium ships with the environment; naming it explicitly avoids a download
+ * when the installed @playwright/test expects a different build number.
+ *
+ * Chromium does not honour NO_PROXY, and a bypass list only applies to a proxy
+ * given on the command line — so a deployment on the local network is sent to
+ * whatever HTTPS_PROXY names and fails to connect with ERR_TUNNEL_CONNECTION_
+ * FAILED. STAGING_BROWSER_DIRECT=1 forces direct connections.
+ */
+const BROWSER_LAUNCH = {
+  executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
+  args: [
+    ...(process.env.NO_PROXY ? [`--proxy-bypass-list=${process.env.NO_PROXY}`] : []),
+    ...(process.env.STAGING_BROWSER_DIRECT ? ['--no-proxy-server'] : []),
+  ],
+};
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -15,10 +32,12 @@ export default defineConfig({
   timeout: 60_000,
   use: {
     baseURL: process.env.WEB_BASE_URL ?? 'http://127.0.0.1:4173',
-    // Chromium ships with the environment. Pointing at it explicitly avoids a
-    // download when the installed @playwright/test expects a different build
-    // number than the one already on disk.
-    launchOptions: { executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium' },
+    // The responsive projects normally target the local preview server, which
+    // the proxy ignores. Pointed at a real deployment they need the same
+    // treatment the staging project needs, so the options are shared rather
+    // than duplicated — see the note on the staging project below.
+    ignoreHTTPSErrors: true,
+    launchOptions: BROWSER_LAUNCH,
     channel: undefined,
   },
   projects: [
@@ -51,29 +70,19 @@ export default defineConfig({
         viewport: { width: 1440, height: 900 },
         baseURL: process.env.STAGING_WEB_URL,
         ignoreHTTPSErrors: true,
-        launchOptions: {
-          executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
-          // Chromium does not honour NO_PROXY, and a bypass list only applies
-          // to a proxy given on the command line — so a staging host on the
-          // local network is sent to whatever HTTPS_PROXY names and fails to
-          // connect. STAGING_BROWSER_DIRECT=1 forces direct connections, which
-          // is what a staging box on the same host needs.
-          args: [
-            ...(process.env.NO_PROXY ? [`--proxy-bypass-list=${process.env.NO_PROXY}`] : []),
-            ...(process.env.STAGING_BROWSER_DIRECT ? ['--no-proxy-server'] : []),
-          ],
-        },
+        launchOptions: BROWSER_LAUNCH,
       },
     },
   ],
   // Skipped for the staging project, which targets a deployment that is
   // already running.
-  webServer: process.env.STAGING_WEB_URL
-    ? undefined
-    : {
-        command: 'npx vite preview --port 4173 --host 127.0.0.1',
-        url: 'http://127.0.0.1:4173',
-        reuseExistingServer: true,
-        timeout: 120_000,
-      },
+  webServer:
+    process.env.STAGING_WEB_URL || process.env.WEB_BASE_URL
+      ? undefined
+      : {
+          command: 'npx vite preview --port 4173 --host 127.0.0.1',
+          url: 'http://127.0.0.1:4173',
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
 });

@@ -2,9 +2,15 @@
 #
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 #
-# The web app is deployed separately (Vercel — apps/web/vercel.json). Use this
-# file when the frontend is self-hosted too: uncomment the `web` service and the
-# nginx site that serves it.
+# The web app can be deployed two ways:
+#
+#   * Vercel (apps/web/vercel.json) — the API is then the only thing this file
+#     serves, and nginx answers 404 for everything outside /api/.
+#   * Self-hosted on this same box — set WEB_DIST to the built bundle and use
+#     deploy/nginx.single-server.conf. One server, one certificate, no external
+#     account. For a firm running 5–40 trucks this is usually the right shape.
+#
+# Pick with the NGINX_CONF variable (see .env.production.example).
 #
 # MIGRATIONS ARE A SEPARATE ONE-SHOT SERVICE (`migrate`) that runs to completion
 # before the API starts. They must never run on every replica's boot: two
@@ -37,6 +43,14 @@ x-api-env: &api-env
   TRUST_PROXY: 1
   SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
   SMS_PROVIDER_TOKEN: ${SMS_PROVIDER_TOKEN:-}
+  # AI assistant. `mock` needs no key and no network and still answers with
+  # correct figures, so it is the default a deployment gets if it says nothing.
+  # Without these lines the container could not be told otherwise at all.
+  AI_PROVIDER: ${AI_PROVIDER:-mock}
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_MODEL: ${AI_MODEL:-claude-opus-5}
+  AI_ENABLED: ${AI_ENABLED:-true}
+  AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-15000}
 
 services:
   postgres:
@@ -141,8 +155,13 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${NGINX_CONF:-./deploy/nginx.conf}:/etc/nginx/nginx.conf:ro
       - ./deploy/certs:/etc/nginx/certs:ro
+      # Shared header snippets used by the single-server config.
+      - ./deploy/conf.d:/etc/nginx/conf.d:ro
+      # The built web bundle. Harmless when the frontend lives on Vercel: the
+      # API-only nginx config never looks at this path.
+      - ${WEB_DIST:-./apps/web/dist}:/usr/share/nginx/web:ro
     depends_on:
       - api
     healthcheck:
