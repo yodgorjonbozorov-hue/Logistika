@@ -7,3 +7,11 @@ pnpm-lock.yaml
 **/playwright-report/
 apps/backend/prisma/migrations/
 mobile/
+
+# nginx configuration. Prettier has no nginx parser, falls back to reflowing it
+# as prose, and the result is not a config file any more: `#` comment prefixes
+# are dropped mid-comment and directives are joined onto one line, so nginx
+# reads a word out of a sentence as a directive and refuses to start. Found by
+# `nginx -t` failing on an include this had silently rewritten.
+deploy/**/*.conf
+deploy/**/*.inc
