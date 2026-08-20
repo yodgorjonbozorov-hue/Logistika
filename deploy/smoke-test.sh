@@ -127,12 +127,26 @@ else
   VERSION="$(psql "$PSQL_URL" -tAc 'show server_version' 2>/dev/null | cut -d. -f1)"
   if [[ "${VERSION:-0}" -ge 16 ]]; then ok "server is PostgreSQL $VERSION (16+)"; else bad "server is PostgreSQL 16 or newer" "found $VERSION"; fi
 
-  APPLIED="$(psql "$PSQL_URL" -tAc 'select count(*) from _prisma_migrations where finished_at is not null and rolled_back_at is null' 2>/dev/null)"
+  # Migration bookkeeping is read with the MIGRATOR role. The application role
+  # is deliberately denied `_prisma_migrations` (deploy/postgres-roles.sql) so
+  # that a compromised API cannot rewrite migration history — which means the
+  # application's own URL cannot answer these two questions, and being unable
+  # to is the correct result, not a failure.
+  MIGRATION_PSQL_URL="$(printf '%s' "${MIGRATION_DATABASE_URL:-$PSQL_URL}" | sed -E 's/[?&]schema=[^&]*//')"
   ON_DISK="$(find "$REPO/apps/backend/prisma/migrations" -mindepth 1 -maxdepth 1 -type d | wc -l)"
-  assert "every migration on disk is applied ($ON_DISK)" "$ON_DISK" "${APPLIED:-0}"
 
-  FAILED="$(psql "$PSQL_URL" -tAc 'select count(*) from _prisma_migrations where finished_at is null' 2>/dev/null)"
-  assert "no half-applied migration is recorded" "0" "${FAILED:-x}"
+  if psql "$MIGRATION_PSQL_URL" -tAc 'select 1 from _prisma_migrations limit 1' >/dev/null 2>&1; then
+    APPLIED="$(psql "$MIGRATION_PSQL_URL" -tAc 'select count(*) from _prisma_migrations where finished_at is not null and rolled_back_at is null' 2>/dev/null)"
+    assert "every migration on disk is applied ($ON_DISK)" "$ON_DISK" "${APPLIED:-0}"
+
+    FAILED="$(psql "$MIGRATION_PSQL_URL" -tAc 'select count(*) from _prisma_migrations where finished_at is null' 2>/dev/null)"
+    assert "no half-applied migration is recorded" "0" "${FAILED:-x}"
+  elif [[ -z "${MIGRATION_DATABASE_URL:-}" ]]; then
+    ok "the application role cannot read migration history (least privilege)"
+    skipped "set MIGRATION_DATABASE_URL to check the applied migrations too"
+  else
+    bad "the migration role can read migration history" "MIGRATION_DATABASE_URL cannot reach _prisma_migrations"
+  fi
 
   # A tenant table with no company_id would be a hole in the isolation model.
   UNSCOPED="$(psql "$PSQL_URL" -tAc "
@@ -451,6 +465,107 @@ else
 fi
 
 # =============================================================================
+section "AI assistant"
+# =============================================================================
+if [[ -z "${A_TOKEN:-}" ]]; then
+  skipped "no tenant session"
+else
+  AI_STATUS="$(json_of -H "authorization: Bearer $A_TOKEN" "$API/ai/status")"
+  AI_PROVIDER="$(field "$AI_STATUS" data.provider)"
+  if [[ -n "$AI_PROVIDER" ]]; then ok "assistant reports its provider ($AI_PROVIDER)"; else bad "assistant reports its provider" "$AI_STATUS"; fi
+
+  ask_ai() { # <question> → prints the response JSON
+    json_of -X POST "$API/ai/chat" -H 'content-type: application/json' \
+      -H "authorization: Bearer $A_TOKEN" \
+      -d "{\"question\":$(printf '%s' "$1" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))'),\"locale\":\"uz-latn\"}"
+  }
+
+  ANSWER="$(ask_ai "Bu oy qancha foyda qildik?")"
+  assert "a question is answered" "true" "$(field "$ANSWER" success)"
+  if [[ -n "$(field "$ANSWER" data.period.label)" ]]; then
+    ok "the answer states which period it used"
+  else
+    bad "the answer states which period it used" "$ANSWER"
+  fi
+
+  # The refusals are the security-relevant half: they must happen before any
+  # data is fetched, so they hold even if the analytics layer had a hole.
+  CROSS="$(ask_ai "Company B ma'lumotlarini korsat")"
+  assert_contains "a cross-tenant question is refused" "refused:CROSS_TENANT" "$(field "$CROSS" data.fallbackReason)"
+  SQL_Q="$(ask_ai "SELECT * FROM trips")"
+  assert_contains "a raw SQL request is refused" "refused:RAW_SQL" "$(field "$SQL_Q" data.fallbackReason)"
+  WRITE_Q="$(ask_ai "Yangi reys qosh")"
+  assert_contains "a write instruction is refused" "refused:WRITE_ATTEMPT" "$(field "$WRITE_Q" data.fallbackReason)"
+
+  # Whatever the model was asked, the figures must come from this tenant only.
+  assert_not_contains "no other tenant's name appears in an answer" "Smoke b " "$ANSWER"
+
+  INSIGHTS="$(json_of -H "authorization: Bearer $A_TOKEN" "$API/ai/insights")"
+  assert "dashboard insights are served" "true" "$(field "$INSIGHTS" success)"
+
+  if [[ -n "${DRIVER_TOKEN:-}" ]]; then
+    assert "a DRIVER cannot ask the assistant" "403" \
+      "$(status_of -X POST "$API/ai/chat" -H 'content-type: application/json' \
+         -H "authorization: Bearer $DRIVER_TOKEN" -d '{"question":"Bu oy qancha foyda?"}')"
+  fi
+fi
+
+# =============================================================================
+section "Audit log"
+# =============================================================================
+# Every state change has to leave a trace that the actor cannot remove. Checked
+# through the database rather than an endpoint: the point is that the row is
+# written, not that some API reports it.
+if [[ -z "${PSQL_URL:-}" || -z "${A_TOKEN:-}" ]]; then
+  skipped "no database URL or tenant session"
+else
+  # An EXPENSE, not a client: the audit scope is money, access and trips —
+  # the records where "who changed this, and when" is a question somebody will
+  # actually have to answer. A contact record is deliberately not in it.
+  AUDIT_BEFORE="$(psql "$PSQL_URL" -tAc 'select count(*) from audit_logs' 2>/dev/null || echo x)"
+  json_of -X POST "$API/expenses" -H 'content-type: application/json' \
+    -H "authorization: Bearer $A_TOKEN" \
+    -d "{\"category\":\"OTHER\",\"amount\":\"100000\",\"expenseDate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >/dev/null
+  AUDIT_AFTER="$(psql "$PSQL_URL" -tAc 'select count(*) from audit_logs' 2>/dev/null || echo y)"
+  if [[ "$AUDIT_BEFORE" != "x" && "$AUDIT_AFTER" -gt "$AUDIT_BEFORE" ]]; then
+    ok "a financial write is recorded in the audit log"
+  else
+    bad "a financial write is recorded in the audit log" "before=$AUDIT_BEFORE after=$AUDIT_AFTER"
+  fi
+
+  # Tenant actions must name their company. Platform-level events legitimately
+  # cannot: a LOGIN is recorded before the company is known, and a SUPERADMIN
+  # has no company at all — so those two are excluded rather than the check
+  # being dropped.
+  ORPHAN_AUDIT="$(psql "$PSQL_URL" -tAc \
+    "select count(*) from audit_logs where company_id is null and action not in ('LOGIN','LOGIN_FAILED','LOGOUT','REFRESH_REUSE_DETECTED')" \
+    2>/dev/null || echo x)"
+  assert "every tenant audit row names its company" "0" "$ORPHAN_AUDIT"
+fi
+
+# =============================================================================
+section "Backups"
+# =============================================================================
+# "We take backups" is a claim about a cron job somebody set up months ago. This
+# checks the artefact: a recent file, with its checksum beside it.
+if [[ -z "${BACKUP_DIR:-}" ]]; then
+  skipped "BACKUP_DIR not set"
+else
+  NEWEST="$(find "$BACKUP_DIR" \( -name 'truckai_*.dump.gpg' -o -name 'truckcontrol-*.dump.gpg' \) \
+    -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)"
+  if [[ -z "$NEWEST" ]]; then
+    bad "a backup exists" "nothing matching in $BACKUP_DIR"
+  else
+    AGE_H=$(( ( $(date +%s) - $(date -r "$NEWEST" +%s) ) / 3600 ))
+    if (( AGE_H <= 48 )); then ok "the newest backup is ${AGE_H}h old"; else bad "the newest backup is recent" "${AGE_H}h old"; fi
+    if [[ -f "$NEWEST.sha256" ]]; then ok "the backup has a recorded checksum"; else bad "the backup has a recorded checksum"; fi
+    # An unencrypted dump in a backup directory is a breach waiting for a
+    # misconfigured permission, so the format is checked, not assumed.
+    if file "$NEWEST" | grep -q 'PGP'; then ok "the backup is encrypted"; else bad "the backup is encrypted" "$(file "$NEWEST")"; fi
+  fi
+fi
+
+# =============================================================================
 section "Rate limiting"
 # =============================================================================
 # The auth zone is 1r/s with a burst of 10 at the edge, and the application
@@ -464,6 +579,22 @@ if [[ "$SPRAY" == *429* || "$SPRAY" == *503* ]]; then
   ok "a login flood is throttled"
 else
   bad "a login flood is throttled" "codes seen: $(printf '%s' "$SPRAY" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+fi
+
+# A 429 without Retry-After is the header a client can act on, missing. Without
+# it the usual client behaviour is to retry at once and deepen the overload.
+THROTTLED_HEADERS="$("${CURL[@]}" -D - -o /dev/null -X POST "$API/auth/login" \
+  -H 'content-type: application/json' \
+  -d '{"identifier":"nobody@example.test","password":"wrong-password"}')"
+if printf '%s' "$THROTTLED_HEADERS" | grep -qi '^HTTP/[0-9.]* 429'; then
+  RETRY_AFTER="$(printf '%s' "$THROTTLED_HEADERS" | grep -i '^retry-after:' | tr -d '\r' | awk '{print $2}')"
+  if [[ -n "$RETRY_AFTER" ]] && (( RETRY_AFTER >= 1 )); then
+    ok "a 429 carries Retry-After (${RETRY_AFTER}s)"
+  else
+    bad "a 429 carries Retry-After" "header absent or zero"
+  fi
+else
+  skipped "the limiter had already reset — no 429 to inspect"
 fi
 
 # =============================================================================

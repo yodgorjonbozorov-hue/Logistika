@@ -258,6 +258,73 @@ jobs:
   # e2e test can see: a build that emits the entrypoint somewhere else, a config
   # the process refuses to boot with, a probe that never turns green.
   # ---------------------------------------------------------------------------
+  security:
+    name: dependency audit · secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      # Critical fails the build. High and moderate are reported but do not,
+      # because the ones that remain need a major-version bump of the framework
+      # and forcing that on a red build is how a security fix becomes an outage.
+      # Each surviving advisory is accounted for in docs/SECURITY.md §12.
+      - name: Production dependency audit
+        run: |
+          pnpm audit --prod --json > /tmp/audit.json || true
+          node -e '
+            const fs = require("fs");
+            const raw = fs.readFileSync("/tmp/audit.json", "utf8").trim();
+            if (!raw) { console.log("no advisories"); process.exit(0); }
+            const advisories = Object.values(JSON.parse(raw).advisories ?? {});
+            const counts = {};
+            for (const a of advisories) counts[a.severity] = (counts[a.severity] ?? 0) + 1;
+            for (const a of advisories) {
+              console.log(`${a.severity.padEnd(9)} ${a.module_name.padEnd(20)} -> ${a.patched_versions}`);
+            }
+            console.log("\ntotals:", JSON.stringify(counts));
+            if (counts.critical) {
+              console.log("::error::critical advisory in a production dependency");
+              process.exit(1);
+            }
+          '
+
+      # A secret reaching the repository is public from the moment it is pushed
+      # and has to be reissued, so this checks the whole history, not the diff.
+      - name: No secret was ever committed
+        run: |
+          FOUND="$(git log --all --diff-filter=A --name-only --pretty=format: \
+            | sort -u | grep -E '^\.env$|^\.env\.production$|\.pem$|\.key$|\.p12$|id_rsa|\.dump$' || true)"
+          if [ -n "$FOUND" ]; then
+            echo "::error::these files were committed at some point:"; echo "$FOUND"; exit 1
+          fi
+          echo "no .env, key, certificate or database dump in the history"
+
+      - name: No secret-shaped string in tracked files
+        run: |
+          if git grep -nIE "(sk-ant-[A-Za-z0-9]|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY)" \
+               -- . ':!*.example' ':!*spec*' ':!*test*'; then
+            echo "::error::a credential-shaped string is tracked"; exit 1
+          fi
+          echo "clean"
+
+      # The gate that keeps a placeholder out of production is itself code, and
+      # code that is never run is code that stops working.
+      - name: The production env gate rejects an unfinished file
+        run: |
+          cp .env.production.example /tmp/unfinished.env
+          chmod 600 /tmp/unfinished.env
+          if sh deploy/check-production-env.sh /tmp/unfinished.env; then
+            echo "::error::the checker accepted a file full of REPLACE_ME"; exit 1
+          fi
+          echo "the checker correctly refuses an unfinished environment file"
+
+  # ---------------------------------------------------------------------------
   deployment-smoke:
     name: deployment smoke (built artefacts)
     runs-on: ubuntu-latest
@@ -340,12 +407,32 @@ jobs:
           done
           echo "::error::the API never became ready"; cat /tmp/api.log; exit 1
 
+      # A real dump, encrypted, then restored into a throwaway database and
+      # compared against the source. This is the check that turns "we have
+      # backups" into "we can recover" — and it runs on every push, so the
+      # backup path cannot rot between releases.
+      - name: Backup and restore verification
+        env:
+          BACKUP_PASSPHRASE: ci-backup-passphrase-for-this-run-only
+          BACKUP_DIR: /tmp/ci-backups
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: truckcontrol
+          PGPASSWORD: truckcontrol
+          PGDATABASE: truckcontrol_staging
+          SOURCE_URL: postgresql://truckcontrol:truckcontrol@127.0.0.1:5432/truckcontrol_staging
+          ADMIN_URL: postgresql://truckcontrol:truckcontrol@127.0.0.1:5432/postgres
+        run: |
+          sh deploy/backup.sh
+          sh deploy/backup-verify.sh
+
       - name: Smoke test
         env:
           BASE_URL: http://127.0.0.1:3000
           # The API is configured to allow this origin, so the CORS checks
           # assert what the deployment was actually told.
           WEB_BASE_URL: https://staging.example.invalid
+          BACKUP_DIR: /tmp/ci-backups
         run: bash deploy/smoke-test.sh
 
       - name: API log
@@ -362,7 +449,9 @@ jobs:
   migrate:
     name: migrate production database
     runs-on: ubuntu-latest
-    needs: [build, deployment-smoke]
+    # `security` is a gate too: a critical advisory in a production dependency
+    # must not reach the production database on the way to being noticed.
+    needs: [build, deployment-smoke, security]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production-database # requires a reviewer approval to proceed
 

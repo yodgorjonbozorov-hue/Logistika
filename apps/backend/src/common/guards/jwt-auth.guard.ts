@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import type { CurrentUserPayload, UserRole } from 'shared';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AppException } from '../exceptions/app.exception';
+import { identifyRequest } from '../logging/request-context';
 import { SessionStateService } from './session-state.service';
 
 interface AccessTokenPayload {
@@ -58,6 +59,9 @@ export class JwtAuthGuard implements CanActivate {
       companyId: payload.companyId,
       role: payload.role,
     };
+    // Anything logged from here on — including inside a service that knows
+    // nothing about HTTP — carries who and which company it was for.
+    identifyRequest(payload.sub, payload.companyId);
     return true;
   }
 }

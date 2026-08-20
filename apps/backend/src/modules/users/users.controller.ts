@@ -13,6 +13,7 @@ import { UserRole, type CurrentUserPayload } from 'shared';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto, paginated } from '../../common/dto/pagination.dto';
+import { ThrottleAccount } from '../../common/throttle/throttle';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 
@@ -29,6 +30,7 @@ export class UsersController {
 
   @Post()
   @Roles(UserRole.OWNER)
+  @ThrottleAccount()
   create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateUserDto) {
     return this.usersService.create(user, dto);
   }
@@ -41,6 +43,7 @@ export class UsersController {
 
   @Patch(':id')
   @Roles(UserRole.OWNER)
+  @ThrottleAccount()
   update(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -51,6 +54,7 @@ export class UsersController {
 
   @Delete(':id')
   @Roles(UserRole.OWNER)
+  @ThrottleAccount()
   deactivate(@CurrentUser() user: CurrentUserPayload, @Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.deactivate(user, id);
   }

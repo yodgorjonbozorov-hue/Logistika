@@ -2,7 +2,7 @@
   "name": "truckcontrol",
   "version": "0.1.0",
   "private": true,
-  "description": "TruckControl AI \u2014 logistika firmalari uchun SaaS boshqaruv tizimi",
+  "description": "TruckControl AI — logistika firmalari uchun SaaS boshqaruv tizimi",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
@@ -35,6 +35,13 @@
       "argon2",
       "sharp",
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "multer": "^2.2.0",
+      "lodash": "^4.18.1",
+      "qs": "^6.15.2",
+      "body-parser": "^1.20.6",
+      "uuid": "^11.1.1"
+    }
   }
 }

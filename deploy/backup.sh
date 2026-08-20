@@ -17,8 +17,11 @@ set -eu
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-BASENAME="truckcontrol-${STAMP}.dump"
+# truckai_<date>_<timestamp>: the date is first so a plain `ls` sorts
+# chronologically, and both halves are UTC so a backup taken either side of a
+# clock change still lands in the right order.
+STAMP="$(date -u +%Y%m%d_%H%M%SZ)"
+BASENAME="truckai_${STAMP}.dump"
 TMP_FILE="${BACKUP_DIR}/.${BASENAME}.partial"
 PLAIN_FILE="${BACKUP_DIR}/${BASENAME}"
 ENC_FILE="${PLAIN_FILE}.gpg"
@@ -89,9 +92,15 @@ fi
 # 5. Retention — only after a successful, verified, encrypted backup
 # ---------------------------------------------------------------------------
 log "pruning backups older than ${RETENTION_DAYS} days"
-find "$BACKUP_DIR" -name 'truckcontrol-*.dump.gpg' -mtime "+${RETENTION_DAYS}" -print -delete
-find "$BACKUP_DIR" -name 'truckcontrol-*.dump.gpg.sha256' -mtime "+${RETENTION_DAYS}" -delete
+# Both naming schemes are matched. Backups written before the rename are still
+# perfectly restorable, and a retention pass that could not see them would
+# either keep them forever or — worse, if the glob were simply replaced — leave
+# them out of the "how many backups do we have" count that the operator reads.
+for pattern in 'truckai_*.dump.gpg' 'truckcontrol-*.dump.gpg'; do
+  find "$BACKUP_DIR" -name "$pattern" -mtime "+${RETENTION_DAYS}" -print -delete
+  find "$BACKUP_DIR" -name "${pattern}.sha256" -mtime "+${RETENTION_DAYS}" -delete
+done
 find "$BACKUP_DIR" -name '.*.partial' -mtime +1 -delete
 
-REMAINING="$(find "$BACKUP_DIR" -name 'truckcontrol-*.dump.gpg' | wc -l)"
+REMAINING="$(find "$BACKUP_DIR" \( -name 'truckai_*.dump.gpg' -o -name 'truckcontrol-*.dump.gpg' \) | wc -l)"
 log "done — ${REMAINING} backups retained"

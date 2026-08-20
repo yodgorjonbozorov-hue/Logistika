@@ -15,6 +15,16 @@ export class SmsService {
   async send(phone: string, text: string): Promise<void> {
     const providerUrl = this.config.get<string>('SMS_PROVIDER_URL');
     if (!providerUrl) {
+      // Printing the code is a development convenience and an account-takeover
+      // primitive in production: a login code in a log file is a valid
+      // credential for anyone who can read logs, which is a much larger group
+      // than the people who can read the driver's phone. In production the
+      // misconfiguration is reported instead — loudly, because driver login is
+      // now broken and somebody has to notice.
+      if (this.config.get<string>('NODE_ENV') === 'production') {
+        this.logger.error('SMS_PROVIDER_URL is not configured — driver login codes cannot be sent');
+        return;
+      }
       this.logger.log(`[DEV SMS] ${phone}: ${text}`);
       return;
     }
@@ -29,11 +39,14 @@ export class SmsService {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
-        this.logger.error(`SMS provider returned ${response.status} for ${phone}`);
+        this.logger.error(`SMS provider returned ${response.status}`);
       }
     } catch (error) {
+      // The phone number is left out on purpose: it identifies a person, the
+      // log is kept for months, and it adds nothing to diagnosing a gateway
+      // failure that the request id does not already give.
       this.logger.error(
-        `SMS send failed for ${phone}: ${error instanceof Error ? error.message : String(error)}`,
+        `SMS send failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

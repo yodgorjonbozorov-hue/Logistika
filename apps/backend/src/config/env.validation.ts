@@ -24,7 +24,34 @@ const FORBIDDEN_PRODUCTION_SECRETS = [
   'change-me-minio',
   'secret',
   'changeme',
+  'replace_me',
+  'replace-with',
+  'placeholder',
+  'example',
 ];
+
+/**
+ * Hostnames that mean "this was never filled in" when they appear in a URL the
+ * outside world has to reach. Loopback is deliberately NOT in this list for
+ * DATABASE_URL / REDIS_URL / MINIO_ENDPOINT: a datastore reachable only over
+ * loopback is the safest way to run one, and failing to boot on it would
+ * punish the better deployment.
+ */
+const PLACEHOLDER_HOSTS = ['example.com', 'example.org', 'replace_me', 'replace-me', 'yourdomain'];
+
+/** True for a host the rest of the network cannot reach. */
+function isLoopback(host: string): boolean {
+  const bare = host.toLowerCase().replace(/^\[|\]$/g, '');
+  return bare === 'localhost' || bare === '127.0.0.1' || bare === '::1' || bare.startsWith('127.');
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
 
 const toBoolean = ({ value }: { value: unknown }): unknown => {
   if (typeof value === 'boolean') return value;
@@ -202,7 +229,7 @@ export class EnvironmentVariables {
  * lets development and tests run with the sample values while a real deployment
  * refuses to boot on a placeholder secret (M-4 / secrets-in-source hardening).
  */
-function assertProductionSafety(env: EnvironmentVariables): string[] {
+function assertProductionSafety(env: EnvironmentVariables, raw: Record<string, unknown>): string[] {
   if (env.NODE_ENV !== 'production') return [];
   const problems: string[] = [];
 
@@ -227,8 +254,49 @@ function assertProductionSafety(env: EnvironmentVariables): string[] {
   if (!env.WEB_URL.startsWith('https://')) {
     problems.push('WEB_URL: must be an https:// origin in production');
   }
-  if (env.DATABASE_URL.includes('change-me')) {
-    problems.push('DATABASE_URL: still contains the sample password');
+  // The browser has to resolve this one, so loopback and the documentation
+  // domains mean the template was never filled in.
+  const webHost = hostOf(env.WEB_URL).toLowerCase();
+  if (isLoopback(webHost) || PLACEHOLDER_HOSTS.some((bad) => webHost.includes(bad))) {
+    problems.push(`WEB_URL: "${webHost || env.WEB_URL}" is a placeholder, not a real domain`);
+  }
+  if (FORBIDDEN_PRODUCTION_SECRETS.some((weak) => env.DATABASE_URL.toLowerCase().includes(weak))) {
+    problems.push('DATABASE_URL: still contains a sample/placeholder credential');
+  }
+
+  // Credentials and file bytes travelling in clear text to a storage node on
+  // another host. Over loopback there is no network to intercept, so that case
+  // is allowed — it is how the single-server deployment runs.
+  const storageHost = env.MINIO_ENDPOINT.toLowerCase();
+  if (!env.MINIO_USE_SSL && !isLoopback(storageHost)) {
+    problems.push(
+      `MINIO_USE_SSL: must be true when MINIO_ENDPOINT ("${storageHost}") is not loopback — ` +
+        'the access key would cross the network in clear text',
+    );
+  }
+  if (PLACEHOLDER_HOSTS.some((bad) => storageHost.includes(bad))) {
+    problems.push(`MINIO_ENDPOINT: "${storageHost}" is a placeholder, not a real host`);
+  }
+
+  // Redis holds refresh-token families and every rate-limit counter. Reachable
+  // over the network it needs a password; over loopback it does not.
+  const redisHost = hostOf(env.REDIS_URL);
+  const redisHasAuth = /^rediss?:\/\/[^@/]+@/.test(env.REDIS_URL);
+  if (redisHost && !isLoopback(redisHost) && !redisHasAuth) {
+    problems.push('REDIS_URL: a non-loopback Redis must carry credentials');
+  }
+
+  // TRUST_PROXY has no safe default in production: 0 behind nginx makes every
+  // request look like it came from the proxy, so one client's flood throttles
+  // everybody, while a non-zero value with no proxy in front lets a client
+  // forge X-Forwarded-For and walk past the limits entirely. Only the operator
+  // knows which it is, so production has to say so explicitly — either value is
+  // accepted, silence is not.
+  if (raw.TRUST_PROXY === undefined || raw.TRUST_PROXY === '') {
+    problems.push(
+      'TRUST_PROXY: must be set explicitly in production (1 behind a single ' +
+        'reverse proxy, 0 when the API is exposed directly)',
+    );
   }
   // Selecting a real provider without a key would run every question through
   // the deterministic fallback while the deployment believed it had an
@@ -247,7 +315,7 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   const problems = errors.map(
     (e) => `${e.property}: ${Object.values(e.constraints ?? {}).join(', ')}`,
   );
-  problems.push(...assertProductionSafety(validated));
+  problems.push(...assertProductionSafety(validated, config));
 
   if (problems.length > 0) {
     throw new Error(`Invalid environment configuration — ${problems.join('; ')}`);

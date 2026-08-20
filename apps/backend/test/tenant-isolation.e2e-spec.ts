@@ -18,6 +18,7 @@ import {
   auth,
   createCompany,
   createTestApp,
+  createUser,
   login,
   prisma,
   resetDatabase,
@@ -321,6 +322,166 @@ describe('Tenant isolation', () => {
         await api(app).post('/api/v1/trips').set(auth(ownerB.accessToken)).send(ref).expect(404);
       }
       expect(await prisma.trip.count({ where: { companyId: companyB.id } })).toBe(0);
+    });
+  });
+
+  /**
+   * The full grid: every tenant-owned resource, every verb that resource has.
+   *
+   * The suites above test the cases that were once bugs. This one tests the
+   * ones that have not been bugs yet — it is generated from a table, so a
+   * resource cannot be covered for GET and quietly missed for DELETE, which is
+   * how isolation holes survive a review: the reviewer checks the endpoint that
+   * is in the diff and not the four beside it.
+   *
+   * The assertion is deliberately loose on WHICH failure (404 or 403). What
+   * matters is that company B is refused and that A's row is untouched
+   * afterwards; the choice between "not found" and "forbidden" is an
+   * information-disclosure preference, and 404 — used here for cross-tenant ids
+   * — is the stronger one.
+   */
+  describe('cross-tenant matrix — every resource, every verb', () => {
+    interface Probe {
+      resource: string;
+      id: (a: Awaited<ReturnType<typeof seedCompanyA>>) => string;
+      patch?: Record<string, unknown>;
+      hasDetailGet?: boolean;
+      hasDelete?: boolean;
+    }
+
+    const PROBES: Probe[] = [
+      {
+        resource: 'trips',
+        id: (a) => a.tripId,
+        patch: { cargoName: 'hijacked' },
+        hasDetailGet: true,
+      },
+      {
+        resource: 'vehicles',
+        id: (a) => a.vehicleId,
+        patch: { brand: 'hijacked' },
+        hasDetailGet: true,
+        hasDelete: true,
+      },
+      {
+        resource: 'drivers',
+        id: (a) => a.driverId,
+        patch: { fullName: 'hijacked' },
+        hasDetailGet: true,
+        hasDelete: true,
+      },
+      {
+        resource: 'clients',
+        id: (a) => a.clientId,
+        patch: { name: 'hijacked' },
+        hasDetailGet: true,
+        hasDelete: true,
+      },
+      {
+        resource: 'routes',
+        id: (a) => a.routeId,
+        patch: { name: 'hijacked' },
+        hasDetailGet: true,
+        hasDelete: true,
+      },
+      { resource: 'expenses', id: (a) => a.expenseId, patch: { amount: '1' }, hasDelete: true },
+      { resource: 'incomes', id: (a) => a.incomeId, patch: { amount: '1' }, hasDelete: true },
+      { resource: 'fuel-logs', id: (a) => a.fuelLogId, patch: { liters: '1.00' }, hasDelete: true },
+    ];
+
+    it.each(PROBES.map((probe) => [probe.resource, probe] as const))(
+      '%s — B is refused on every verb and A keeps its row',
+      async (_name, probe) => {
+        const a = await seedCompanyA();
+        const id = probe.id(a);
+        const path = `/api/v1/${probe.resource}/${id}`;
+        const refused = (status: number) => expect([403, 404]).toContain(status);
+
+        if (probe.hasDetailGet) {
+          const read = await api(app).get(path).set(auth(ownerB.accessToken));
+          refused(read.status);
+          expect(JSON.stringify(read.body)).not.toContain('Secret');
+        }
+
+        if (probe.patch) {
+          refused(
+            (await api(app).patch(path).set(auth(ownerB.accessToken)).send(probe.patch)).status,
+          );
+        }
+
+        if (probe.hasDelete) {
+          refused((await api(app).delete(path).set(auth(ownerB.accessToken))).status);
+        }
+
+        // The list stays empty for B whatever the writes attempted above did.
+        const list = await api(app)
+          .get(`/api/v1/${probe.resource}`)
+          .set(auth(ownerB.accessToken))
+          .expect(200);
+        expect(list.body.data).toEqual([]);
+      },
+    );
+
+    it('a hijack attempt leaves company A byte-for-byte unchanged', async () => {
+      const a = await seedCompanyA();
+      const before = await prisma.trip.findUniqueOrThrow({ where: { id: a.tripId } });
+
+      await api(app)
+        .patch(`/api/v1/trips/${a.tripId}`)
+        .set(auth(ownerB.accessToken))
+        .send({ cargoName: 'hijacked', agreedPrice: '1' });
+
+      const after = await prisma.trip.findUniqueOrThrow({ where: { id: a.tripId } });
+      expect(after.cargoName).toBe(before.cargoName);
+      expect(after.agreedPrice).toBe(before.agreedPrice);
+      expect(after.companyId).toBe(companyA.id);
+    });
+
+    it('B cannot manage A’s staff', async () => {
+      const staff = await createUser(companyA.id, 'LOGIST');
+      const path = `/api/v1/users/${staff.id}`;
+
+      expect([403, 404]).toContain((await api(app).get(path).set(auth(ownerB.accessToken))).status);
+      expect([403, 404]).toContain(
+        (await api(app).patch(path).set(auth(ownerB.accessToken)).send({ fullName: 'x' })).status,
+      );
+      expect([403, 404]).toContain(
+        (await api(app).delete(path).set(auth(ownerB.accessToken))).status,
+      );
+
+      const survivor = await prisma.user.findUniqueOrThrow({ where: { id: staff.id } });
+      expect(survivor.companyId).toBe(companyA.id);
+      expect(survivor.isActive).toBe(true);
+    });
+
+    it('the assistant answers from B’s own (empty) books, never A’s', async () => {
+      await seedCompanyA();
+
+      const answer = await api(app)
+        .post('/api/v1/ai/chat')
+        .set(auth(ownerB.accessToken))
+        .send({ question: 'Bu oy qancha daromad?', locale: 'uz-latn' })
+        .expect(201);
+
+      // A's figures are 90 000 000 tiyin of income and 50 000 000 of expense.
+      // Neither may appear in B's answer in any formatting.
+      const text = JSON.stringify(answer.body);
+      for (const leak of ['900 000', '900\u00a0000', '500 000', '500\u00a0000', 'Secret']) {
+        expect(text).not.toContain(leak);
+      }
+    });
+
+    it('an explicit companyId in a query string changes nothing', async () => {
+      await seedCompanyA();
+      const response = await api(app)
+        .get('/api/v1/trips')
+        .query({ companyId: companyA.id })
+        .set(auth(ownerB.accessToken));
+
+      // Either the unknown parameter is rejected outright by the global
+      // whitelist pipe, or it is ignored — never honoured.
+      if (response.status === 200) expect(response.body.data).toEqual([]);
+      else expect(response.status).toBe(400);
     });
   });
 

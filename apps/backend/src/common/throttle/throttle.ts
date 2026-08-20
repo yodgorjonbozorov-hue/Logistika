@@ -56,6 +56,18 @@ export const ThrottleAi = () => Throttle({ default: { limit: 20, ttl: MINUTE } }
 export const ThrottleIngest = () => Throttle({ default: { limit: 120, ttl: MINUTE } });
 
 /**
+ * Creating, editing or removing an account — including setting someone's
+ * password.
+ *
+ * These are authenticated OWNER actions, so the global 300/minute applied to
+ * them, which is three hundred password changes a minute from one stolen
+ * session. A real administrator manages a handful of staff; anything faster is
+ * either automation nobody asked for or an attacker working through a
+ * compromised token, and both should be slowed down.
+ */
+export const ThrottleAccount = () => Throttle({ default: { limit: 10, ttl: MINUTE } });
+
+/**
  * Global throttler guard.
  *
  * Two deliberate differences from the stock guard:
@@ -80,8 +92,20 @@ export class AppThrottlerGuard extends ThrottlerGuard {
     _context: ExecutionContext,
     detail: ThrottlerLimitDetail,
   ): Promise<void> {
+    // Units differ inside ThrottlerLimitDetail and it is easy to get wrong:
+    // `timeToExpire` and `timeToBlockExpire` are SECONDS, while `ttl` is
+    // MILLISECONDS. Dividing the first two by 1000 as well produced a
+    // Retry-After of 1 for a 60-second window, which tells a client to come
+    // straight back and turns the limiter into a busy-wait for both sides.
+    const seconds =
+      detail.timeToBlockExpire > 0
+        ? detail.timeToBlockExpire
+        : detail.timeToExpire > 0
+          ? detail.timeToExpire
+          : detail.ttl / 1000;
+
     throw new AppException('RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS, undefined, {
-      retryAfterSeconds: Math.max(1, Math.ceil((detail.timeToBlockExpire || detail.ttl) / 1000)),
+      retryAfterSeconds: Math.max(1, Math.ceil(seconds)),
     });
   }
 }

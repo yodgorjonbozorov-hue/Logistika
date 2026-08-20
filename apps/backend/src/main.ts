@@ -1,5 +1,5 @@
 import './common/serialization';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -7,12 +7,49 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { redact } from './common/logging/redact';
+
+/**
+ * A process that keeps running after an uncaught exception is in an unknown
+ * state and will serve wrong answers rather than no answers; a rejected promise
+ * nobody handled is the same failure with a quieter shape. Both are logged
+ * (redacted — the reason is frequently a driver error carrying a connection
+ * string) and then the process exits so the orchestrator replaces it.
+ *
+ * Installed before the application is created, or a failure during bootstrap
+ * itself would go to Node's default handler and print unredacted.
+ */
+function installCrashHandlers(): void {
+  const logger = new Logger('Process');
+
+  process.on('unhandledRejection', (reason) => {
+    const detail = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
+    logger.error('Unhandled promise rejection — exiting', redact(detail));
+    process.exitCode = 1;
+    // Give the log a tick to flush before the process goes away.
+    setTimeout(() => process.exit(1), 100).unref();
+  });
+
+  process.on('uncaughtException', (error) => {
+    logger.error('Uncaught exception — exiting', redact(error.stack ?? error.message));
+    process.exitCode = 1;
+    setTimeout(() => process.exit(1), 100).unref();
+  });
+}
 
 async function bootstrap(): Promise<void> {
+  installCrashHandlers();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // JSON body cap is applied explicitly below; the default parser is off so
     // an oversized payload is rejected before it reaches a handler (M-1).
     bodyParser: true,
+    // `debug` and `verbose` are off in production: they are the levels that
+    // print arguments, and arguments are where the credentials are.
+    logger:
+      process.env.NODE_ENV === 'production'
+        ? ['error', 'warn', 'log']
+        : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   const config = app.get(ConfigService);
   const isProduction = config.get<string>('NODE_ENV') === 'production';

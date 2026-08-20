@@ -44,3 +44,41 @@ mobile/**/*.iml
 
 # Redis writes its snapshot into the CWD of whoever started it.
 *.rdb
+
+# ---------------------------------------------------------------------------
+# Things that must never reach the repository
+# ---------------------------------------------------------------------------
+# Real environment files. `.env` and `.env.local` were already covered, but a
+# production deployment's file is the one that hurts most and was not — the
+# `!` rules keep the committed templates visible.
+.env.*
+!.env.example
+!.env.production.example
+!.env.*.example
+
+# Private keys and certificates. A leaked key is not fixable by a later commit:
+# it is public from the moment it is pushed and has to be reissued.
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+!**/*.pub
+
+# Database dumps and backups. A dump is a complete copy of every tenant's data.
+*.dump
+*.dump.gpg
+*.sql.gz
+*.bak
+backups/
+
+# Secret bundles by convention
+secrets.json
+secrets.yaml
+*.secrets
+
+# Local runtime noise
+*.log
+.DS_Store

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { SessionStateModule } from './common/guards/session-state.module';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
+import { RequestLoggerMiddleware } from './common/logging/request-logger.middleware';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { I18nModule } from './i18n/i18n.module';
@@ -68,4 +69,10 @@ import { PrismaModule } from './prisma/prisma.module';
     { provide: APP_FILTER, useClass: AppExceptionFilter },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    // Every route, including the ones a guard rejects: a burst of 401s is
+    // exactly the pattern worth being able to query for.
+    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  }
+}

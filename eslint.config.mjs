@@ -9,6 +9,15 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Operator scripts under deploy/ run on bare Node with no bundler and no
+    // TypeScript, so `process`, `console` and `fetch` are their environment
+    // rather than undefined globals.
+    files: ['deploy/**/*.mjs', 'deploy/**/*.js'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', fetch: 'readonly', URL: 'readonly' },
+    },
+  },
+  {
     rules: {
       // MUHIM QOIDA: bo'sh catch taqiqlanadi (CLAUDE.md — error handling)
       'no-empty': ['error', { allowEmptyCatch: false }],
